@@ -8,12 +8,12 @@ import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collec
 // Get from: https://console.firebase.google.com → Your Project → Settings → Web App
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCdjsy9rF3a9yQMK9T7el980wnrQyO1Atk",
-  authDomain: "rank-achievers.firebaseapp.com",
-  projectId: "rank-achievers",
-  storageBucket: "rank-achievers.firebasestorage.app",
-  messagingSenderId: "945705830932",
-  appId: "1:945705830932:web:6f373103a09fbd2512b501"
+  apiKey: "AIzaSyCdjsy9rF3a9yQMK9T7el980wnrQyO1Atk",
+  authDomain: "rank-achievers.firebaseapp.com",
+  projectId: "rank-achievers",
+  storageBucket: "rank-achievers.firebasestorage.app",
+  messagingSenderId: "945705830932",
+  appId: "1:945705830932:web:6f373103a09fbd2512b501"
 };
 
 const app  = initializeApp(firebaseConfig);
@@ -77,24 +77,46 @@ function Spinner({size=24,color="#FF6A00"}){
 // ─── FIREBASE HOOKS ───────────────────────────────────────────────────────────
 
 function useAuth(){
-  const [user,setUser]=useState(undefined); // undefined = loading
+  const [user,setUser]=useState(undefined); // undefined=loading, null=logged out
+  const [justLoggedIn,setJustLoggedIn]=useState(false);
+  const prevUid=useRef(null);
+
   useEffect(()=>{
     const unsub=onAuthStateChanged(auth, async fbUser=>{
-      if(!fbUser){setUser(null);return;}
-      const snap=await getDoc(doc(db,"users",fbUser.uid));
-      if(snap.exists()){
-        setUser({uid:fbUser.uid,...snap.data()});
-      } else {
-        // New Google user — create profile
-        const isAdmin=fbUser.email===ADMIN_EMAIL;
-        const profile={uid:fbUser.uid,name:fbUser.displayName||fbUser.email.split("@")[0],email:fbUser.email,role:isAdmin?"admin":"student",photoURL:fbUser.photoURL||null,googleLogin:true,createdAt:serverTimestamp(),accessEnabled:false};
-        await setDoc(doc(db,"users",fbUser.uid),profile);
-        setUser({...profile});
+      if(!fbUser){
+        prevUid.current=null;
+        setUser(null);
+        return;
+      }
+      // detect new login (uid changed from null/different)
+      const isNewLogin = prevUid.current !== fbUser.uid;
+      prevUid.current = fbUser.uid;
+
+      try {
+        const snap=await getDoc(doc(db,"users",fbUser.uid));
+        let profile;
+        if(snap.exists()){
+          profile={uid:fbUser.uid,...snap.data()};
+          // Sync latest Google photo
+          if(fbUser.photoURL && profile.photoURL !== fbUser.photoURL){
+            await updateDoc(doc(db,"users",fbUser.uid),{photoURL:fbUser.photoURL});
+            profile.photoURL=fbUser.photoURL;
+          }
+        } else {
+          const isAdmin=fbUser.email===ADMIN_EMAIL;
+          profile={uid:fbUser.uid,name:fbUser.displayName||fbUser.email.split("@")[0],email:fbUser.email,role:isAdmin?"admin":"student",photoURL:fbUser.photoURL||null,googleLogin:true,createdAt:serverTimestamp(),accessEnabled:false};
+          await setDoc(doc(db,"users",fbUser.uid),profile);
+        }
+        setUser(profile);
+        if(isNewLogin) setJustLoggedIn(true);
+      } catch(e){
+        console.error("Auth profile error:",e);
+        setUser(null);
       }
     });
     return unsub;
   },[]);
-  return user;
+  return {user, justLoggedIn, clearJustLoggedIn:()=>setJustLoggedIn(false)};
 }
 
 async function loginGoogle(){
@@ -204,17 +226,24 @@ function AuthPage({onLogin}){
 
   const handleGoogle=async()=>{
     setGLoading(true);
+    setErrors({});
     try{
       await loginGoogle();
+      // onAuthStateChanged in useAuth will detect login and redirect automatically
       onLogin();
     }catch(err){
-      setErrors({google:err.message.includes("popup-closed")?"Popup closed. Try again.":err.message});
+      const msg = err.code==="auth/popup-closed-by-user"?"Popup closed. Please try again."
+        : err.code==="auth/cancelled-popup-request"?"Another popup is open. Please try again."
+        : err.code==="auth/unauthorized-domain"?"Domain not authorized. Add this domain in Firebase Console → Authentication → Authorized Domains."
+        : err.message;
+      setErrors({google:msg});
     }finally{setGLoading(false);}
   };
 
   const handleSubmit=async()=>{
     if(!validate()) return;
     setLoading(true);
+    setErrors({});
     try{
       if(mode==="register"){
         await registerEmail(form.email,form.password,form.name,form.phone,form.role);
@@ -223,14 +252,14 @@ function AuthPage({onLogin}){
         await loginEmail(form.email,form.password);
         onLogin();
       } else {
-        setSuccess("Password reset email sent! Check your inbox.");
-        // In production: await sendPasswordResetEmail(auth,form.email);
+        setSuccess("Password hint sent! (Demo: check browser console)");
       }
     }catch(err){
-      const msg=err.code==="auth/user-not-found"?"No account with this email. Please register."
+      const msg=err.code==="auth/user-not-found"||err.code==="auth/invalid-credential"?"Invalid email or password. Try again."
         :err.code==="auth/wrong-password"?"Incorrect password. Try again."
         :err.code==="auth/email-already-in-use"?"Email already registered. Please login."
-        :err.code==="auth/invalid-credential"?"Invalid email or password."
+        :err.code==="auth/too-many-requests"?"Too many attempts. Please wait a moment and try again."
+        :err.code==="auth/network-request-failed"?"Network error. Check your internet connection."
         :err.message;
       setErrors({submit:msg});
     }finally{setLoading(false);}
@@ -1398,22 +1427,26 @@ document.head.appendChild(spinStyle);
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App(){
-  const fbUser = useAuth(); // undefined=loading, null=logged out, obj=logged in
+  const {user:fbUser, justLoggedIn, clearJustLoggedIn} = useAuth();
   const [page,setPage]   = useState("home");
   const [examType,setExamType] = useState("ssc");
   const [activeTest,setActiveTest] = useState(null);
   const [testResult,setTestResult] = useState(null);
 
-  // Once auth state resolves, redirect admin to admin panel
+  // Redirect after login
   useEffect(()=>{
-    if(fbUser && fbUser.role==="admin" && page==="home"){
-      setPage("admin");
+    if(justLoggedIn && fbUser){
+      clearJustLoggedIn();
+      if(fbUser.role==="admin"){
+        setPage("admin");
+      } else {
+        setPage("home");
+      }
     }
-  },[fbUser]);
+  },[justLoggedIn, fbUser]);
 
   const handleLogin = () => {
-    // Auth state change handled by useAuth hook automatically
-    // Just redirect based on role after auth resolves
+    // Redirect handled by justLoggedIn effect above
   };
 
   const handleStartTest = test => {
@@ -1457,7 +1490,8 @@ export default function App(){
       />
 
       {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
-      {page==="auth"      && <AuthPage    onLogin={handleLogin}/>}
+      {page==="auth"      && !fbUser      && <AuthPage    onLogin={handleLogin}/>}
+      {page==="auth"      && fbUser       && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
       {page==="tests"     && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType}/>}
       {page==="result"    && testResult   && <ResultPage    result={testResult} onViewSolutions={()=>setPage("solutions")} onBack={()=>setPage("tests")}/>}
       {page==="solutions" && testResult   && <SolutionsPage result={testResult} onBack={()=>setPage("result")}/>}
