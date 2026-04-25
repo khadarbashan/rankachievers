@@ -8,6 +8,7 @@ import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collec
 // Get from: https://console.firebase.google.com → Your Project → Settings → Web App
 
 const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyCdjsy9rF3a9yQMK9T7el980wnrQyO1Atk",
   authDomain: "rank-achievers.firebaseapp.com",
   projectId: "rank-achievers",
@@ -22,7 +23,17 @@ const db   = getFirestore(app);
 const gProvider = new GoogleAuthProvider();
 
 // ─── ADMIN EMAIL ──────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = "nkhadar@gmail.com";
+const ADMIN_EMAIL    = "nkhadar@gmail.com";
+const ADMIN_PASSWORD = "Khadar@ra2";
+
+// Auto-create admin account in Firebase on first load
+async function ensureAdminExists(){
+  try {
+    await createUserWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD);
+  } catch(e) {
+    // Already exists — that's fine
+  }
+}
 
 // ─── EXAM TYPES ───────────────────────────────────────────────────────────────
 const EXAM_TYPES = [
@@ -163,7 +174,7 @@ async function checkAccess(uid){
 }
 
 // ─── NAVBAR ───────────────────────────────────────────────────────────────────
-function NavBar({page,setPage,user,examType,setExamType}){
+function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices}){
   return(
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"#fff",borderBottom:"2px solid #FF6A00",padding:"0 24px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 16px #FF6A0015"}}>
       <button onClick={()=>setPage("home")} style={{background:"none",border:"none",cursor:"pointer"}}><Logo/></button>
@@ -178,6 +189,10 @@ function NavBar({page,setPage,user,examType,setExamType}){
           <>
             <button onClick={()=>setPage("dashboard")} style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",background:page==="dashboard"?"#FF6A00":"#fff0e6",color:page==="dashboard"?"#fff":"#FF6A00",fontWeight:700,fontSize:13}}>Dashboard</button>
             {user.role==="admin"&&<button onClick={()=>setPage("admin")} style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",background:page==="admin"?"#000":"#f0f0f0",color:page==="admin"?"#fff":"#000",fontWeight:700,fontSize:13}}>⚙️ Admin</button>}
+            <button onClick={()=>{setShowNotifPanel(p=>!p);localStorage.setItem("ra_last_notice",Date.now().toString());setUnreadCount&&setUnreadCount(0);}} style={{position:"relative",background:"none",border:"none",cursor:"pointer",fontSize:22,padding:"4px 8px",lineHeight:1}}>
+              🔔
+              {unreadCount>0&&<span style={{position:"absolute",top:-2,right:-2,background:"#ef4444",color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #fff"}}>{unreadCount}</span>}
+            </button>
             <button onClick={()=>setPage("profile")} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 12px 5px 5px",borderRadius:24,border:"2px solid #f0f0f0",background:"#fff",cursor:"pointer"}}>
               {user.photoURL
                 ?<img src={user.photoURL} alt="" style={{width:28,height:28,borderRadius:"50%"}}/>
@@ -191,6 +206,69 @@ function NavBar({page,setPage,user,examType,setExamType}){
         )}
       </div>
     </nav>
+  );
+}
+
+// ─── NOTICE MODAL (shown after login) ─────────────────────────────────────────
+function NoticeModal({notices, onClose}){
+  const [idx,setIdx]=useState(0);
+  const n=notices[idx];
+  if(!n) return null;
+  return(
+    <div style={{position:"fixed",inset:0,background:"#00000095",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:"#fff",borderRadius:24,maxWidth:520,width:"100%",overflow:"hidden",boxShadow:"0 24px 80px #00000060"}}>
+        {/* Header */}
+        <div style={{background:"linear-gradient(135deg,#FF6A00,#ff9a00)",padding:"20px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{color:"#fff",fontWeight:900,fontSize:18}}>📢 Announcement</div>
+            <div style={{color:"rgba(255,255,255,.8)",fontSize:12,marginTop:2}}>Rank Achievers Academy · Anantapur</div>
+          </div>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,.2)",border:"none",borderRadius:"50%",width:32,height:32,color:"#fff",fontWeight:900,cursor:"pointer",fontSize:16}}>✕</button>
+        </div>
+        {/* Body */}
+        <div style={{padding:"28px 28px 20px"}}>
+          {n.imageUrl&&<img src={n.imageUrl} alt="notice" style={{width:"100%",borderRadius:12,marginBottom:20,objectFit:"cover",maxHeight:200}}/>}
+          <div style={{fontWeight:900,fontSize:20,marginBottom:10,color:"#000"}}>{n.title}</div>
+          <p style={{color:"#555",lineHeight:1.7,fontSize:15,margin:0}}>{n.body}</p>
+          {n.link&&<a href={n.link} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:16,padding:"10px 24px",borderRadius:10,background:"#FF6A00",color:"#fff",fontWeight:800,textDecoration:"none",fontSize:14}}>Learn More →</a>}
+        </div>
+        {/* Footer */}
+        <div style={{padding:"12px 24px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:12,color:"#aaa"}}>{idx+1} of {notices.length}</div>
+          <div style={{display:"flex",gap:10}}>
+            {notices.length>1&&idx<notices.length-1&&(
+              <button onClick={()=>setIdx(i=>i+1)} style={{padding:"9px 20px",borderRadius:10,border:"2px solid #FF6A00",background:"#fff",color:"#FF6A00",fontWeight:700,cursor:"pointer",fontSize:13}}>Next →</button>
+            )}
+            <button onClick={()=>{localStorage.setItem("ra_last_notice",Date.now().toString());onClose();}} style={{padding:"9px 20px",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13}}>Got it ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── NOTIFICATION BELL PANEL ───────────────────────────────────────────────────
+function NotifPanel({notices,onClose}){
+  return(
+    <div style={{position:"fixed",top:68,right:16,width:340,maxHeight:480,background:"#fff",borderRadius:16,boxShadow:"0 8px 40px #00000025",border:"2px solid #f0f0f0",zIndex:9998,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+      <div style={{padding:"14px 18px",borderBottom:"2px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontWeight:900,fontSize:15}}>📢 Announcements</div>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#888"}}>✕</button>
+      </div>
+      <div style={{overflowY:"auto",flex:1}}>
+        {notices.length===0
+          ?<div style={{padding:32,textAlign:"center",color:"#aaa"}}>No announcements yet</div>
+          :notices.map((n,i)=>(
+            <div key={n.id||i} style={{padding:"14px 18px",borderBottom:"1px solid #f8f8f8"}}>
+              <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>{n.title}</div>
+              <div style={{fontSize:13,color:"#666",lineHeight:1.5}}>{n.body}</div>
+              {n.link&&<a href={n.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#FF6A00",fontWeight:700,textDecoration:"none"}}>Read more →</a>}
+              <div style={{fontSize:11,color:"#ccc",marginTop:6}}>{n.createdAt?.seconds?new Date(n.createdAt.seconds*1000).toLocaleDateString("en-IN"):""}</div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
   );
 }
 
@@ -1168,6 +1246,35 @@ function AdminPage(){
     }catch(err){setSe({email:err.code==="auth/email-already-in-use"?"Already registered":err.message});}
   };
 
+  // Notices
+  const [dbNotices,setDbNotices]=useState([]);
+  const [nf,setNf]=useState({title:"",body:"",link:"",imageUrl:""});
+  const [nSaving,setNSaving]=useState(false);
+  const [nSaved,setNSaved]=useState(false);
+  const [delNoticeId,setDelNoticeId]=useState(null);
+
+  useEffect(()=>{
+    const q=query(collection(db,"notices"),orderBy("createdAt","desc"));
+    const unsub=onSnapshot(q,snap=>setDbNotices(snap.docs.map(d=>({id:d.id,...d.data()}))));
+    return unsub;
+  },[]);
+
+  const saveNotice=async()=>{
+    if(!nf.title.trim()||!nf.body.trim()){alert("Title and body required");return;}
+    setNSaving(true);
+    try{
+      await addDoc(collection(db,"notices"),{...nf,createdAt:serverTimestamp()});
+      setNf({title:"",body:"",link:"",imageUrl:""});
+      setNSaved(true);setTimeout(()=>setNSaved(false),2000);
+    }catch(e){alert("Error: "+e.message);}
+    finally{setNSaving(false);}
+  };
+
+  const deleteNotice=async(id)=>{
+    await deleteDoc(doc(db,"notices",id));
+    setDelNoticeId(null);
+  };
+
   // Bulk upload
   const [upFile,setUpFile]=useState(null);
   const [upRows,setUpRows]=useState([]);
@@ -1202,7 +1309,7 @@ function AdminPage(){
   };
 
   const filtStu=students.filter(s=>s.name?.toLowerCase().includes(search.toLowerCase())||s.email?.toLowerCase().includes(search.toLowerCase()));
-  const TABS=[{id:"students",l:"👥 Students"},{id:"questions",l:"📝 Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"settings",l:"⚙️ Settings"}];
+  const TABS=[{id:"students",l:"👥 Students"},{id:"questions",l:"📝 Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}];
 
   return(
     <div style={{paddingTop:80,padding:"80px 28px 40px",maxWidth:1000,margin:"0 auto"}}>
@@ -1372,6 +1479,59 @@ function AdminPage(){
         </div>
       )}
 
+      {/* NOTICES TAB */}
+      {tab==="notices"&&(
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:22,alignItems:"start"}}>
+          {/* Create Notice */}
+          <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+            <h3 style={{fontWeight:900,marginBottom:4}}>📢 Post Announcement</h3>
+            <p style={{color:"#888",fontSize:13,marginBottom:20}}>Students see this as a popup after login and in the 🔔 bell</p>
+            {nSaved&&<div style={{background:"#dcfce7",border:"2px solid #86efac",borderRadius:9,padding:"9px 14px",marginBottom:14,fontSize:13,color:"#166534",fontWeight:600}}>✅ Announcement posted!</div>}
+            <label style={LS}>Title *</label>
+            <input value={nf.title} onChange={e=>setNf(f=>({...f,title:e.target.value}))} style={IS} placeholder="e.g. SSC CGL 2025 Exam Dates Released!"/>
+            <label style={LS}>Message *</label>
+            <textarea value={nf.body} onChange={e=>setNf(f=>({...f,body:e.target.value}))} rows={4} style={{...IS,resize:"vertical"}} placeholder="Full announcement text..."/>
+            <label style={LS}>Link (optional)</label>
+            <input value={nf.link} onChange={e=>setNf(f=>({...f,link:e.target.value}))} style={IS} placeholder="https://... (exam notification, form link)"/>
+            <label style={LS}>Image URL (optional)</label>
+            <input value={nf.imageUrl} onChange={e=>setNf(f=>({...f,imageUrl:e.target.value}))} style={IS} placeholder="https://... (banner image)"/>
+            <button onClick={saveNotice} disabled={nSaving} style={{width:"100%",padding:"12px 0",borderRadius:11,border:"none",background:nSaving?"#ccc":"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:14,cursor:nSaving?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              {nSaving&&<Spinner size={16} color="#fff"/>}📢 Post Announcement
+            </button>
+          </div>
+
+          {/* Live Notices List */}
+          <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+              <h3 style={{fontWeight:900,margin:0}}>Live Announcements</h3>
+              <span style={{background:"#FF6A00",color:"#fff",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:800}}>{dbNotices.length} · Live ☁️</span>
+            </div>
+            {dbNotices.length===0
+              ?<div style={{textAlign:"center",padding:32,color:"#aaa",fontSize:14}}>No announcements yet.<br/>Post one to notify students.</div>
+              :<div style={{display:"flex",flexDirection:"column",gap:12,maxHeight:460,overflowY:"auto"}}>
+                {dbNotices.map(n=>(
+                  <div key={n.id} style={{background:"#f9f9f9",borderRadius:12,padding:"14px 16px",border:"2px solid #f0f0f0"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:6}}>
+                      <div style={{fontWeight:800,fontSize:14,color:"#000",flex:1,marginRight:10}}>{n.title}</div>
+                      {delNoticeId===n.id
+                        ?<div style={{display:"flex",gap:6,flexShrink:0}}>
+                          <button onClick={()=>deleteNotice(n.id)} style={{padding:"4px 10px",borderRadius:7,border:"none",background:"#dc2626",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>Delete</button>
+                          <button onClick={()=>setDelNoticeId(null)} style={{padding:"4px 10px",borderRadius:7,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>Cancel</button>
+                        </div>
+                        :<button onClick={()=>setDelNoticeId(n.id)} style={{padding:"4px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontWeight:700,fontSize:11,cursor:"pointer",flexShrink:0}}>🗑️ Delete</button>
+                      }
+                    </div>
+                    <p style={{fontSize:13,color:"#666",lineHeight:1.5,margin:"0 0 6px"}}>{n.body}</p>
+                    {n.link&&<a href={n.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#FF6A00",fontWeight:700}}>🔗 {n.link.substring(0,40)}...</a>}
+                    <div style={{fontSize:11,color:"#ccc",marginTop:6}}>{n.createdAt?.seconds?new Date(n.createdAt.seconds*1000).toLocaleDateString("en-IN","dd/MM/yyyy"):"Just now"}</div>
+                  </div>
+                ))}
+              </div>
+            }
+          </div>
+        </div>
+      )}
+
       {/* BULK UPLOAD */}
       {tab==="bulk"&&(
         <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
@@ -1432,8 +1592,31 @@ export default function App(){
   const [examType,setExamType] = useState("ssc");
   const [activeTest,setActiveTest] = useState(null);
   const [testResult,setTestResult] = useState(null);
+  const [notices,setNotices] = useState([]);
+  const [showNoticeModal,setShowNoticeModal] = useState(false);
+  const [showNotifPanel,setShowNotifPanel] = useState(false);
+  const [unreadCount,setUnreadCount] = useState(0);
 
-  // Redirect after login
+  // Seed admin account on first load
+  useEffect(()=>{ ensureAdminExists(); },[]);
+
+  // Load notices from Firestore
+  useEffect(()=>{
+    const q = query(collection(db,"notices"), orderBy("createdAt","desc"), limit(10));
+    const unsub = onSnapshot(q, snap=>{
+      const list = snap.docs.map(d=>({id:d.id,...d.data()}));
+      setNotices(list);
+      const lastSeen = parseInt(localStorage.getItem("ra_last_notice")||"0");
+      const newCount = list.filter(n=>{
+        const t = n.createdAt?.seconds ? n.createdAt.seconds*1000 : 0;
+        return t > lastSeen;
+      }).length;
+      setUnreadCount(newCount);
+    });
+    return unsub;
+  },[]);
+
+  // Redirect after login + show notice modal
   useEffect(()=>{
     if(justLoggedIn && fbUser){
       clearJustLoggedIn();
@@ -1441,9 +1624,11 @@ export default function App(){
         setPage("admin");
       } else {
         setPage("home");
+        // Show notice modal to student if there are notices
+        if(notices.length>0) setShowNoticeModal(true);
       }
     }
-  },[justLoggedIn, fbUser]);
+  },[justLoggedIn, fbUser, notices]);
 
   const handleLogin = () => {
     // Redirect handled by justLoggedIn effect above
@@ -1487,8 +1672,13 @@ export default function App(){
         page={page} setPage={setPage}
         user={fbUser}
         examType={examType} setExamType={setExamType}
+        showNotifPanel={showNotifPanel} setShowNotifPanel={setShowNotifPanel}
+        unreadCount={unreadCount} setUnreadCount={setUnreadCount}
+        notices={notices}
       />
 
+      {showNoticeModal && notices.length>0 && <NoticeModal notices={notices} onClose={()=>setShowNoticeModal(false)}/>}
+      {showNotifPanel && <NotifPanel notices={notices} onClose={()=>setShowNotifPanel(false)}/>}
       {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
       {page==="auth"      && !fbUser      && <AuthPage    onLogin={handleLogin}/>}
       {page==="auth"      && fbUser       && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
