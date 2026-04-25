@@ -8,7 +8,6 @@ import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collec
 // Get from: https://console.firebase.google.com → Your Project → Settings → Web App
 
 const firebaseConfig = {
-const firebaseConfig = {
   apiKey: "AIzaSyCdjsy9rF3a9yQMK9T7el980wnrQyO1Atk",
   authDomain: "rank-achievers.firebaseapp.com",
   projectId: "rank-achievers",
