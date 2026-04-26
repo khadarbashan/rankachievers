@@ -2,19 +2,150 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="description" content="Rank Achievers Academy – SSC, Banking, Railways Aptitude Practice"/>
-    <meta name="theme-color" content="#FF6A00"/>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+
+    <!-- Primary Meta -->
     <title>Rank Achievers Academy · Anantapur</title>
+    <meta name="description" content="SSC, Banking & Railways Aptitude Practice — Rank Achievers Academy, Anantapur"/>
+    <meta name="keywords" content="SSC, Banking, Railways, Aptitude, Mock Test, Anantapur, Practice"/>
+    <meta name="author" content="Rank Achievers Academy"/>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json"/>
+    <meta name="theme-color" content="#FF6A00"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-title" content="Rank Achievers"/>
+
+    <!-- Icons -->
+    <link rel="icon" href="/icons/icon-192.png" type="image/png"/>
+    <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png"/>
+    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144.png"/>
+    <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128.png"/>
+    <link rel="apple-touch-icon" sizes="96x96"   href="/icons/icon-96.png"/>
+    <link rel="apple-touch-icon" sizes="72x72"   href="/icons/icon-72.png"/>
+
+    <!-- Open Graph (WhatsApp / Social sharing) -->
+    <meta property="og:type"        content="website"/>
+    <meta property="og:url"         content="https://www.rankachievers.in"/>
+    <meta property="og:title"       content="Rank Achievers Academy · Anantapur"/>
+    <meta property="og:description" content="SSC, Banking & Railways Aptitude Practice Platform"/>
+    <meta property="og:image"       content="https://www.rankachievers.in/icons/icon-512.png"/>
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card"        content="summary"/>
+    <meta name="twitter:title"       content="Rank Achievers Academy"/>
+    <meta name="twitter:description" content="SSC, Banking & Railways Aptitude Practice"/>
+    <meta name="twitter:image"       content="https://www.rankachievers.in/icons/icon-512.png"/>
+
     <style>
-      *    { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family:"Segoe UI",system-ui,sans-serif; background:#fff; }
-      #root{ min-height:100vh; }
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body {
+        font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+        background:#fff;
+        /* Safe area for notched phones */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      #root { min-height:100vh; }
+
+      /* PWA Install Banner */
+      #pwa-banner {
+        display:none;
+        position:fixed; bottom:16px; left:16px; right:16px;
+        background:#000; color:#fff;
+        border-radius:16px; padding:16px 20px;
+        box-shadow:0 8px 32px rgba(0,0,0,0.4);
+        z-index:9999;
+        border:2px solid #FF6A00;
+        align-items:center; gap:14px;
+      }
+      #pwa-banner.show { display:flex; }
+      #pwa-banner img { width:48px; height:48px; border-radius:10px; }
+      #pwa-banner .text { flex:1; }
+      #pwa-banner .text b { display:block; font-size:15px; color:#FF6A00; }
+      #pwa-banner .text span { font-size:12px; color:#aaa; }
+      #pwa-banner button {
+        padding:8px 16px; border-radius:10px; border:none;
+        background:linear-gradient(90deg,#FF6A00,#ff9a00);
+        color:#fff; font-weight:800; font-size:13px; cursor:pointer;
+        white-space:nowrap;
+      }
+      #pwa-close {
+        background:none !important; color:#666 !important;
+        padding:4px 8px !important; font-size:18px !important;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-banner">
+      <img src="/icons/icon-96.png" alt="Rank Achievers"/>
+      <div class="text">
+        <b>Install Rank Achievers App</b>
+        <span>Add to home screen for quick access</span>
+      </div>
+      <button id="pwa-install-btn">Install</button>
+      <button id="pwa-close">✕</button>
+    </div>
+
     <script type="module" src="/src/main.jsx"></script>
+
+    <script>
+      // ── Register Service Worker ──
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((reg) => console.log("[PWA] Service Worker registered:", reg.scope))
+            .catch((err) => console.log("[PWA] SW registration failed:", err));
+        });
+      }
+
+      // ── PWA Install Prompt ──
+      let deferredPrompt = null;
+      const banner    = document.getElementById("pwa-banner");
+      const installBtn= document.getElementById("pwa-install-btn");
+      const closeBtn  = document.getElementById("pwa-close");
+
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        // Show banner after 3 seconds
+        setTimeout(() => {
+          if (!localStorage.getItem("pwa-installed")) {
+            banner.classList.add("show");
+          }
+        }, 3000);
+      });
+
+      installBtn.addEventListener("click", async () => {
+        if (!deferredPrompt) return;
+        banner.classList.remove("show");
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === "accepted") {
+          localStorage.setItem("pwa-installed", "true");
+          console.log("[PWA] App installed!");
+        }
+        deferredPrompt = null;
+      });
+
+      closeBtn.addEventListener("click", () => {
+        banner.classList.remove("show");
+        localStorage.setItem("pwa-installed", "dismissed");
+      });
+
+      // ── Track install ──
+      window.addEventListener("appinstalled", () => {
+        console.log("[PWA] Rank Achievers installed as app!");
+        localStorage.setItem("pwa-installed", "true");
+        banner.classList.remove("show");
+      });
+    </script>
   </body>
 </html>

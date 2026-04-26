@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Offline — Rank Achievers Academy</title>
+  <style>
+    *{ margin:0; padding:0; box-sizing:border-box; }
+    body{
+      font-family:'Segoe UI',system-ui,sans-serif;
+      background:#000; color:#fff;
+      min-height:100vh; display:flex;
+      align-items:center; justify-content:center;
+      text-align:center; padding:24px;
+    }
+    .logo{
+      width:80px; height:80px;
+      background:linear-gradient(135deg,#FF6A00,#ff9a00);
+      border-radius:20px; display:flex;
+      align-items:center; justify-content:center;
+      font-size:32px; font-weight:900; color:#fff;
+      margin:0 auto 24px;
+    }
+    h1{ font-size:28px; font-weight:900; margin-bottom:12px; }
+    h1 span{ color:#FF6A00; }
+    p{ color:#888; font-size:16px; line-height:1.7; max-width:360px; margin:0 auto 32px; }
+    .btn{
+      display:inline-block; padding:14px 36px;
+      background:linear-gradient(90deg,#FF6A00,#ff9a00);
+      color:#fff; border-radius:12px; font-weight:800;
+      font-size:16px; text-decoration:none; cursor:pointer;
+      border:none; margin-bottom:16px;
+    }
+    .tip{
+      background:#111; border:1px solid #222;
+      border-radius:12px; padding:16px 20px;
+      max-width:360px; margin:24px auto 0;
+      font-size:13px; color:#666; line-height:1.6;
+    }
+    .tip b{ color:#FF6A00; }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="logo">RA</div>
+    <h1>You're <span>Offline</span></h1>
+    <p>No internet connection found. Please check your connection and try again.</p>
+    <button class="btn" onclick="window.location.reload()">🔄 Try Again</button>
+    <div class="tip">
+      <b>Tip:</b> Once you're back online, Rank Achievers will load instantly — your progress is saved to the cloud!
+    </div>
+  </div>
+</body>
+</html>
