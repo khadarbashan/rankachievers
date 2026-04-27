@@ -16,6 +16,7 @@ const firebaseConfig = {
   appId: "1:945705830932:web:6f373103a09fbd2512b501"
 };
 
+
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
@@ -174,37 +175,74 @@ async function checkAccess(uid){
 
 // ─── NAVBAR ───────────────────────────────────────────────────────────────────
 function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices}){
+  const [menuOpen,setMenuOpen]=useState(false);
+  const isMobile=window.innerWidth<=768;
   return(
-    <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"#fff",borderBottom:"2px solid #FF6A00",padding:"0 24px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 16px #FF6A0015"}}>
-      <button onClick={()=>setPage("home")} style={{background:"none",border:"none",cursor:"pointer"}}><Logo/></button>
-      <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-        {user && EXAM_TYPES.map(e=>(
-          <button key={e.id} onClick={()=>{setExamType(e.id);setPage("tests");}} style={{padding:"5px 12px",borderRadius:20,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{e.icon} {e.label}</button>
-        ))}
-        {["home","leaderboard"].map(p=>(
-          <button key={p} onClick={()=>setPage(p)} style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",background:page===p?"#FF6A00":"transparent",color:page===p?"#fff":"#000",fontWeight:700,fontSize:13,textTransform:"capitalize"}}>{p==="leaderboard"?"🏆 Board":p.charAt(0).toUpperCase()+p.slice(1)}</button>
-        ))}
-        {user?(
-          <>
-            <button onClick={()=>setPage("dashboard")} style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",background:page==="dashboard"?"#FF6A00":"#fff0e6",color:page==="dashboard"?"#fff":"#FF6A00",fontWeight:700,fontSize:13}}>Dashboard</button>
-            {user.role==="admin"&&<button onClick={()=>setPage("admin")} style={{padding:"6px 14px",borderRadius:8,border:"none",cursor:"pointer",background:page==="admin"?"#000":"#f0f0f0",color:page==="admin"?"#fff":"#000",fontWeight:700,fontSize:13}}>⚙️ Admin</button>}
-            <button onClick={()=>{setShowNotifPanel(p=>!p);localStorage.setItem("ra_last_notice",Date.now().toString());setUnreadCount&&setUnreadCount(0);}} style={{position:"relative",background:"none",border:"none",cursor:"pointer",fontSize:22,padding:"4px 8px",lineHeight:1}}>
-              🔔
-              {unreadCount>0&&<span style={{position:"absolute",top:-2,right:-2,background:"#ef4444",color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #fff"}}>{unreadCount}</span>}
-            </button>
-            <button onClick={()=>setPage("profile")} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 12px 5px 5px",borderRadius:24,border:"2px solid #f0f0f0",background:"#fff",cursor:"pointer"}}>
-              {user.photoURL
-                ?<img src={user.photoURL} alt="" style={{width:28,height:28,borderRadius:"50%"}}/>
-                :<div style={{width:28,height:28,borderRadius:"50%",background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#fff"}}>{user.name?.charAt(0).toUpperCase()}</div>
-              }
-              <span style={{fontWeight:700,fontSize:13,color:"#000"}}>{user.name?.split(" ")[0]}</span>
-            </button>
-          </>
-        ):(
-          <button onClick={()=>setPage("auth")} style={{padding:"6px 20px",borderRadius:8,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer",boxShadow:"0 2px 10px #FF6A0050"}}>Login / Register</button>
-        )}
-      </div>
-    </nav>
+    <>
+      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"#fff",borderBottom:"2px solid #FF6A00",padding:"0 16px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 16px #FF6A0015"}}>
+        <button onClick={()=>{setPage("home");setMenuOpen(false);}} style={{background:"none",border:"none",cursor:"pointer"}}><Logo/></button>
+
+        {/* Desktop nav */}
+        <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"nowrap"}} className="desktop-nav">
+          {user && EXAM_TYPES.map(e=>(
+            <button key={e.id} onClick={()=>{setExamType(e.id);setPage("tests");}} style={{padding:"5px 10px",borderRadius:20,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,fontSize:11,cursor:"pointer",display:isMobile?"none":"flex"}}>{e.icon} {e.label}</button>
+          ))}
+          {!isMobile&&["home","leaderboard"].map(p=>(
+            <button key={p} onClick={()=>setPage(p)} style={{padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",background:page===p?"#FF6A00":"transparent",color:page===p?"#fff":"#000",fontWeight:700,fontSize:13}}>{p==="leaderboard"?"🏆":p.charAt(0).toUpperCase()+p.slice(1)}</button>
+          ))}
+          {user?(
+            <>
+              {!isMobile&&<button onClick={()=>setPage("dashboard")} style={{padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",background:page==="dashboard"?"#FF6A00":"#fff0e6",color:page==="dashboard"?"#fff":"#FF6A00",fontWeight:700,fontSize:13}}>Dashboard</button>}
+              {!isMobile&&user.role==="admin"&&<button onClick={()=>setPage("admin")} style={{padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",background:page==="admin"?"#000":"#f0f0f0",color:page==="admin"?"#fff":"#000",fontWeight:700,fontSize:13}}>⚙️ Admin</button>}
+              <button onClick={()=>{setShowNotifPanel(p=>!p);localStorage.setItem("ra_last_notice",Date.now().toString());setUnreadCount&&setUnreadCount(0);}} style={{position:"relative",background:"none",border:"none",cursor:"pointer",fontSize:22,padding:"4px 6px",lineHeight:1}}>
+                🔔{unreadCount>0&&<span style={{position:"absolute",top:-2,right:-2,background:"#ef4444",color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #fff"}}>{unreadCount}</span>}
+              </button>
+              <button onClick={()=>{setPage("profile");setMenuOpen(false);}} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px 4px 4px",borderRadius:24,border:"2px solid #f0f0f0",background:"#fff",cursor:"pointer"}}>
+                {user.photoURL?<img src={user.photoURL} alt="" style={{width:26,height:26,borderRadius:"50%"}}/>:<div style={{width:26,height:26,borderRadius:"50%",background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900,color:"#fff"}}>{user.name?.charAt(0).toUpperCase()}</div>}
+                {!isMobile&&<span style={{fontWeight:700,fontSize:12,color:"#000"}}>{user.name?.split(" ")[0]}</span>}
+              </button>
+            </>
+          ):(
+            <button onClick={()=>setPage("auth")} style={{padding:"6px 16px",borderRadius:8,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:13,cursor:"pointer"}}>Login</button>
+          )}
+          {/* Hamburger — mobile only */}
+          {isMobile&&<button onClick={()=>setMenuOpen(o=>!o)} style={{background:"none",border:"none",cursor:"pointer",fontSize:24,padding:"4px",color:"#000",marginLeft:4}}>{menuOpen?"✕":"☰"}</button>}
+        </div>
+      </nav>
+
+      {/* Mobile Slide-down Menu */}
+      {isMobile&&menuOpen&&(
+        <div style={{position:"fixed",top:60,left:0,right:0,background:"#fff",zIndex:99,borderBottom:"2px solid #FF6A00",padding:"16px",boxShadow:"0 8px 24px #00000020"}}>
+          {/* Exam types */}
+          {user&&(
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#888",marginBottom:8,letterSpacing:1}}>CHOOSE EXAM</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {EXAM_TYPES.map(e=>(
+                  <button key={e.id} onClick={()=>{setExamType(e.id);setPage("tests");setMenuOpen(false);}} style={{padding:"8px 16px",borderRadius:20,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,fontSize:13,cursor:"pointer"}}>{e.icon} {e.label}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Nav links */}
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            {[
+              {l:"🏠 Home",p:"home"},
+              {l:"📝 Practice Tests",p:"tests"},
+              {l:"🏆 Leaderboard",p:"leaderboard"},
+              ...(user?[{l:"📊 Dashboard",p:"dashboard"}]:[]),
+              ...(user?.role==="admin"?[{l:"⚙️ Admin Panel",p:"admin"}]:[]),
+            ].map(item=>(
+              <button key={item.p} onClick={()=>{setPage(item.p);setMenuOpen(false);}} style={{padding:"12px 16px",borderRadius:10,border:"none",background:page===item.p?"#FF6A00":"#f8f8f8",color:page===item.p?"#fff":"#000",fontWeight:700,fontSize:15,cursor:"pointer",textAlign:"left"}}>
+                {item.l}
+              </button>
+            ))}
+            {!user&&<button onClick={()=>{setPage("auth");setMenuOpen(false);}} style={{padding:"12px 16px",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer",textAlign:"left",marginTop:8}}>Login / Register</button>}
+            {user&&<button onClick={()=>{setPage("profile");setMenuOpen(false);}} style={{padding:"12px 16px",borderRadius:10,border:"none",background:"#f8f8f8",color:"#000",fontWeight:700,fontSize:15,cursor:"pointer",textAlign:"left"}}>👤 {user.name?.split(" ")[0]} (Profile)</button>}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -284,22 +322,70 @@ function AuthPage({onLogin}){
 
   const validate=()=>{
     const e={};
+    const emailReg=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const pwdUpper=/[A-Z]/;
+    const pwdLower=/[a-z]/;
+    const pwdNum=/[0-9]/;
+    const pwdSpecial=/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
+
     if(mode!=="forgot"){
-      if(!form.email.trim()) e.email="Email required";
-      else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email="Invalid email";
-      if(!form.password) e.password="Password required";
-      else if(form.password.length<6) e.password="Min 6 characters";
+      // Email rules
+      if(!form.email.trim())
+        e.email="Email is required";
+      else if(!emailReg.test(form.email))
+        e.email="Enter a valid email address (e.g. name@gmail.com)";
+
+      // Password rules
+      if(!form.password)
+        e.password="Password is required";
+      else if(form.password.length<8)
+        e.password="Password must be at least 8 characters";
+      else if(!pwdUpper.test(form.password))
+        e.password="Password must contain at least one uppercase letter (A-Z)";
+      else if(!pwdLower.test(form.password))
+        e.password="Password must contain at least one lowercase letter (a-z)";
+      else if(!pwdNum.test(form.password))
+        e.password="Password must contain at least one number (0-9)";
+      else if(!pwdSpecial.test(form.password))
+        e.password="Password must contain at least one special character (!@#$%...)";
     }
+
     if(mode==="register"){
-      if(!form.name.trim()) e.name="Name required";
-      if(form.phone&&!/^[0-9]{10}$/.test(form.phone)) e.phone="10-digit number";
-      if(!form.confirm) e.confirm="Confirm your password";
-      else if(form.confirm!==form.password) e.confirm="Passwords do not match";
+      if(!form.name.trim())
+        e.name="Full name is required";
+      else if(form.name.trim().length<3)
+        e.name="Name must be at least 3 characters";
+      if(form.phone&&!/^[0-9]{10}$/.test(form.phone))
+        e.phone="Enter a valid 10-digit mobile number";
+      if(!form.confirm)
+        e.confirm="Please confirm your password";
+      else if(form.confirm!==form.password)
+        e.confirm="Passwords do not match";
     }
-    if(mode==="forgot"&&!form.email.trim()) e.email="Email required";
+
+    if(mode==="forgot"){
+      if(!form.email.trim()) e.email="Email is required";
+      else if(!emailReg.test(form.email)) e.email="Enter a valid email address";
+    }
+
     setErrors(e);
     return Object.keys(e).length===0;
   };
+
+  // Password strength indicator
+  const getPwdStrength=(pwd)=>{
+    if(!pwd) return null;
+    let score=0;
+    if(pwd.length>=8) score++;
+    if(/[A-Z]/.test(pwd)) score++;
+    if(/[a-z]/.test(pwd)) score++;
+    if(/[0-9]/.test(pwd)) score++;
+    if(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) score++;
+    if(score<=2) return {label:"Weak",color:"#ef4444",width:"33%"};
+    if(score===3||score===4) return {label:"Medium",color:"#f59e0b",width:"66%"};
+    return {label:"Strong 💪",color:"#22c55e",width:"100%"};
+  };
+  const pwdStrength=mode==="register"?getPwdStrength(form.password):null;
 
   const handleGoogle=async()=>{
     setGLoading(true);
@@ -345,8 +431,8 @@ function AuthPage({onLogin}){
   const sw=m=>{setMode(m);setErrors({});setSuccess("");};
 
   return(
-    <div style={{paddingTop:60,minHeight:"100vh",background:"linear-gradient(135deg,#000 0%,#1a0500 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:"80px 20px 40px"}}>
-      <div style={{background:"#fff",borderRadius:24,padding:"40px 40px 32px",width:"100%",maxWidth:440,boxShadow:"0 24px 80px #FF6A0040"}}>
+    <div style={{paddingTop:60,minHeight:"100vh",background:"linear-gradient(135deg,#000 0%,#1a0500 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:window.innerWidth<=768?"70px 16px 32px":"80px 20px 40px"}}>
+      <div style={{background:"#fff",borderRadius:24,padding:window.innerWidth<=768?"28px 20px 24px":"40px 40px 32px",width:"100%",maxWidth:440,boxShadow:"0 24px 80px #FF6A0040"}}>
         <div style={{textAlign:"center",marginBottom:24}}>
           <Logo/>
           <h2 style={{marginTop:16,fontWeight:900,fontSize:22}}>{mode==="login"?"Welcome Back 👋":mode==="register"?"Create Account 🚀":"Reset Password 🔑"}</h2>
@@ -381,7 +467,26 @@ function AuthPage({onLogin}){
         <label style={LS}>Email Address *</label>
         <input value={form.email} onChange={e=>f("email",e.target.value)} type="email" placeholder="you@gmail.com" style={{...IS,borderColor:errors.email?"#fca5a5":"#f0f0f0"}}/><Err m={errors.email}/>
 
-        {mode!=="forgot"&&<><label style={LS}>{mode==="register"?"Create Password *":"Password *"}</label><PwdInput value={form.password} onChange={e=>f("password",e.target.value)} placeholder={mode==="register"?"Min 6 characters":"Enter password"}/><Err m={errors.password}/></>}
+        {mode!=="forgot"&&(
+          <>
+            <label style={LS}>{mode==="register"?"Create Password *":"Password *"}</label>
+            <PwdInput value={form.password} onChange={e=>f("password",e.target.value)} placeholder={mode==="register"?"Min 8 chars, uppercase, number, symbol":"Enter password"}/>
+            {mode==="register"&&form.password&&pwdStrength&&(
+              <div style={{marginBottom:10,marginTop:-2}}>
+                <div style={{height:5,background:"#f0f0f0",borderRadius:4,overflow:"hidden",marginBottom:4}}>
+                  <div style={{height:"100%",width:pwdStrength.width,background:pwdStrength.color,borderRadius:4,transition:"all .3s"}}/>
+                </div>
+                <div style={{fontSize:11,color:pwdStrength.color,fontWeight:700}}>{pwdStrength.label}</div>
+              </div>
+            )}
+            {mode==="register"&&!errors.password&&(
+              <div style={{fontSize:11,color:"#aaa",marginBottom:8,lineHeight:1.6}}>
+                ✓ Min 8 chars &nbsp;✓ Uppercase &nbsp;✓ Lowercase &nbsp;✓ Number &nbsp;✓ Symbol
+              </div>
+            )}
+            <Err m={errors.password}/>
+          </>
+        )}
 
         {mode==="register"&&(
           <>
@@ -414,9 +519,9 @@ function HomePage({setPage,user,setExamType}){
         <div style={{position:"absolute",inset:0,opacity:.05,backgroundImage:"linear-gradient(#FF6A00 1px,transparent 1px),linear-gradient(90deg,#FF6A00 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
         <div style={{position:"absolute",top:-100,right:-100,width:500,height:500,borderRadius:"50%",background:"radial-gradient(#FF6A0030,transparent 70%)"}}/>
         <div style={{position:"absolute",bottom:-100,left:-100,width:400,height:400,borderRadius:"50%",background:"radial-gradient(#FF6A0020,transparent 70%)"}}/>
-        <div style={{flex:1,display:"flex",position:"relative",maxWidth:1200,margin:"0 auto",width:"100%",padding:"40px",gap:40,alignItems:"center"}}>
+        <div style={{flex:1,display:"flex",position:"relative",maxWidth:1200,margin:"0 auto",width:"100%",padding:"20px",gap:32,alignItems:"center",flexDirection:window.innerWidth<=768?"column":"row",justifyContent:"center"}}>
           {/* LEFT */}
-          <div style={{flex:1}}>
+          <div style={{flex:1,textAlign:window.innerWidth<=768?"center":"left"}}>
             <div style={{display:"inline-block",background:"#FF6A00",color:"#fff",padding:"5px 18px",borderRadius:20,fontSize:12,fontWeight:700,letterSpacing:2,marginBottom:24}}>ANANTAPUR'S #1 EXAM PREP PLATFORM</div>
             <h1 style={{fontSize:"clamp(36px,5vw,64px)",fontWeight:900,color:"#fff",lineHeight:1.05,margin:"0 0 20px",letterSpacing:-2}}>
               Crack Your<br/><span style={{color:"#FF6A00"}}>Dream Exam.</span><br/><span style={{fontSize:"60%",color:"#888"}}>Right Here in Anantapur.</span>
@@ -433,7 +538,7 @@ function HomePage({setPage,user,setExamType}){
             </div>
           </div>
           {/* RIGHT — Exam Selector */}
-          <div style={{width:320,flexShrink:0}}>
+          <div style={{width:window.innerWidth<=768?"100%":"320px",flexShrink:0}}>
             <div style={{background:"rgba(255,255,255,0.06)",backdropFilter:"blur(10px)",borderRadius:24,padding:24,border:"1px solid rgba(255,106,0,0.25)"}}>
               <div style={{color:"#FF6A00",fontWeight:800,fontSize:14,marginBottom:4,letterSpacing:1}}>CHOOSE YOUR EXAM</div>
               <div style={{color:"#666",fontSize:12,marginBottom:20}}>Select to start your preparation</div>
@@ -455,7 +560,7 @@ function HomePage({setPage,user,setExamType}){
           </div>
         </div>
       </div>
-      <div style={{background:"#FF6A00",padding:"18px 40px",display:"flex",justifyContent:"center",gap:48,flexWrap:"wrap"}}>
+      <div style={{background:"#FF6A00",padding:window.innerWidth<=768?"14px 16px":"18px 40px",display:"flex",justifyContent:"center",gap:window.innerWidth<=768?"20px":"48px",flexWrap:"wrap"}}>
         {[["⏱️","Real Exam Timer"],["📹","Video Solutions"],["☁️","Cloud Scores"],["🔵","Google Login"],["🔒↔🆓","Access Control"]].map(([i,l])=>(
           <div key={l} style={{textAlign:"center"}}><span style={{fontSize:18}}>{i}</span><div style={{fontSize:11,color:"#ffe0c0",fontWeight:700,marginTop:2}}>{l}</div></div>
         ))}
@@ -515,9 +620,9 @@ function TestsPage({user,onStartTest,examType,setExamType}){
   const isPaidLocked=settings.contentMode==="paid"&&!userAccess&&user?.role!=="admin";
 
   return(
-    <div style={{paddingTop:80,padding:"80px 40px 40px",maxWidth:1100,margin:"0 auto"}}>
+    <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:1100,margin:"0 auto"}}>
       {/* Exam tabs */}
-      <div style={{display:"flex",gap:12,marginBottom:28,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:window.innerWidth<=768?8:12,marginBottom:window.innerWidth<=768?16:28,flexWrap:"wrap"}}>
         {EXAM_TYPES.map(e=>(
           <button key={e.id} onClick={()=>{setExamType(e.id);setSelTopic(null);}} style={{padding:"12px 24px",borderRadius:14,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:800,fontSize:14,cursor:"pointer",boxShadow:examType===e.id?`0 4px 20px ${e.color}40`:"none"}}>
             {e.icon} {e.label}<span style={{display:"block",fontSize:10,opacity:.8,marginTop:2}}>{e.fullName}</span>
@@ -705,36 +810,35 @@ function TestPage({test,user,onFinish}){
   );
 
   return(
-    <div style={{paddingTop:60,height:"100vh",display:"flex",flexDirection:"column",background:"#f8f8f8"}}>
+    <div style={{paddingTop:60,height:"100vh",display:"flex",flexDirection:"column",background:"#f8f8f8",overflow:"hidden"}}>
       {/* Header */}
-      <div style={{background:"#000",color:"#fff",padding:"10px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div>
-          <div style={{fontWeight:800,fontSize:14}}>{et.icon} {test.title}</div>
-          <div style={{fontSize:11,marginTop:2,color:isTimed?"#f59e0b":"#22c55e",fontWeight:700}}>{isTimed?"⏱️ Timed Mode":"🧘 Practice Mode (No Timer)"}</div>
+      <div style={{background:"#000",color:"#fff",padding:window.innerWidth<=768?"8px 12px":"10px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexShrink:0}}>
+        <div style={{minWidth:0,flex:1}}>
+          <div style={{fontWeight:800,fontSize:window.innerWidth<=768?12:14,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{et.icon} {test.title}</div>
+          <div style={{fontSize:10,marginTop:2,color:isTimed?"#f59e0b":"#22c55e",fontWeight:700}}>{isTimed?"⏱️ Timed":"🧘 Practice"}</div>
         </div>
-        <div style={{display:"flex",gap:14,alignItems:"center"}}>
+        <div style={{display:"flex",gap:window.innerWidth<=768?6:14,alignItems:"center",flexShrink:0}}>
           {isTimed?(
             <div style={{textAlign:"center"}}>
-              <div style={{fontSize:10,color:"#aaa",marginBottom:2,letterSpacing:1}}>TIME LEFT</div>
-              <div style={{background:tc,color:"#fff",padding:"6px 16px",borderRadius:8,fontWeight:900,fontSize:20,fontFamily:"monospace",boxShadow:`0 0 16px ${tc}80`}}>⏱ {fmtT(timeLeft)}</div>
+              <div style={{fontSize:9,color:"#aaa",marginBottom:1,letterSpacing:.5}}>LEFT</div>
+              <div style={{background:tc,color:"#fff",padding:window.innerWidth<=768?"4px 10px":"6px 16px",borderRadius:8,fontWeight:900,fontSize:window.innerWidth<=768?15:20,fontFamily:"monospace",boxShadow:`0 0 12px ${tc}60`}}>⏱{fmtT(timeLeft)}</div>
             </div>
           ):(
-            <div style={{background:"#22c55e20",border:"2px solid #22c55e40",borderRadius:10,padding:"8px 16px",textAlign:"center"}}>
-              <div style={{fontSize:11,color:"#22c55e",fontWeight:700}}>🧘 PRACTICE MODE</div>
-              <div style={{fontSize:11,color:"#666"}}>No time limit</div>
+            <div style={{background:"#22c55e20",border:"1px solid #22c55e40",borderRadius:8,padding:window.innerWidth<=768?"4px 8px":"8px 16px",textAlign:"center"}}>
+              <div style={{fontSize:window.innerWidth<=768?9:11,color:"#22c55e",fontWeight:700}}>🧘 Practice</div>
             </div>
           )}
           <div style={{textAlign:"center"}}>
-            <div style={{fontSize:10,color:"#aaa",marginBottom:2,letterSpacing:1}}>THIS QUESTION</div>
-            <div style={{background:liveQSec>120?"#dc2626":liveQSec>60?"#f59e0b":"#334155",color:"#fff",padding:"6px 16px",borderRadius:8,fontWeight:900,fontSize:20,fontFamily:"monospace",transition:"background .5s"}}>🕐 {fmtT(liveQSec)}</div>
+            <div style={{fontSize:9,color:"#aaa",marginBottom:1,letterSpacing:.5}}>THIS Q</div>
+            <div style={{background:liveQSec>120?"#dc2626":liveQSec>60?"#f59e0b":"#334155",color:"#fff",padding:window.innerWidth<=768?"4px 10px":"6px 16px",borderRadius:8,fontWeight:900,fontSize:window.innerWidth<=768?15:20,fontFamily:"monospace",transition:"background .5s"}}>🕐{fmtT(liveQSec)}</div>
           </div>
         </div>
-        <button onClick={()=>setShowSubmitModal(true)} style={{padding:"8px 20px",borderRadius:8,border:"none",background:"#FF6A00",color:"#fff",fontWeight:800,cursor:"pointer",boxShadow:"0 0 12px #FF6A0070"}}>Submit Test</button>
+        <button onClick={()=>setShowSubmitModal(true)} style={{padding:window.innerWidth<=768?"6px 12px":"8px 20px",borderRadius:8,border:"none",background:"#FF6A00",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:window.innerWidth<=768?12:14,whiteSpace:"nowrap",boxShadow:"0 0 12px #FF6A0070"}}>Submit</button>
       </div>
 
-      <div style={{display:"flex",flex:1,overflow:"hidden"}}>
-        {/* Question panel */}
-        <div style={{flex:1,padding:24,overflowY:"auto"}}>
+      <div style={{display:"flex",flex:1,overflow:"hidden",flexDirection:window.innerWidth<=768?"column":"row"}}>
+        {/* Question panel — takes all space above palette on mobile */}
+        <div style={{flex:1,padding:window.innerWidth<=768?"10px 12px":24,overflowY:"auto",minHeight:0}}>
           <div style={{background:"#fff",borderRadius:16,padding:26,boxShadow:"0 2px 16px #0000000a"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
@@ -758,38 +862,87 @@ function TestPage({test,user,onFinish}){
                 </label>
               ))}
             </div>
-            <div style={{display:"flex",gap:10,marginTop:24}}>
-              <button onClick={()=>current>0&&goTo(current-1)} disabled={current===0} style={{padding:"10px 20px",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer",fontSize:13}}>← Prev</button>
-              <button onClick={markReview} style={{padding:"10px 20px",borderRadius:10,border:`2px solid ${et.color}`,background:"#fff",color:et.color,fontWeight:700,cursor:"pointer",fontSize:13}}>🔖 Review</button>
-              <button onClick={saveAndNext} style={{flex:1,padding:"10px 20px",borderRadius:10,border:"none",background:`linear-gradient(90deg,${et.color},${et.color}cc)`,color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13}}>Save & Next →</button>
+            <div style={{display:"flex",gap:8,marginTop:window.innerWidth<=768?16:24}}>
+              <button onClick={()=>current>0&&goTo(current-1)} disabled={current===0} style={{padding:window.innerWidth<=768?"10px 14px":"10px 20px",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer",fontSize:window.innerWidth<=768?13:13,opacity:current===0?.4:1}}>←</button>
+              <button onClick={markReview} style={{padding:window.innerWidth<=768?"10px 14px":"10px 20px",borderRadius:10,border:`2px solid ${et.color}`,background:"#fff",color:et.color,fontWeight:700,cursor:"pointer",fontSize:13}}>🔖</button>
+              <button onClick={saveAndNext} style={{flex:1,padding:"10px 16px",borderRadius:10,border:"none",background:`linear-gradient(90deg,${et.color},${et.color}cc)`,color:"#fff",fontWeight:800,cursor:"pointer",fontSize:14}}>Save & Next →</button>
             </div>
           </div>
         </div>
-        {/* Palette */}
-        <div style={{width:250,background:"#fff",borderLeft:"2px solid #f0f0f0",padding:18,overflowY:"auto"}}>
-          <h3 style={{fontWeight:800,fontSize:13,marginBottom:12}}>Question Palette</h3>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
-            {[["#22c55e","Answered"],["#ef4444","Not Ans."],["#e5e7eb","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
-              <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10}}><div style={{width:10,height:10,borderRadius:3,background:c}}/><span style={{color:"#555"}}>{l}</span></div>
-            ))}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
-            {questions.map((_,i)=>(
-              <button key={i} onClick={()=>goTo(i)} style={{width:36,height:36,borderRadius:7,border:"2px solid",borderColor:current===i?"#000":"transparent",background:pc(i),color:pc(i)==="#e5e7eb"?"#555":"#fff",fontWeight:800,fontSize:12,cursor:"pointer",boxShadow:current===i?"0 0 0 3px #00000030":"none"}}>{i+1}</button>
-            ))}
-          </div>
-          <div style={{marginTop:14,padding:12,background:"#f8f8f8",borderRadius:10}}>
-            <div style={{fontSize:11,color:"#666",marginBottom:6}}>Progress</div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
-              <span>✅ {Object.values(status).filter(s=>s==="answered").length}</span>
-              <span>🔖 {Object.values(status).filter(s=>s==="review").length}</span>
-              <span>⬜ {questions.length-Object.keys(status).length}</span>
+        {/* Palette — bottom bar on mobile, side panel on desktop */}
+        {window.innerWidth<=768?(
+          /* ── MOBILE: fixed bottom palette bar ── */
+          <div style={{background:"#fff",borderTop:"2px solid #FF6A00",padding:"8px 12px",flexShrink:0}}>
+            {/* Progress summary */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#555"}}>Question Palette</div>
+              <div style={{display:"flex",gap:10,fontSize:11}}>
+                <span style={{color:"#22c55e",fontWeight:700}}>✅{Object.values(status).filter(s=>s==="answered").length}</span>
+                <span style={{color:"#FF6A00",fontWeight:700}}>🔖{Object.values(status).filter(s=>s==="review").length}</span>
+                <span style={{color:"#888",fontWeight:700}}>⬜{questions.length-Object.keys(status).length}</span>
+              </div>
+            </div>
+            {/* Horizontal scrollable number buttons */}
+            <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,WebkitOverflowScrolling:"touch"}}>
+              {questions.map((_,i)=>(
+                <button key={i} onClick={()=>goTo(i)} style={{
+                  minWidth:34,height:34,borderRadius:8,border:"2px solid",
+                  borderColor:current===i?"#000":"transparent",
+                  background:pc(i),
+                  color:pc(i)==="#e5e7eb"?"#555":"#fff",
+                  fontWeight:800,fontSize:12,cursor:"pointer",flexShrink:0,
+                  boxShadow:current===i?"0 0 0 3px #FF6A0060":"none",
+                  transform:current===i?"scale(1.15)":"scale(1)",
+                  transition:"transform .15s"
+                }}>{i+1}</button>
+              ))}
+            </div>
+            {/* Color legend */}
+            <div style={{display:"flex",gap:12,marginTop:8,flexWrap:"wrap"}}>
+              {[["#22c55e","Answered"],["#ef4444","Not Ans."],["#e5e7eb","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
+                <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10}}>
+                  <div style={{width:10,height:10,borderRadius:3,background:c,flexShrink:0}}/>
+                  <span style={{color:"#666"}}>{l}</span>
+                </div>
+              ))}
             </div>
           </div>
-          <div style={{marginTop:12,padding:"8px 12px",background:"#f0fdf4",borderRadius:10,border:"1px solid #86efac"}}>
-            <div style={{fontSize:11,color:"#16a34a",fontWeight:700}}>☁️ Results auto-saved to cloud</div>
+        ):(
+          /* ── DESKTOP: right side panel ── */
+          <div style={{width:250,background:"#fff",borderLeft:"2px solid #f0f0f0",padding:18,overflowY:"auto",flexShrink:0}}>
+            <h3 style={{fontWeight:800,fontSize:13,marginBottom:12}}>Question Palette</h3>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+              {[["#22c55e","Answered"],["#ef4444","Not Ans."],["#e5e7eb","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
+                <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10}}>
+                  <div style={{width:10,height:10,borderRadius:3,background:c}}/>
+                  <span style={{color:"#555"}}>{l}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
+              {questions.map((_,i)=>(
+                <button key={i} onClick={()=>goTo(i)} style={{
+                  width:36,height:36,borderRadius:7,border:"2px solid",
+                  borderColor:current===i?"#000":"transparent",
+                  background:pc(i),color:pc(i)==="#e5e7eb"?"#555":"#fff",
+                  fontWeight:800,fontSize:12,cursor:"pointer",
+                  boxShadow:current===i?"0 0 0 3px #00000030":"none"
+                }}>{i+1}</button>
+              ))}
+            </div>
+            <div style={{marginTop:14,padding:12,background:"#f8f8f8",borderRadius:10}}>
+              <div style={{fontSize:11,color:"#666",marginBottom:6}}>Progress</div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
+                <span>✅ {Object.values(status).filter(s=>s==="answered").length}</span>
+                <span>🔖 {Object.values(status).filter(s=>s==="review").length}</span>
+                <span>⬜ {questions.length-Object.keys(status).length}</span>
+              </div>
+            </div>
+            <div style={{marginTop:12,padding:"8px 12px",background:"#f0fdf4",borderRadius:10,border:"1px solid #86efac"}}>
+              <div style={{fontSize:11,color:"#16a34a",fontWeight:700}}>☁️ Auto-saved to cloud</div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {showSubmitModal&&(
@@ -835,7 +988,7 @@ function ResultPage({result,onViewSolutions,onBack}){
   const timeSorted=result.questions.map((q,i)=>({qIndex:i,qNum:i+1,text:q.question_text,timeTaken:result.qTimes[i]||0,correct:result.answers[i]===q.correct_answer,answered:!!result.answers[i]})).filter(q=>q.timeTaken>0).sort((a,b)=>b.timeTaken-a.timeTaken).slice(0,10);
   const maxTime=timeSorted[0]?.timeTaken||1;
   return(
-    <div style={{paddingTop:80,padding:"80px 40px 40px",maxWidth:680,margin:"0 auto"}}>
+    <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:680,margin:"0 auto"}}>
       {auto&&<div style={{background:"#fff3cd",border:"2px solid #ffc107",borderRadius:10,padding:"10px 18px",marginBottom:20,textAlign:"center"}}>⏰ Time up! Auto-submitted.</div>}
       <div style={{textAlign:"center",marginBottom:28}}>
         <div style={{fontSize:56,marginBottom:10}}>{accuracy>=80?"🏆":accuracy>=60?"🎯":"📚"}</div>
@@ -845,7 +998,7 @@ function ResultPage({result,onViewSolutions,onBack}){
           <span style={{fontSize:12,color:"#16a34a",fontWeight:700}}>☁️ Results saved to your cloud account</span>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:14,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"repeat(2,1fr)":"repeat(2,1fr)",gap:10,marginBottom:20}}>
         {[{l:"Score",v:`${score}/${total}`,i:"📝"},{l:"Accuracy",v:`${accuracy}%`,i:"🎯"},{l:"Time Spent",v:fmtT(timeSpent),i:"⏱️"},{l:"Difficulty",v:(test.difficulty||"Mixed").toUpperCase(),i:"💪"}].map(item=>(
           <div key={item.l} style={{background:"#fff",border:"2px solid #f0f0f0",borderRadius:14,padding:"20px 16px",textAlign:"center"}}>
             <div style={{fontSize:26,marginBottom:6}}>{item.i}</div>
@@ -906,7 +1059,7 @@ function SolutionsPage({result,onBack}){
     return true;
   });
   return(
-    <div style={{paddingTop:80,padding:"80px 40px 40px",maxWidth:800,margin:"0 auto"}}>
+    <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:800,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:22}}>
         <button onClick={onBack} style={{padding:"8px 14px",borderRadius:8,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>← Back</button>
         <h1 style={{fontSize:24,fontWeight:900,margin:0}}>Answers & <span style={{color:et.color}}>Solutions</span></h1>
@@ -973,7 +1126,7 @@ function DashboardPage({user,setPage}){
   const isPaid=settings.contentMode==="paid";
 
   return(
-    <div style={{paddingTop:80,padding:"80px 40px 40px",maxWidth:900,margin:"0 auto"}}>
+    <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:900,margin:"0 auto"}}>
       {/* Profile card */}
       <div style={{background:"linear-gradient(135deg,#000,#1a0a00)",borderRadius:20,padding:26,display:"flex",alignItems:"center",gap:22,marginBottom:24,border:"2px solid #FF6A0030"}}>
         {user?.photoURL
@@ -990,7 +1143,10 @@ function DashboardPage({user,setPage}){
             <span style={{background:"#334155",color:"#94a3b8",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700}}>☁️ Cloud Synced</span>
           </div>
         </div>
-        <button onClick={()=>setPage("tests")} style={{padding:"10px 22px",borderRadius:10,border:"none",background:"#FF6A00",color:"#fff",fontWeight:800,cursor:"pointer"}}>Practice →</button>
+        <div style={{display:"flex",flexDirection:"column",gap:6,flexShrink:0}}>
+          <button onClick={()=>setPage("tests")} style={{padding:"9px 18px",borderRadius:10,border:"none",background:"#FF6A00",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13}}>📝 Practice</button>
+          <button onClick={()=>setPage("leaderboard")} style={{padding:"9px 18px",borderRadius:10,border:"2px solid #FF6A00",background:"transparent",color:"#FF6A00",fontWeight:700,cursor:"pointer",fontSize:13}}>🏆 Leaderboard</button>
+        </div>
       </div>
 
       {isPaid&&!userAccess&&(
@@ -1000,7 +1156,7 @@ function DashboardPage({user,setPage}){
         </div>
       )}
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:24}}>
+      <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"repeat(1,1fr)":"repeat(3,1fr)",gap:14,marginBottom:24}}>
         {[{l:"Tests Attempted",v:loading?"...":total,i:"📝"},{l:"Average Accuracy",v:loading?"...":`${avgAcc}%`,i:"🎯"},{l:"Avg Time/Test",v:loading?"...":fmtT(avgTime),i:"⏱️"}].map(s=>(
           <div key={s.l} style={{background:"#fff",borderRadius:14,padding:"20px 16px",border:"2px solid #f0f0f0",textAlign:"center"}}>
             <div style={{fontSize:28,marginBottom:6}}>{s.i}</div>
@@ -1010,32 +1166,133 @@ function DashboardPage({user,setPage}){
         ))}
       </div>
 
+      {/* ── Per-Exam Breakdown ── */}
+      {!loading&&attempts.length>0&&(
+        <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"repeat(3,1fr)",gap:14,marginBottom:20}}>
+          {EXAM_TYPES.map(et=>{
+            const ea=attempts.filter(a=>a.examType===et.id);
+            const eAcc=ea.length?Math.round(ea.reduce((s,a)=>s+(a.accuracy||0),0)/ea.length):0;
+            const best=ea.length?Math.max(...ea.map(a=>a.accuracy||0)):0;
+            return(
+              <div key={et.id} style={{background:"#fff",borderRadius:14,padding:"16px 18px",border:`2px solid ${et.color}30`}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                  <span style={{fontSize:22}}>{et.icon}</span>
+                  <div>
+                    <div style={{fontWeight:800,fontSize:14,color:et.color}}>{et.label}</div>
+                    <div style={{fontSize:11,color:"#888"}}>{ea.length} tests taken</div>
+                  </div>
+                </div>
+                {ea.length===0?(
+                  <div style={{fontSize:12,color:"#ccc",textAlign:"center",padding:"8px 0"}}>Not attempted yet</div>
+                ):(
+                  <>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:8}}>
+                      <span style={{color:"#666"}}>Avg Accuracy</span>
+                      <span style={{fontWeight:800,color:eAcc>=80?"#22c55e":eAcc>=60?"#f59e0b":"#ef4444"}}>{eAcc}%</span>
+                    </div>
+                    <div style={{background:"#f0f0f0",borderRadius:6,height:8,marginBottom:8,overflow:"hidden"}}>
+                      <div style={{height:"100%",borderRadius:6,width:eAcc+"%",background:et.color,transition:"width 1s"}}/>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#888"}}>
+                      <span>Best: <b style={{color:et.color}}>{best}%</b></span>
+                      <span>Tests: <b>{ea.length}</b></span>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── All Attempts Table ── */}
       <div style={{background:"#fff",borderRadius:14,padding:22,border:"2px solid #f0f0f0"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <h3 style={{fontWeight:900,margin:0}}>Recent Attempts</h3>
-          <span style={{fontSize:12,color:"#888"}}>☁️ Synced from cloud</span>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+          <h3 style={{fontWeight:900,margin:0}}>All Attempts History</h3>
+          <span style={{fontSize:12,color:"#22c55e",fontWeight:600}}>☁️ Live from cloud</span>
         </div>
         {loading?(
           <div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
         ):attempts.length===0?(
-          <div style={{textAlign:"center",padding:32,color:"#aaa"}}>
-            <p style={{marginBottom:16}}>No tests attempted yet.</p>
-            <button onClick={()=>setPage("tests")} style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#FF6A00",color:"#fff",fontWeight:800,cursor:"pointer"}}>Take First Test →</button>
+          <div style={{textAlign:"center",padding:40,color:"#aaa"}}>
+            <div style={{fontSize:48,marginBottom:12}}>📚</div>
+            <p style={{marginBottom:16,fontSize:15}}>No tests attempted yet.<br/>Start practicing to see your progress here!</p>
+            <button onClick={()=>setPage("tests")} style={{padding:"12px 28px",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:15}}>Start First Test →</button>
           </div>
         ):(
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr style={{borderBottom:"2px solid #f0f0f0"}}>{["Test","Exam","Mode","Score","Accuracy","Time"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:11,color:"#888",fontWeight:700}}>{h}</th>)}</tr></thead>
-            <tbody>{attempts.map((a,i)=>(
-              <tr key={a.id||i} style={{borderBottom:"1px solid #f8f8f8"}}>
-                <td style={{padding:"10px",fontWeight:600,fontSize:12}}>{a.testTitle}</td>
-                <td style={{padding:"10px",fontSize:12}}>{EXAM_TYPES.find(e=>e.id===a.examType)?.icon} {a.examType?.toUpperCase()}</td>
-                <td style={{padding:"10px",fontSize:11}}>{a.mode==="practice"?"🧘":"⏱️"} {a.mode}</td>
-                <td style={{padding:"10px",fontSize:12}}>{a.score}/{a.total}</td>
-                <td style={{padding:"10px"}}><span style={{background:a.accuracy>=80?"#dcfce7":a.accuracy>=60?"#fef9c3":"#fee2e2",color:a.accuracy>=80?"#16a34a":a.accuracy>=60?"#854d0e":"#dc2626",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700}}>{a.accuracy}%</span></td>
-                <td style={{padding:"10px",fontSize:12,color:"#666"}}>{fmtT(a.timeSpent||0)}</td>
-              </tr>
-            ))}</tbody>
-          </table>
+          window.innerWidth<=768?(
+            /* Mobile card view */
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {attempts.map((a,i)=>{
+                const et=EXAM_TYPES.find(e=>e.id===a.examType);
+                return(
+                  <div key={a.id||i} style={{background:"#f9f9f9",borderRadius:12,padding:"14px 16px",border:"2px solid #f0f0f0"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:8}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>{a.testTitle}</div>
+                        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                          <span style={{background:et?.color||"#FF6A00",color:"#fff",padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:700}}>{et?.icon} {a.examType?.toUpperCase()}</span>
+                          <span style={{background:"#f0f0f0",color:"#555",padding:"2px 8px",borderRadius:10,fontSize:10}}>{a.mode==="practice"?"🧘 Practice":"⏱️ Timed"}</span>
+                        </div>
+                      </div>
+                      <span style={{background:a.accuracy>=80?"#dcfce7":a.accuracy>=60?"#fef9c3":"#fee2e2",color:a.accuracy>=80?"#16a34a":a.accuracy>=60?"#854d0e":"#dc2626",padding:"4px 12px",borderRadius:20,fontSize:14,fontWeight:900,flexShrink:0}}>{a.accuracy}%</span>
+                    </div>
+                    <div style={{display:"flex",gap:16,fontSize:12,color:"#888"}}>
+                      <span>📝 {a.score}/{a.total}</span>
+                      <span>⏱️ {fmtT(a.timeSpent||0)}</span>
+                      <span style={{marginLeft:"auto",fontSize:11}}>{a.createdAt?.seconds?new Date(a.createdAt.seconds*1000).toLocaleDateString("en-IN"):""}</span>
+                    </div>
+                    {/* Mini accuracy bar */}
+                    <div style={{marginTop:8,background:"#e5e7eb",borderRadius:4,height:4,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:a.accuracy+"%",background:a.accuracy>=80?"#22c55e":a.accuracy>=60?"#f59e0b":"#ef4444",borderRadius:4}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ):(
+            /* Desktop table view */
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead>
+                  <tr style={{borderBottom:"2px solid #f0f0f0",background:"#f9f9f9"}}>
+                    {["#","Test","Exam","Topic","Mode","Score","Accuracy","Time","Date"].map(h=>(
+                      <th key={h} style={{padding:"10px 12px",textAlign:"left",fontSize:11,color:"#888",fontWeight:700,whiteSpace:"nowrap"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {attempts.map((a,i)=>{
+                    const et=EXAM_TYPES.find(e=>e.id===a.examType);
+                    return(
+                      <tr key={a.id||i} style={{borderBottom:"1px solid #f8f8f8",transition:"background .15s"}}
+                        onMouseOver={e=>e.currentTarget.style.background="#fff8f0"}
+                        onMouseOut={e=>e.currentTarget.style.background="transparent"}>
+                        <td style={{padding:"12px",fontSize:12,color:"#aaa",fontWeight:700}}>#{i+1}</td>
+                        <td style={{padding:"12px",fontWeight:600,fontSize:13,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.testTitle}</td>
+                        <td style={{padding:"12px"}}>
+                          <span style={{background:et?.color||"#FF6A00",color:"#fff",padding:"3px 10px",borderRadius:10,fontSize:11,fontWeight:700}}>{et?.icon} {a.examType?.toUpperCase()}</span>
+                        </td>
+                        <td style={{padding:"12px",fontSize:12,color:"#666"}}>{a.topicId?.split("_")[1]||"-"}</td>
+                        <td style={{padding:"12px",fontSize:12}}>{a.mode==="practice"?"🧘 Practice":"⏱️ Timed"}</td>
+                        <td style={{padding:"12px",fontSize:13,fontWeight:700}}>{a.score}/{a.total}</td>
+                        <td style={{padding:"12px"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <div style={{width:50,height:6,background:"#f0f0f0",borderRadius:3,overflow:"hidden"}}>
+                              <div style={{height:"100%",width:a.accuracy+"%",background:a.accuracy>=80?"#22c55e":a.accuracy>=60?"#f59e0b":"#ef4444",borderRadius:3}}/>
+                            </div>
+                            <span style={{fontWeight:800,fontSize:13,color:a.accuracy>=80?"#16a34a":a.accuracy>=60?"#854d0e":"#dc2626"}}>{a.accuracy}%</span>
+                          </div>
+                        </td>
+                        <td style={{padding:"12px",fontSize:12,color:"#666",whiteSpace:"nowrap"}}>{fmtT(a.timeSpent||0)}</td>
+                        <td style={{padding:"12px",fontSize:11,color:"#aaa",whiteSpace:"nowrap"}}>{a.createdAt?.seconds?new Date(a.createdAt.seconds*1000).toLocaleDateString("en-IN"):"-"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
         )}
       </div>
     </div>
@@ -1064,7 +1321,7 @@ function LeaderboardPage(){
   const filtered=examFilter==="all"?leaders:leaders.filter(l=>l.examType===examFilter);
 
   return(
-    <div style={{paddingTop:80,padding:"80px 40px 40px",maxWidth:700,margin:"0 auto"}}>
+    <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:700,margin:"0 auto"}}>
       <div style={{textAlign:"center",marginBottom:28}}><div style={{fontSize:44,marginBottom:8}}>🏆</div><h1 style={{fontSize:28,fontWeight:900}}>Live <span style={{color:"#FF6A00"}}>Leaderboard</span></h1><p style={{color:"#888",fontSize:13}}>Real scores from Rank Achievers students · Updated live ☁️</p></div>
       <div style={{display:"flex",gap:8,marginBottom:20,justifyContent:"center",flexWrap:"wrap"}}>
         <button onClick={()=>setExamFilter("all")} style={{padding:"7px 16px",borderRadius:20,border:"2px solid",borderColor:examFilter==="all"?"#FF6A00":"#e0e0e0",background:examFilter==="all"?"#FF6A00":"#fff",color:examFilter==="all"?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>All Exams</button>
@@ -1119,7 +1376,7 @@ function ProfilePage({user,setUser,setPage}){
   };
 
   return(
-    <div style={{paddingTop:80,padding:"80px 40px 40px",maxWidth:600,margin:"0 auto"}}>
+    <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:600,margin:"0 auto"}}>
       <div style={{background:"linear-gradient(135deg,#000,#1a0a00)",borderRadius:18,padding:24,display:"flex",alignItems:"center",gap:18,marginBottom:22,border:"2px solid #FF6A0030"}}>
         {user?.photoURL
           ?<img src={user.photoURL} alt="" style={{width:64,height:64,borderRadius:"50%",flexShrink:0}}/>
@@ -1245,6 +1502,49 @@ function AdminPage(){
     }catch(err){setSe({email:err.code==="auth/email-already-in-use"?"Already registered":err.message});}
   };
 
+  // Edit Questions state
+  const [allQuestions,setAllQuestions]=useState([]);
+  const [qLoading,setQLoading]=useState(false);
+  const [qSearch,setQSearch]=useState("");
+  const [editingQ,setEditingQ]=useState(null); // question being edited
+  const [editQForm,setEditQForm]=useState({});
+  const [qExamFilter,setQExamFilter]=useState("ssc");
+  const [delQId,setDelQId]=useState(null);
+  const [qSaveMsg,setQSaveMsg]=useState("");
+
+  useEffect(()=>{
+    if(tab!=="editq") return;
+    setQLoading(true);
+    const q=query(collection(db,"questions"),orderBy("createdAt","desc"),limit(100));
+    const unsub=onSnapshot(q,snap=>{
+      setAllQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
+      setQLoading(false);
+    });
+    return unsub;
+  },[tab]);
+
+  const saveEditQ=async()=>{
+    if(!editingQ) return;
+    try{
+      await updateDoc(doc(db,"questions",editingQ),editQForm);
+      setEditingQ(null);setEditQForm({});
+      setQSaveMsg("✅ Question updated!");setTimeout(()=>setQSaveMsg(""),3000);
+    }catch(e){setQSaveMsg("❌ Error: "+e.message);}
+  };
+
+  const deleteQuestion=async(id)=>{
+    try{
+      await deleteDoc(doc(db,"questions",id));
+      setDelQId(null);
+    }catch(e){alert("Delete failed: "+e.message);}
+  };
+
+  const filteredQs=allQuestions.filter(q=>{
+    const matchExam=!qExamFilter||q.examType===qExamFilter;
+    const matchSearch=!qSearch||q.question_text?.toLowerCase().includes(qSearch.toLowerCase())||q.topicName?.toLowerCase().includes(qSearch.toLowerCase());
+    return matchExam&&matchSearch;
+  });
+
   // Notices
   const [dbNotices,setDbNotices]=useState([]);
   const [nf,setNf]=useState({title:"",body:"",link:"",imageUrl:""});
@@ -1308,10 +1608,10 @@ function AdminPage(){
   };
 
   const filtStu=students.filter(s=>s.name?.toLowerCase().includes(search.toLowerCase())||s.email?.toLowerCase().includes(search.toLowerCase()));
-  const TABS=[{id:"students",l:"👥 Students"},{id:"questions",l:"📝 Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}];
+  const TABS=[{id:"students",l:"👥 Students"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}];
 
   return(
-    <div style={{paddingTop:80,padding:"80px 28px 40px",maxWidth:1000,margin:"0 auto"}}>
+    <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 14px 32px":"80px 28px 40px",maxWidth:1000,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:10}}>
         <div>
           <h1 style={{fontSize:24,fontWeight:900,margin:0}}>Admin Dashboard</h1>
@@ -1388,7 +1688,7 @@ function AdminPage(){
               </div>
             </div>
           )}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:22,alignItems:"start"}}>
+          <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"1fr 1fr",gap:22,alignItems:"start"}}>
             <div style={{background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
               <h3 style={{fontWeight:900,marginBottom:4}}>➕ Create Student Account</h3>
               <p style={{color:"#888",fontSize:13,marginBottom:18}}>Creates real Firebase auth account</p>
@@ -1480,7 +1780,7 @@ function AdminPage(){
 
       {/* NOTICES TAB */}
       {tab==="notices"&&(
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:22,alignItems:"start"}}>
+        <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"1fr 1fr",gap:22,alignItems:"start"}}>
           {/* Create Notice */}
           <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
             <h3 style={{fontWeight:900,marginBottom:4}}>📢 Post Announcement</h3>
@@ -1528,6 +1828,120 @@ function AdminPage(){
               </div>
             }
           </div>
+        </div>
+      )}
+
+      {/* EDIT QUESTIONS */}
+      {tab==="editq"&&(
+        <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
+            <div>
+              <h3 style={{fontWeight:900,margin:0}}>✏️ Edit / Delete Questions</h3>
+              <p style={{color:"#888",fontSize:13,marginTop:4}}>All questions stored in Firebase Firestore</p>
+            </div>
+            {qSaveMsg&&<div style={{padding:"8px 16px",borderRadius:10,fontSize:13,fontWeight:700,background:qSaveMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:qSaveMsg.startsWith("✅")?"#166534":"#dc2626"}}>{qSaveMsg}</div>}
+          </div>
+
+          {/* Filters */}
+          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+            <button onClick={()=>setQExamFilter("")} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:!qExamFilter?"#FF6A00":"#e0e0e0",background:!qExamFilter?"#FF6A00":"#fff",color:!qExamFilter?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>All</button>
+            {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>setQExamFilter(e.id)} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:qExamFilter===e.id?e.color:"#e0e0e0",background:qExamFilter===e.id?e.color:"#fff",color:qExamFilter===e.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
+          </div>
+          <input value={qSearch} onChange={e=>setQSearch(e.target.value)} placeholder="🔍 Search questions or topics..." style={{...IS,marginBottom:20}}/>
+
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <span style={{fontSize:13,color:"#888"}}>{filteredQs.length} questions found</span>
+            <span style={{fontSize:12,color:"#aaa"}}>☁️ Live from Firestore</span>
+          </div>
+
+          {qLoading?(
+            <div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>
+          ):filteredQs.length===0?(
+            <div style={{textAlign:"center",padding:40,color:"#aaa"}}>
+              <div style={{fontSize:40,marginBottom:12}}>📭</div>
+              <p>No questions found. Add questions in the "📝 Add Question" tab.</p>
+            </div>
+          ):(
+            <div style={{display:"flex",flexDirection:"column",gap:12,maxHeight:600,overflowY:"auto"}}>
+              {filteredQs.map(q=>(
+                <div key={q.id} style={{background:"#f9f9f9",borderRadius:12,padding:"14px 16px",border:"2px solid",borderColor:editingQ===q.id?"#FF6A00":"#f0f0f0"}}>
+                  {editingQ===q.id?(
+                    /* ── Edit Form ── */
+                    <div>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
+                        <div style={{fontWeight:700,color:"#FF6A00",fontSize:13}}>✏️ Editing Question</div>
+                        <button onClick={()=>{setEditingQ(null);setEditQForm({});}} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#888"}}>✕</button>
+                      </div>
+                      <label style={LS}>Question Text</label>
+                      <textarea value={editQForm.question_text||""} onChange={e=>setEditQForm(f=>({...f,question_text:e.target.value}))} rows={3} style={{...IS,resize:"vertical"}}/>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+                        {["a","b","c","d"].map(opt=>(
+                          <div key={opt}>
+                            <label style={{...LS,color:editQForm.correct_answer===opt?"#FF6A00":"#444"}}>Option {opt.toUpperCase()} {editQForm.correct_answer===opt?"✅":""}</label>
+                            <input value={editQForm[`option_${opt}`]||""} onChange={e=>setEditQForm(f=>({...f,[`option_${opt}`]:e.target.value}))} style={{...IS,borderColor:editQForm.correct_answer===opt?"#FF6A00":"#f0f0f0"}}/>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                        <div>
+                          <label style={LS}>Correct Answer</label>
+                          <select value={editQForm.correct_answer||"a"} onChange={e=>setEditQForm(f=>({...f,correct_answer:e.target.value}))} style={IS}>
+                            {["a","b","c","d"].map(o=><option key={o} value={o}>Option {o.toUpperCase()}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label style={LS}>Difficulty</label>
+                          <select value={editQForm.difficulty||"easy"} onChange={e=>setEditQForm(f=>({...f,difficulty:e.target.value}))} style={IS}>
+                            {["easy","medium","hard"].map(d=><option key={d} value={d}>{d.charAt(0).toUpperCase()+d.slice(1)}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <label style={LS}>Explanation</label>
+                      <textarea value={editQForm.explanation||""} onChange={e=>setEditQForm(f=>({...f,explanation:e.target.value}))} rows={2} style={{...IS,resize:"vertical"}}/>
+                      <label style={LS}>YouTube Link</label>
+                      <input value={editQForm.youtube_link||""} onChange={e=>setEditQForm(f=>({...f,youtube_link:e.target.value}))} style={IS} placeholder="https://www.youtube.com/embed/..."/>
+                      <div style={{display:"flex",gap:10,marginTop:4}}>
+                        <button onClick={saveEditQ} style={{flex:2,padding:"10px 0",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"}}>💾 Save Changes</button>
+                        <button onClick={()=>{setEditingQ(null);setEditQForm({});}} style={{flex:1,padding:"10px 0",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                      </div>
+                    </div>
+                  ):(
+                    /* ── View Row ── */
+                    <div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",gap:10}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                            <span style={{background:EXAM_TYPES.find(e=>e.id===q.examType)?.color||"#FF6A00",color:"#fff",padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700}}>{q.examType?.toUpperCase()}</span>
+                            <span style={{background:DBG[q.difficulty]||"#f0f0f0",color:DCOL[q.difficulty]||"#666",padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700}}>{q.difficulty?.toUpperCase()}</span>
+                            <span style={{background:"#f0f0f0",color:"#555",padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:600}}>{q.topicName}</span>
+                          </div>
+                          <p style={{fontSize:13,fontWeight:600,color:"#000",lineHeight:1.5,margin:0}}>{q.question_text?.substring(0,120)}{q.question_text?.length>120?"...":""}</p>
+                          <div style={{display:"flex",gap:10,marginTop:6,flexWrap:"wrap"}}>
+                            {["a","b","c","d"].map(opt=>(
+                              <span key={opt} style={{fontSize:11,color:q.correct_answer===opt?"#FF6A00":"#888",fontWeight:q.correct_answer===opt?700:400}}>
+                                {opt.toUpperCase()}: {q[`option_${opt}`]?.substring(0,20)}{q.correct_answer===opt?" ✅":""}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:6,flexShrink:0}}>
+                          <button onClick={()=>{setEditingQ(q.id);setEditQForm({...q});}} style={{padding:"6px 12px",borderRadius:8,border:"2px solid #FF6A00",background:"#fff5ee",color:"#FF6A00",fontWeight:700,fontSize:12,cursor:"pointer"}}>✏️ Edit</button>
+                          {delQId===q.id?(
+                            <div style={{display:"flex",gap:4}}>
+                              <button onClick={()=>deleteQuestion(q.id)} style={{padding:"6px 10px",borderRadius:8,border:"none",background:"#dc2626",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>Confirm</button>
+                              <button onClick={()=>setDelQId(null)} style={{padding:"6px 10px",borderRadius:8,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>✕</button>
+                            </div>
+                          ):(
+                            <button onClick={()=>setDelQId(q.id)} style={{padding:"6px 12px",borderRadius:8,border:"none",background:"#fee2e2",color:"#dc2626",fontWeight:700,fontSize:12,cursor:"pointer"}}>🗑️</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
