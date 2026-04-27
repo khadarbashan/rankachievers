@@ -16,7 +16,6 @@ const firebaseConfig = {
   appId: "1:945705830932:web:6f373103a09fbd2512b501"
 };
 
-
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
@@ -677,9 +676,19 @@ function TestsPage({user,onStartTest,examType,setExamType}){
 }
 
 // ─── TEST PAGE ────────────────────────────────────────────────────────────────
-function TestPage({test,user,onFinish}){
-  const questions=Array.from({length:30},(_,i)=>({
+// ─── GLOBAL QUESTION GENERATOR ───────────────────────────────────────────────
+// Used by TestPage (live) AND by admin seeder (to push to Firestore)
+function generateQuestionsForTest(test){
+  const et = EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
+  const topic = et.topics.find(t=>t.id===test.topic_id)||et.topics[0];
+  return Array.from({length:30},(_,i)=>({
     id:`${test.id}_q${i}`,
+    testId: test.id,
+    testTitle: test.title,
+    examType: test.examType,
+    topicId: test.topic_id,
+    topicName: topic?.name||"General",
+    difficulty: test.difficulty,
     question_text:`Q${i+1}: If the sum of two numbers is ${20+i} and their difference is ${4+i}, what is their product?`,
     option_a:`${Math.round(((20+i+4+i)/2)*((20+i-4-i)/2)-10)}`,
     option_b:`${Math.round(((20+i+4+i)/2)*((20+i-4-i)/2))}`,
@@ -688,7 +697,68 @@ function TestPage({test,user,onFinish}){
     correct_answer:"b",
     explanation:`x+y=${20+i}, x-y=${4+i} → x=${12+i}, y=8 → Product=${(12+i)*8}`,
     youtube_link:"https://www.youtube.com/embed/dQw4w9WgXcQ",
+    isSeeded: true,
   }));
+}
+
+// All possible tests across all exam types & topics
+function getAllTests(){
+  const tests=[];
+  EXAM_TYPES.forEach(et=>{
+    et.topics.forEach(topic=>{
+      ["easy","medium","hard"].forEach((diff,di)=>{
+        tests.push({
+          id:`${topic.id}_${diff}`,
+          topic_id:topic.id,
+          topicName:topic.name,
+          difficulty:diff,
+          title:`${topic.name} – Test ${di+1}`,
+          duration:1800,
+          examType:et.id,
+        });
+      });
+    });
+  });
+  return tests;
+}
+
+function TestPage({test,user,onFinish}){
+  const [questions,setQuestions]=useState([]);
+  const [qLoading,setQLoading]=useState(true);
+
+  // Load questions from Firestore first, fall back to generated
+  useEffect(()=>{
+    const loadQs=async()=>{
+      try{
+        const q=query(
+          collection(db,"questions"),
+          where("testId","==",test.id),
+          orderBy("createdAt","asc"),
+          limit(30)
+        );
+        const snap=await getDocs(q);
+        if(snap.docs.length>=10){
+          // Use Firestore questions
+          setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
+        } else {
+          // Fall back to generated questions
+          setQuestions(generateQuestionsForTest(test));
+        }
+      }catch(e){
+        // Fall back to generated on error
+        setQuestions(generateQuestionsForTest(test));
+      }
+      setQLoading(false);
+    };
+    loadQs();
+  },[test.id]);
+
+  if(qLoading) return(
+    <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20}}>
+      <Spinner size={40} color="#FF6A00"/>
+      <div style={{color:"#fff",fontWeight:700,fontSize:16}}>Loading questions...</div>
+    </div>
+  );
 
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
   const isTimed=test.timed!==false;
@@ -1512,10 +1582,39 @@ function AdminPage(){
   const [delQId,setDelQId]=useState(null);
   const [qSaveMsg,setQSaveMsg]=useState("");
 
+  const [seedLoading,setSeedLoading]=useState(false);
+  const [seedMsg,setSeedMsg]=useState("");
+  const [seedDone,setSeedDone]=useState(false);
+
+  // Seed all generated questions to Firestore (one-time)
+  const seedAllQuestions=async()=>{
+    setSeedLoading(true);setSeedMsg("");
+    try{
+      const allTests=getAllTests();
+      let total=0;
+      for(const test of allTests){
+        const qs=generateQuestionsForTest(test);
+        // Check if already seeded
+        const existing=await getDocs(query(collection(db,"questions"),where("testId","==",test.id),limit(1)));
+        if(existing.docs.length>0){ total+=30; continue; }
+        // Batch write 30 questions
+        for(const q of qs){
+          await addDoc(collection(db,"questions"),{...q,createdAt:serverTimestamp()});
+          total++;
+        }
+      }
+      setSeedMsg(`✅ ${total} questions seeded to Firestore!`);
+      setSeedDone(true);
+    }catch(e){
+      setSeedMsg("❌ Error: "+e.message);
+    }finally{setSeedLoading(false);}
+  };
+
   useEffect(()=>{
     if(tab!=="editq") return;
     setQLoading(true);
-    const q=query(collection(db,"questions"),orderBy("createdAt","desc"),limit(100));
+    // Load up to 500 questions (all seeded + manually added)
+    const q=query(collection(db,"questions"),orderBy("createdAt","asc"),limit(500));
     const unsub=onSnapshot(q,snap=>{
       setAllQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
       setQLoading(false);
@@ -1539,10 +1638,18 @@ function AdminPage(){
     }catch(e){alert("Delete failed: "+e.message);}
   };
 
+  const [qTopicFilter,setQTopicFilter]=useState("");
+  const [qDiffFilter,setQDiffFilter]=useState("");
+
   const filteredQs=allQuestions.filter(q=>{
     const matchExam=!qExamFilter||q.examType===qExamFilter;
-    const matchSearch=!qSearch||q.question_text?.toLowerCase().includes(qSearch.toLowerCase())||q.topicName?.toLowerCase().includes(qSearch.toLowerCase());
-    return matchExam&&matchSearch;
+    const matchTopic=!qTopicFilter||q.topicId===qTopicFilter||q.topicName===qTopicFilter;
+    const matchDiff=!qDiffFilter||q.difficulty===qDiffFilter;
+    const matchSearch=!qSearch||
+      q.question_text?.toLowerCase().includes(qSearch.toLowerCase())||
+      q.topicName?.toLowerCase().includes(qSearch.toLowerCase())||
+      q.testTitle?.toLowerCase().includes(qSearch.toLowerCase());
+    return matchExam&&matchTopic&&matchDiff&&matchSearch;
   });
 
   // Notices
@@ -1834,32 +1941,107 @@ function AdminPage(){
       {/* EDIT QUESTIONS */}
       {tab==="editq"&&(
         <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:12}}>
-            <div>
-              <h3 style={{fontWeight:900,margin:0}}>✏️ Edit / Delete Questions</h3>
-              <p style={{color:"#888",fontSize:13,marginTop:4}}>All questions stored in Firebase Firestore</p>
+          <div style={{marginBottom:20}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",flexWrap:"wrap",gap:12,marginBottom:16}}>
+              <div>
+                <h3 style={{fontWeight:900,margin:0}}>✏️ Manage All Questions</h3>
+                <p style={{color:"#888",fontSize:13,marginTop:4}}>Edit, delete or update any question across all exams</p>
+              </div>
+              {qSaveMsg&&<div style={{padding:"8px 16px",borderRadius:10,fontSize:13,fontWeight:700,background:qSaveMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:qSaveMsg.startsWith("✅")?"#166534":"#dc2626"}}>{qSaveMsg}</div>}
             </div>
-            {qSaveMsg&&<div style={{padding:"8px 16px",borderRadius:10,fontSize:13,fontWeight:700,background:qSaveMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:qSaveMsg.startsWith("✅")?"#166534":"#dc2626"}}>{qSaveMsg}</div>}
+
+            {/* Seed banner — show if no questions yet */}
+            {!qLoading&&allQuestions.length<100&&(
+              <div style={{background:"linear-gradient(135deg,#1a0800,#2d1000)",borderRadius:14,padding:"18px 22px",border:"2px solid #FF6A0050",marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+                  <div style={{flex:1}}>
+                    <div style={{color:"#FF6A00",fontWeight:900,fontSize:16,marginBottom:4}}>🚀 Initialize Question Bank</div>
+                    <div style={{color:"#aaa",fontSize:13,lineHeight:1.5}}>
+                      Click to seed all <b style={{color:"#fff"}}>{getAllTests().length * 30} practice questions</b> ({getAllTests().length} tests × 30 questions) across SSC, Banking & Railways into Firestore. Do this once — then you can edit all questions here.
+                    </div>
+                  </div>
+                  <button onClick={seedAllQuestions} disabled={seedLoading||seedDone} style={{
+                    padding:"12px 24px",borderRadius:12,border:"none",
+                    background:seedDone?"#22c55e":seedLoading?"#555":"linear-gradient(90deg,#FF6A00,#ff9a00)",
+                    color:"#fff",fontWeight:800,fontSize:14,cursor:seedLoading||seedDone?"not-allowed":"pointer",
+                    whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:8,flexShrink:0
+                  }}>
+                    {seedLoading?<><Spinner size={16} color="#fff"/>Seeding...</>:seedDone?"✅ Done!":"⬆️ Seed Questions"}
+                  </button>
+                </div>
+                {seedMsg&&<div style={{marginTop:12,padding:"8px 14px",borderRadius:9,fontSize:13,fontWeight:600,background:seedMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:seedMsg.startsWith("✅")?"#166534":"#dc2626"}}>{seedMsg}</div>}
+                {seedLoading&&<div style={{marginTop:12,color:"#888",fontSize:12}}>⏳ This may take 1-2 minutes for {getAllTests().length * 30} questions. Please wait...</div>}
+              </div>
+            )}
+
+            {/* Stats row */}
+            {!qLoading&&allQuestions.length>0&&(
+              <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:4}}>
+                {EXAM_TYPES.map(et=>{
+                  const cnt=allQuestions.filter(q=>q.examType===et.id).length;
+                  return(
+                    <div key={et.id} style={{background:et.bg,border:`2px solid ${et.color}30`,borderRadius:10,padding:"8px 16px",display:"flex",gap:8,alignItems:"center"}}>
+                      <span style={{fontSize:16}}>{et.icon}</span>
+                      <span style={{fontWeight:700,fontSize:13,color:et.color}}>{cnt}</span>
+                      <span style={{fontSize:12,color:"#888"}}>{et.label}</span>
+                    </div>
+                  );
+                })}
+                <div style={{background:"#f0fdf4",border:"2px solid #86efac",borderRadius:10,padding:"8px 16px",display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:16}}>📚</span>
+                  <span style={{fontWeight:700,fontSize:13,color:"#16a34a"}}>{allQuestions.length}</span>
+                  <span style={{fontSize:12,color:"#888"}}>Total</span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Filters */}
-          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-            <button onClick={()=>setQExamFilter("")} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:!qExamFilter?"#FF6A00":"#e0e0e0",background:!qExamFilter?"#FF6A00":"#fff",color:!qExamFilter?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>All</button>
-            {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>setQExamFilter(e.id)} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:qExamFilter===e.id?e.color:"#e0e0e0",background:qExamFilter===e.id?e.color:"#fff",color:qExamFilter===e.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
+          {/* Exam filter */}
+          <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+            <button onClick={()=>{setQExamFilter("");setQTopicFilter("");}} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:!qExamFilter?"#FF6A00":"#e0e0e0",background:!qExamFilter?"#FF6A00":"#fff",color:!qExamFilter?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>All Exams</button>
+            {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>{setQExamFilter(e.id);setQTopicFilter("");}} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:qExamFilter===e.id?e.color:"#e0e0e0",background:qExamFilter===e.id?e.color:"#fff",color:qExamFilter===e.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
           </div>
-          <input value={qSearch} onChange={e=>setQSearch(e.target.value)} placeholder="🔍 Search questions or topics..." style={{...IS,marginBottom:20}}/>
+
+          {/* Topic filter — shows when exam selected */}
+          {qExamFilter&&(
+            <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+              <button onClick={()=>setQTopicFilter("")} style={{padding:"5px 12px",borderRadius:20,border:"2px solid",borderColor:!qTopicFilter?"#333":"#e0e0e0",background:!qTopicFilter?"#333":"#fff",color:!qTopicFilter?"#fff":"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>All Topics</button>
+              {(EXAM_TYPES.find(e=>e.id===qExamFilter)?.topics||[]).map(t=>(
+                <button key={t.id} onClick={()=>setQTopicFilter(t.id)} style={{padding:"5px 12px",borderRadius:20,border:"2px solid",borderColor:qTopicFilter===t.id?"#333":"#e0e0e0",background:qTopicFilter===t.id?"#333":"#fff",color:qTopicFilter===t.id?"#fff":"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>{t.icon} {t.name}</button>
+              ))}
+            </div>
+          )}
+
+          {/* Difficulty filter */}
+          <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+            <button onClick={()=>setQDiffFilter("")} style={{padding:"5px 12px",borderRadius:20,border:"2px solid",borderColor:!qDiffFilter?"#555":"#e0e0e0",background:!qDiffFilter?"#555":"#fff",color:!qDiffFilter?"#fff":"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>All Levels</button>
+            {["easy","medium","hard"].map(d=><button key={d} onClick={()=>setQDiffFilter(d)} style={{padding:"5px 12px",borderRadius:20,border:"2px solid",borderColor:qDiffFilter===d?DCOL[d]:"#e0e0e0",background:qDiffFilter===d?DBG[d]:"#fff",color:qDiffFilter===d?DCOL[d]:"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>{d.charAt(0).toUpperCase()+d.slice(1)}</button>)}
+          </div>
+
+          {/* Search */}
+          <input value={qSearch} onChange={e=>setQSearch(e.target.value)} placeholder="🔍 Search by question text, topic or test name..." style={{...IS,marginBottom:14}}/>
 
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <span style={{fontSize:13,color:"#888"}}>{filteredQs.length} questions found</span>
-            <span style={{fontSize:12,color:"#aaa"}}>☁️ Live from Firestore</span>
+            <span style={{fontSize:13,color:"#555",fontWeight:600}}>
+              Showing <b style={{color:"#FF6A00"}}>{filteredQs.length}</b> of {allQuestions.length} questions
+            </span>
+            <span style={{fontSize:12,color:"#22c55e",fontWeight:600}}>☁️ Live from Firestore</span>
           </div>
 
           {qLoading?(
             <div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>
           ):filteredQs.length===0?(
             <div style={{textAlign:"center",padding:40,color:"#aaa"}}>
-              <div style={{fontSize:40,marginBottom:12}}>📭</div>
-              <p>No questions found. Add questions in the "📝 Add Question" tab.</p>
+              <div style={{fontSize:48,marginBottom:16}}>📭</div>
+              {allQuestions.length===0?(
+                <div>
+                  <p style={{fontSize:15,marginBottom:8,color:"#555",fontWeight:600}}>No questions in Firestore yet.</p>
+                  <p style={{fontSize:13,marginBottom:20}}>Click <b style={{color:"#FF6A00"}}>"⬆️ Seed Questions"</b> above to load all {getAllTests().length*30} practice questions into Firestore so you can edit them here.</p>
+                  <button onClick={seedAllQuestions} disabled={seedLoading} style={{padding:"12px 24px",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"}}>⬆️ Seed All Questions Now</button>
+                </div>
+              ):(
+                <p>No questions match your filters. Try changing the exam, topic or difficulty filter.</p>
+              )}
             </div>
           ):(
             <div style={{display:"flex",flexDirection:"column",gap:12,maxHeight:600,overflowY:"auto"}}>
