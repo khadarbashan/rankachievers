@@ -11,7 +11,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyCdjsy9rF3a9yQMK9T7el980wnrQyO1Atk",
   authDomain: "rank-achievers.firebaseapp.com",
   projectId: "rank-achievers",
-  storageBucket: "rank-achievers.firebasestorage.app",
+  storageBucket: "rank-achievers.appspot.com",
   messagingSenderId: "945705830932",
   appId: "1:945705830932:web:6f373103a09fbd2512b501"
 };
