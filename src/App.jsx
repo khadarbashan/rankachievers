@@ -8,14 +8,13 @@ import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collec
 // Get from: https://console.firebase.google.com → Your Project → Settings → Web App
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCdjsy9rF3a9yQMK9T7el980wnrQyO1Atk",
-  authDomain: "rank-achievers.firebaseapp.com",
-  projectId: "rank-achievers",
-  storageBucket: "rank-achievers.firebasestorage.app",
-  messagingSenderId: "945705830932",
-  appId: "1:945705830932:web:6f373103a09fbd2512b501"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
-
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -36,14 +35,40 @@ async function ensureAdminExists(){
 }
 
 // ─── EXAM TYPES ───────────────────────────────────────────────────────────────
-const EXAM_TYPES = [
-  { id:"ssc",      label:"SSC",      fullName:"Staff Selection Commission", icon:"🏛️", color:"#FF6A00", bg:"#fff5ee", desc:"CGL · CHSL · MTS · CPO",
+// ── Default exam types (fallback if Firestore not loaded yet) ──
+const DEFAULT_EXAM_TYPES = [
+  { id:"ssc",      label:"SSC",      fullName:"Staff Selection Commission", icon:"🏛️", color:"#FF6A00", bg:"#fff5ee", desc:"CGL · CHSL · MTS · CPO · GD Constable",
     topics:[{id:"ssc_arith",name:"Arithmetic",icon:"➕"},{id:"ssc_alg",name:"Algebra",icon:"🔣"},{id:"ssc_num",name:"Number System",icon:"🔢"},{id:"ssc_simp",name:"Simplification",icon:"✖️"},{id:"ssc_di",name:"Data Interpretation",icon:"📊"},{id:"ssc_geo",name:"Geometry",icon:"📐"}]},
-  { id:"banking",  label:"Banking",  fullName:"Banking & Insurance",        icon:"🏦", color:"#1d4ed8", bg:"#eff6ff", desc:"IBPS PO · SBI PO · RBI · LIC",
+  { id:"banking",  label:"Banking",  fullName:"Banking & Insurance",        icon:"🏦", color:"#1d4ed8", bg:"#eff6ff", desc:"IBPS PO · SBI PO · RBI · NABARD · LIC",
     topics:[{id:"bnk_qa",name:"Quantitative Aptitude",icon:"🔢"},{id:"bnk_da",name:"Data Analysis",icon:"📊"},{id:"bnk_re",name:"Reasoning",icon:"🧠"},{id:"bnk_en",name:"English",icon:"📝"},{id:"bnk_ga",name:"General Awareness",icon:"🌍"},{id:"bnk_cp",name:"Computer Knowledge",icon:"💻"}]},
   { id:"railways", label:"Railways", fullName:"Indian Railways",            icon:"🚂", color:"#16a34a", bg:"#f0fdf4", desc:"RRB NTPC · Group D · ALP · JE",
     topics:[{id:"rly_ma",name:"Mathematics",icon:"📐"},{id:"rly_gi",name:"General Intelligence",icon:"🧩"},{id:"rly_sc",name:"General Science",icon:"🔬"},{id:"rly_ga",name:"General Awareness",icon:"🌍"},{id:"rly_re",name:"Reasoning",icon:"🧠"},{id:"rly_te",name:"Technical Ability",icon:"⚙️"}]}
 ];
+
+// Global mutable exam types — updated from Firestore
+let EXAM_TYPES = [...DEFAULT_EXAM_TYPES];
+
+// Hook to load exam types from Firestore and sync globally
+function useExamTypes(){
+  const [examTypes,setExamTypes]=useState(DEFAULT_EXAM_TYPES);
+  useEffect(()=>{
+    const snap=onSnapshot(doc(db,"settings","examTypes"),d=>{
+      if(d.exists()&&d.data().types?.length>0){
+        const loaded=d.data().types;
+        EXAM_TYPES=loaded;
+        setExamTypes(loaded);
+      }
+    });
+    return snap;
+  },[]);
+  return examTypes;
+}
+
+// Save exam types to Firestore
+async function saveExamTypes(types){
+  await setDoc(doc(db,"settings","examTypes"),{types});
+  EXAM_TYPES=types;
+}
 
 const DIFFS  = ["easy","medium","hard"];
 const DCOL   = {easy:"#22c55e",medium:"#f59e0b",hard:"#ef4444"};
@@ -511,58 +536,145 @@ function AuthPage({onLogin}){
 }
 
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
-function HomePage({setPage,user,setExamType}){
+// ─── BANNER SLIDER ───────────────────────────────────────────────────────────
+function BannerSlider({banners}){
+  const [idx,setIdx]=useState(0);
+  const timerRef=useRef(null);
+
+  useEffect(()=>{
+    if(banners.length<=1) return;
+    timerRef.current=setInterval(()=>setIdx(i=>(i+1)%banners.length),4000);
+    return()=>clearInterval(timerRef.current);
+  },[banners.length]);
+
+  if(!banners.length) return null;
+  const b=banners[idx];
+
+  return(
+    <div style={{position:"relative",width:"100%",overflow:"hidden",borderRadius:16,marginBottom:24}}>
+      {/* Slide */}
+      <div style={{
+        width:"100%",minHeight:window.innerWidth<=768?160:220,
+        background:b.bgColor||"linear-gradient(135deg,#FF6A00,#ff9a00)",
+        borderRadius:16,overflow:"hidden",position:"relative",
+        display:"flex",alignItems:"center",
+        transition:"all .4s ease"
+      }}>
+        {b.imageUrl?(
+          <img src={b.imageUrl} alt={b.title} style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,opacity:.5}}/>
+        ):null}
+        <div style={{position:"relative",padding:window.innerWidth<=768?"20px 20px":"28px 36px",zIndex:1}}>
+          {b.badge&&<div style={{display:"inline-block",background:"rgba(255,255,255,.2)",color:"#fff",padding:"4px 14px",borderRadius:20,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:10}}>{b.badge}</div>}
+          <div style={{fontWeight:900,fontSize:window.innerWidth<=768?"18px":"26px",color:"#fff",lineHeight:1.2,marginBottom:8}}>{b.title}</div>
+          <div style={{fontSize:window.innerWidth<=768?12:14,color:"rgba(255,255,255,.85)",lineHeight:1.5,maxWidth:500}}>{b.subtitle}</div>
+          {b.btnText&&b.btnLink&&(
+            <a href={b.btnLink} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:14,padding:"9px 22px",background:"#fff",color:b.bgColor||"#FF6A00",borderRadius:10,fontWeight:800,fontSize:13,textDecoration:"none"}}>
+              {b.btnText} →
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Dots */}
+      {banners.length>1&&(
+        <div style={{display:"flex",justifyContent:"center",gap:8,marginTop:10}}>
+          {banners.map((_,i)=>(
+            <button key={i} onClick={()=>setIdx(i)} style={{width:i===idx?24:8,height:8,borderRadius:4,border:"none",background:i===idx?"#FF6A00":"#e0e0e0",cursor:"pointer",transition:"all .3s",padding:0}}/>
+          ))}
+        </div>
+      )}
+
+      {/* Arrows */}
+      {banners.length>1&&(
+        <>
+          <button onClick={()=>setIdx(i=>(i-1+banners.length)%banners.length)} style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,.4)",border:"none",borderRadius:"50%",width:32,height:32,color:"#fff",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+          <button onClick={()=>setIdx(i=>(i+1)%banners.length)} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"rgba(0,0,0,.4)",border:"none",borderRadius:"50%",width:32,height:32,color:"#fff",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function HomePage({setPage,user,setExamType,banners=[],examTypes}){
   const [sel,setSel]=useState(null);
+  const ETs=examTypes||EXAM_TYPES;
+  const isMobile=window.innerWidth<=768;
+
   return(
     <div style={{paddingTop:60,minHeight:"100vh",display:"flex",flexDirection:"column"}}>
       <div style={{flex:1,minHeight:"calc(100vh - 60px)",background:"linear-gradient(135deg,#000 0%,#1a0800 40%,#000 100%)",display:"flex",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",inset:0,opacity:.05,backgroundImage:"linear-gradient(#FF6A00 1px,transparent 1px),linear-gradient(90deg,#FF6A00 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
         <div style={{position:"absolute",top:-100,right:-100,width:500,height:500,borderRadius:"50%",background:"radial-gradient(#FF6A0030,transparent 70%)"}}/>
         <div style={{position:"absolute",bottom:-100,left:-100,width:400,height:400,borderRadius:"50%",background:"radial-gradient(#FF6A0020,transparent 70%)"}}/>
-        <div style={{flex:1,display:"flex",position:"relative",maxWidth:1200,margin:"0 auto",width:"100%",padding:"20px",gap:32,alignItems:"center",flexDirection:window.innerWidth<=768?"column":"row",justifyContent:"center"}}>
+
+        <div style={{flex:1,display:"flex",position:"relative",maxWidth:1200,margin:"0 auto",width:"100%",padding:isMobile?"16px":"28px 40px",gap:32,alignItems:"flex-start",flexDirection:isMobile?"column":"row",justifyContent:"center",overflowY:"auto"}}>
+
           {/* LEFT */}
-          <div style={{flex:1,textAlign:window.innerWidth<=768?"center":"left"}}>
-            <div style={{display:"inline-block",background:"#FF6A00",color:"#fff",padding:"5px 18px",borderRadius:20,fontSize:12,fontWeight:700,letterSpacing:2,marginBottom:24}}>ANANTAPUR'S #1 EXAM PREP PLATFORM</div>
-            <h1 style={{fontSize:"clamp(36px,5vw,64px)",fontWeight:900,color:"#fff",lineHeight:1.05,margin:"0 0 20px",letterSpacing:-2}}>
+          <div style={{flex:1,textAlign:isMobile?"center":"left",paddingTop:isMobile?8:40}}>
+            <div style={{display:"inline-block",background:"#FF6A00",color:"#fff",padding:"5px 18px",borderRadius:20,fontSize:12,fontWeight:700,letterSpacing:2,marginBottom:20}}>ANANTAPUR'S #1 EXAM PREP PLATFORM</div>
+            <h1 style={{fontSize:isMobile?"clamp(28px,8vw,40px)":"clamp(36px,5vw,60px)",fontWeight:900,color:"#fff",lineHeight:1.05,margin:"0 0 16px",letterSpacing:-2}}>
               Crack Your<br/><span style={{color:"#FF6A00"}}>Dream Exam.</span><br/><span style={{fontSize:"60%",color:"#888"}}>Right Here in Anantapur.</span>
             </h1>
-            <p style={{color:"#888",fontSize:17,maxWidth:480,marginBottom:36,lineHeight:1.7}}>India's most focused aptitude practice platform for SSC, Banking & Railways. Real exam simulation · Video solutions · Instant scores saved to cloud.</p>
-            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:40}}>
-              <button onClick={()=>user?setPage("tests"):setPage("auth")} style={{padding:"15px 40px",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:17,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 30px #FF6A0070"}}>Start Practice →</button>
-              <button onClick={()=>setPage("leaderboard")} style={{padding:"15px 32px",borderRadius:12,border:"2px solid #FF6A00",background:"transparent",color:"#FF6A00",fontSize:15,fontWeight:700,cursor:"pointer"}}>🏆 Leaderboard</button>
+            <p style={{color:"#888",fontSize:isMobile?14:16,maxWidth:480,marginBottom:isMobile?20:28,lineHeight:1.7}}>
+              India's most focused aptitude practice platform for SSC, Banking & Railways. Real exam simulation · Video solutions · Cloud scores.
+            </p>
+
+            {/* Banner Slider — shown in left panel */}
+            <BannerSlider banners={banners}/>
+
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:28,justifyContent:isMobile?"center":"flex-start"}}>
+              <button onClick={()=>user?setPage("tests"):setPage("auth")} style={{padding:"13px 32px",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 24px #FF6A0070"}}>Start Practice →</button>
+              <button onClick={()=>setPage("leaderboard")} style={{padding:"13px 24px",borderRadius:12,border:"2px solid #FF6A00",background:"transparent",color:"#FF6A00",fontSize:14,fontWeight:700,cursor:"pointer"}}>🏆 Leaderboard</button>
             </div>
-            <div style={{display:"flex",gap:32,flexWrap:"wrap"}}>
-              {[["50K+","Students"],["10K+","Questions"],["95%","Selection Rate"],["☁️","Cloud Saved"]].map(([v,l])=>(
-                <div key={l}><div style={{fontSize:24,fontWeight:900,color:"#FF6A00"}}>{v}</div><div style={{fontSize:11,color:"#666",fontWeight:600}}>{l}</div></div>
+
+            <div style={{display:"flex",gap:24,flexWrap:"wrap",justifyContent:isMobile?"center":"flex-start"}}>
+              {[["50K+","Students"],["10K+","Questions"],["95%","Pass Rate"],["☁️","Cloud"]].map(([v,l])=>(
+                <div key={l} style={{textAlign:"center"}}>
+                  <div style={{fontSize:isMobile?20:24,fontWeight:900,color:"#FF6A00"}}>{v}</div>
+                  <div style={{fontSize:10,color:"#666",fontWeight:600}}>{l}</div>
+                </div>
               ))}
             </div>
           </div>
-          {/* RIGHT — Exam Selector */}
-          <div style={{width:window.innerWidth<=768?"100%":"320px",flexShrink:0}}>
-            <div style={{background:"rgba(255,255,255,0.06)",backdropFilter:"blur(10px)",borderRadius:24,padding:24,border:"1px solid rgba(255,106,0,0.25)"}}>
+
+          {/* RIGHT — Exam Selector (dynamic from Firestore) */}
+          <div style={{width:isMobile?"100%":"320px",flexShrink:0,paddingTop:isMobile?0:40,paddingBottom:isMobile?24:0}}>
+            <div style={{background:"rgba(255,255,255,0.06)",backdropFilter:"blur(10px)",borderRadius:24,padding:isMobile?"16px":"24px",border:"1px solid rgba(255,106,0,0.25)"}}>
               <div style={{color:"#FF6A00",fontWeight:800,fontSize:14,marginBottom:4,letterSpacing:1}}>CHOOSE YOUR EXAM</div>
-              <div style={{color:"#666",fontSize:12,marginBottom:20}}>Select to start your preparation</div>
-              {EXAM_TYPES.map(et=>(
-                <div key={et.id} onClick={()=>{setSel(et.id);setExamType(et.id);if(user)setPage("tests");else setPage("auth");}}
-                  style={{background:sel===et.id?"linear-gradient(135deg,#FF6A00,#ff9a00)":"rgba(255,255,255,0.05)",borderRadius:16,padding:"18px 20px",marginBottom:12,cursor:"pointer",border:"2px solid",borderColor:sel===et.id?"#FF6A00":"rgba(255,255,255,0.1)",transition:"all .2s"}}
+              <div style={{color:"#666",fontSize:12,marginBottom:16}}>Select to start your preparation</div>
+
+              {ETs.filter(et=>et.visible!==false).map(et=>(
+                <div key={et.id}
+                  onClick={()=>{setSel(et.id);setExamType(et.id);if(user)setPage("tests");else setPage("auth");}}
+                  style={{background:sel===et.id?"linear-gradient(135deg,#FF6A00,#ff9a00)":"rgba(255,255,255,0.05)",borderRadius:16,padding:"16px 18px",marginBottom:10,cursor:"pointer",border:"2px solid",borderColor:sel===et.id?"#FF6A00":"rgba(255,255,255,0.1)",transition:"all .2s"}}
                   onMouseOver={e=>{if(sel!==et.id){e.currentTarget.style.borderColor="#FF6A00";e.currentTarget.style.background="rgba(255,106,0,0.12)";}}}
                   onMouseOut={e=>{if(sel!==et.id){e.currentTarget.style.borderColor="rgba(255,255,255,0.1)";e.currentTarget.style.background="rgba(255,255,255,0.05)";}}}
                 >
-                  <div style={{display:"flex",alignItems:"center",gap:14}}>
-                    <span style={{fontSize:30}}>{et.icon}</span>
-                    <div style={{flex:1}}><div style={{fontWeight:800,fontSize:16,color:"#fff"}}>{et.label}</div><div style={{fontSize:11,color:sel===et.id?"rgba(255,255,255,.7)":"#777",marginTop:2}}>{et.desc}</div></div>
-                    <span style={{color:sel===et.id?"#fff":"#555",fontSize:16}}>→</span>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <span style={{fontSize:28}}>{et.icon}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:800,fontSize:15,color:"#fff"}}>{et.label}</div>
+                      <div style={{fontSize:11,color:sel===et.id?"rgba(255,255,255,.75)":"#777",marginTop:2}}>{et.desc}</div>
+                    </div>
+                    <span style={{color:sel===et.id?"#fff":"#555",fontSize:14}}>→</span>
                   </div>
                 </div>
               ))}
-              {!user&&<div style={{marginTop:8,padding:"10px 14px",background:"rgba(255,106,0,.1)",borderRadius:10,border:"1px solid rgba(255,106,0,.3)",textAlign:"center"}}><span style={{color:"#FF6A00",fontSize:13,fontWeight:600}}>Login required to practice →</span></div>}
+
+              {!user&&(
+                <div style={{marginTop:8,padding:"10px 14px",background:"rgba(255,106,0,.1)",borderRadius:10,border:"1px solid rgba(255,106,0,.3)",textAlign:"center"}}>
+                  <span style={{color:"#FF6A00",fontSize:13,fontWeight:600}}>Login required to practice →</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
-      <div style={{background:"#FF6A00",padding:window.innerWidth<=768?"14px 16px":"18px 40px",display:"flex",justifyContent:"center",gap:window.innerWidth<=768?"20px":"48px",flexWrap:"wrap"}}>
-        {[["⏱️","Real Exam Timer"],["📹","Video Solutions"],["☁️","Cloud Scores"],["🔵","Google Login"],["🔒↔🆓","Access Control"]].map(([i,l])=>(
-          <div key={l} style={{textAlign:"center"}}><span style={{fontSize:18}}>{i}</span><div style={{fontSize:11,color:"#ffe0c0",fontWeight:700,marginTop:2}}>{l}</div></div>
+
+      {/* Feature strip */}
+      <div style={{background:"#FF6A00",padding:isMobile?"12px 16px":"16px 40px",display:"flex",justifyContent:"center",gap:isMobile?"16px":"40px",flexWrap:"wrap"}}>
+        {[["⏱️","Real Timer"],["📹","Video Solutions"],["☁️","Cloud Scores"],["🔵","Google Login"],["📱","PWA App"]].map(([i,l])=>(
+          <div key={l} style={{textAlign:"center"}}><span style={{fontSize:16}}>{i}</span><div style={{fontSize:10,color:"#ffe0c0",fontWeight:700,marginTop:2}}>{l}</div></div>
         ))}
       </div>
     </div>
@@ -605,7 +717,7 @@ function ExamModeModal({test,onConfirm,onCancel}){
 }
 
 // ─── TESTS PAGE ───────────────────────────────────────────────────────────────
-function TestsPage({user,onStartTest,examType,setExamType}){
+function TestsPage({user,onStartTest,examType,setExamType,examTypes}){
   const [selTopic,setSelTopic]=useState(null);
   const [modeModal,setModeModal]=useState(null);
   const [settings,setSettingsState]=useState({contentMode:"free"});
@@ -616,14 +728,15 @@ function TestsPage({user,onStartTest,examType,setExamType}){
     if(user?.uid) checkAccess(user.uid).then(a=>setUserAccess(a));
   },[user]);
 
-  const et=EXAM_TYPES.find(e=>e.id===examType)||EXAM_TYPES[0];
+  const ETs=examTypes||EXAM_TYPES;
+  const et=ETs.find(e=>e.id===examType)||ETs[0];
   const isPaidLocked=settings.contentMode==="paid"&&!userAccess&&user?.role!=="admin";
 
   return(
     <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:1100,margin:"0 auto"}}>
       {/* Exam tabs */}
       <div style={{display:"flex",gap:window.innerWidth<=768?8:12,marginBottom:window.innerWidth<=768?16:28,flexWrap:"wrap"}}>
-        {EXAM_TYPES.map(e=>(
+        {ETs.filter(e=>e.visible!==false).map(e=>(
           <button key={e.id} onClick={()=>{setExamType(e.id);setSelTopic(null);}} style={{padding:"12px 24px",borderRadius:14,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:800,fontSize:14,cursor:"pointer",boxShadow:examType===e.id?`0 4px 20px ${e.color}40`:"none"}}>
             {e.icon} {e.label}<span style={{display:"block",fontSize:10,opacity:.8,marginTop:2}}>{e.fullName}</span>
           </button>
@@ -1583,6 +1696,99 @@ function AdminPage(){
   const [delQId,setDelQId]=useState(null);
   const [qSaveMsg,setQSaveMsg]=useState("");
 
+
+  // ── Exam Types state ──
+  const [liveExamTypes,setLiveExamTypes]=useState(DEFAULT_EXAM_TYPES);
+  const [editingET,setEditingET]=useState(null);
+  const [etForm,setEtForm]=useState({});
+  const [etSaving,setEtSaving]=useState(false);
+  const [etMsg,setEtMsg]=useState("");
+  const [addingTopic,setAddingTopic]=useState(null); // examType id
+  const [newTopicName,setNewTopicName]=useState("");
+  const [newTopicIcon,setNewTopicIcon]=useState("📌");
+
+  useEffect(()=>{
+    const unsub=onSnapshot(doc(db,"settings","examTypes"),d=>{
+      if(d.exists()&&d.data().types?.length>0) setLiveExamTypes(d.data().types);
+      else setLiveExamTypes(DEFAULT_EXAM_TYPES);
+    });
+    return unsub;
+  },[]);
+
+  const saveExamTypeEdit=async()=>{
+    if(!etForm.label||!etForm.fullName) return;
+    setEtSaving(true);
+    const updated=liveExamTypes.map(e=>e.id===editingET?{...e,...etForm}:e);
+    try{
+      await saveExamTypes(updated);
+      setEtMsg("✅ Saved!");setTimeout(()=>setEtMsg(""),2500);
+      setEditingET(null);setEtForm({});
+    }catch(e){setEtMsg("❌ "+e.message);}
+    finally{setEtSaving(false);}
+  };
+
+  const toggleExamVisible=async(id)=>{
+    const updated=liveExamTypes.map(e=>e.id===id?{...e,visible:e.visible===false?true:false}:e);
+    await saveExamTypes(updated);
+  };
+
+  const addTopic=async(etId)=>{
+    if(!newTopicName.trim()) return;
+    const tid=`${etId}_${Date.now()}`;
+    const updated=liveExamTypes.map(e=>e.id===etId?{...e,topics:[...e.topics,{id:tid,name:newTopicName.trim(),icon:newTopicIcon}]}:e);
+    await saveExamTypes(updated);
+    setNewTopicName("");setNewTopicIcon("📌");setAddingTopic(null);
+  };
+
+  const deleteTopic=async(etId,topicId)=>{
+    const updated=liveExamTypes.map(e=>e.id===etId?{...e,topics:e.topics.filter(t=>t.id!==topicId)}:e);
+    await saveExamTypes(updated);
+  };
+
+  // ── Banners state ──
+  const [adminBanners,setAdminBanners]=useState([]);
+  const [bannerForm,setBannerForm]=useState({title:"",subtitle:"",badge:"",imageUrl:"",bgColor:"#FF6A00",btnText:"",btnLink:"",order:0});
+  const [bannerSaving,setBannerSaving]=useState(false);
+  const [bannerMsg,setBannerMsg]=useState("");
+  const [delBannerId,setDelBannerId]=useState(null);
+  const [editingBanner,setEditingBanner]=useState(null);
+
+  useEffect(()=>{
+    const q=query(collection(db,"banners"),orderBy("order","asc"),limit(20));
+    const unsub=onSnapshot(q,snap=>setAdminBanners(snap.docs.map(d=>({id:d.id,...d.data()}))));
+    return unsub;
+  },[]);
+
+  const saveBanner=async()=>{
+    if(!bannerForm.title.trim()){alert("Title required");return;}
+    setBannerSaving(true);
+    try{
+      if(editingBanner){
+        await updateDoc(doc(db,"banners",editingBanner),bannerForm);
+        setEditingBanner(null);
+      } else {
+        await addDoc(collection(db,"banners"),{...bannerForm,createdAt:serverTimestamp()});
+      }
+      setBannerForm({title:"",subtitle:"",badge:"",imageUrl:"",bgColor:"#FF6A00",btnText:"",btnLink:"",order:adminBanners.length});
+      setBannerMsg("✅ Banner saved!");setTimeout(()=>setBannerMsg(""),2500);
+    }catch(e){setBannerMsg("❌ "+e.message);}
+    finally{setBannerSaving(false);}
+  };
+
+  const deleteBanner=async(id)=>{
+    await deleteDoc(doc(db,"banners",id));
+    setDelBannerId(null);
+  };
+
+  const moveBanner=async(id,dir)=>{
+    const idx=adminBanners.findIndex(b=>b.id===id);
+    const swapIdx=idx+dir;
+    if(swapIdx<0||swapIdx>=adminBanners.length) return;
+    const a=adminBanners[idx];const b=adminBanners[swapIdx];
+    await updateDoc(doc(db,"banners",a.id),{order:b.order??swapIdx});
+    await updateDoc(doc(db,"banners",b.id),{order:a.order??idx});
+  };
+
   const [seedLoading,setSeedLoading]=useState(false);
   const [seedMsg,setSeedMsg]=useState("");
   const [seedDone,setSeedDone]=useState(false);
@@ -1716,7 +1922,7 @@ function AdminPage(){
   };
 
   const filtStu=students.filter(s=>s.name?.toLowerCase().includes(search.toLowerCase())||s.email?.toLowerCase().includes(search.toLowerCase()));
-  const TABS=[{id:"students",l:"👥 Students"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}];
+  const TABS=[{id:"students",l:"👥 Students"},{id:"exams",l:"🎯 Exam Types"},{id:"banners",l:"🖼️ Banners"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}];
 
   return(
     <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 14px 32px":"80px 28px 40px",maxWidth:1000,margin:"0 auto"}}>
@@ -1729,6 +1935,174 @@ function AdminPage(){
           {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:9,border:"2px solid",borderColor:tab===t.id?"#FF6A00":"#e0e0e0",background:tab===t.id?"#FF6A00":"#fff",color:tab===t.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.l}</button>)}
         </div>
       </div>
+
+      {/* ── EXAM TYPES TAB ── */}
+      {tab==="exams"&&(
+        <div>
+          {etMsg&&<div style={{padding:"10px 16px",borderRadius:10,marginBottom:16,fontSize:13,fontWeight:700,background:etMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:etMsg.startsWith("✅")?"#166534":"#dc2626"}}>{etMsg}</div>}
+          <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
+            {liveExamTypes.map(et=>(
+              <div key={et.id} style={{background:"#fff",borderRadius:18,padding:22,border:"2px solid",borderColor:editingET===et.id?et.color:"#f0f0f0"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+                  <span style={{fontSize:28}}>{et.icon}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:900,fontSize:16,color:et.color}}>{et.label}</div>
+                    <div style={{fontSize:12,color:"#888"}}>{et.fullName}</div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div onClick={()=>toggleExamVisible(et.id)} style={{width:40,height:22,borderRadius:11,background:et.visible===false?"#e0e0e0":"#22c55e",position:"relative",cursor:"pointer",transition:"background .3s",flexShrink:0}}>
+                      <div style={{position:"absolute",top:2,left:et.visible===false?2:20,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .3s",boxShadow:"0 1px 4px #00000030"}}/>
+                    </div>
+                    <span style={{fontSize:10,color:et.visible===false?"#aaa":"#22c55e",fontWeight:700,whiteSpace:"nowrap"}}>{et.visible===false?"Hidden":"Shown"}</span>
+                  </div>
+                </div>
+
+                {editingET===et.id?(
+                  <div>
+                    <label style={LS}>Label</label><input value={etForm.label||""} onChange={e=>setEtForm(f=>({...f,label:e.target.value}))} style={IS} placeholder="SSC"/>
+                    <label style={LS}>Full Name</label><input value={etForm.fullName||""} onChange={e=>setEtForm(f=>({...f,fullName:e.target.value}))} style={IS}/>
+                    <label style={LS}>Description</label><input value={etForm.desc||""} onChange={e=>setEtForm(f=>({...f,desc:e.target.value}))} style={IS}/>
+                    <label style={LS}>Icon (emoji)</label><input value={etForm.icon||""} onChange={e=>setEtForm(f=>({...f,icon:e.target.value}))} style={IS}/>
+                    <label style={LS}>Color</label>
+                    <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
+                      <input type="color" value={etForm.color||"#FF6A00"} onChange={e=>setEtForm(f=>({...f,color:e.target.value}))} style={{width:44,height:38,borderRadius:8,border:"2px solid #f0f0f0",cursor:"pointer"}}/>
+                      <input value={etForm.color||""} onChange={e=>setEtForm(f=>({...f,color:e.target.value}))} style={{...IS,marginBottom:0,flex:1}}/>
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={saveExamTypeEdit} disabled={etSaving} style={{flex:2,padding:"10px 0",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                        {etSaving&&<Spinner size={14} color="#fff"/>}Save
+                      </button>
+                      <button onClick={()=>{setEditingET(null);setEtForm({});}} style={{flex:1,padding:"10px 0",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                    </div>
+                  </div>
+                ):(
+                  <>
+                    <p style={{fontSize:12,color:"#666",marginBottom:12}}>{et.desc}</p>
+                    <button onClick={()=>{setEditingET(et.id);setEtForm({label:et.label,fullName:et.fullName,desc:et.desc,icon:et.icon,color:et.color});}} style={{width:"100%",padding:"8px 0",borderRadius:10,border:`2px solid ${et.color}`,background:et.bg||"#fff5ee",color:et.color,fontWeight:700,cursor:"pointer",marginBottom:12,fontSize:13}}>✏️ Edit Exam Details</button>
+                    <div style={{fontSize:12,fontWeight:700,color:"#555",marginBottom:8}}>Topics ({et.topics?.length||0})</div>
+                    <div style={{maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
+                      {(et.topics||[]).map(t=>(
+                        <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"#f8f8f8",borderRadius:8}}>
+                          <span style={{fontSize:14}}>{t.icon}</span>
+                          <span style={{flex:1,fontSize:12,fontWeight:600}}>{t.name}</span>
+                          <button onClick={()=>deleteTopic(et.id,t.id)} style={{padding:"2px 8px",borderRadius:6,border:"none",background:"#fee2e2",color:"#dc2626",fontSize:10,fontWeight:700,cursor:"pointer"}}>✕</button>
+                        </div>
+                      ))}
+                    </div>
+                    {addingTopic===et.id?(
+                      <div style={{background:"#f8f8f8",borderRadius:10,padding:12,border:"2px solid #FF6A0030"}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"#FF6A00",marginBottom:8}}>➕ New Topic</div>
+                        <div style={{display:"flex",gap:6,marginBottom:8}}>
+                          <input value={newTopicIcon} onChange={e=>setNewTopicIcon(e.target.value)} style={{...IS,width:44,marginBottom:0,textAlign:"center",padding:"8px 4px"}} maxLength={4}/>
+                          <input value={newTopicName} onChange={e=>setNewTopicName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addTopic(et.id)} style={{...IS,flex:1,marginBottom:0}} placeholder="Topic name..."/>
+                        </div>
+                        <div style={{display:"flex",gap:6}}>
+                          <button onClick={()=>addTopic(et.id)} style={{flex:1,padding:"8px 0",borderRadius:8,border:"none",background:"#FF6A00",color:"#fff",fontWeight:700,cursor:"pointer"}}>Add</button>
+                          <button onClick={()=>{setAddingTopic(null);setNewTopicName("");}} style={{flex:1,padding:"8px 0",borderRadius:8,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                        </div>
+                      </div>
+                    ):(
+                      <button onClick={()=>setAddingTopic(et.id)} style={{width:"100%",padding:"7px 0",borderRadius:9,border:"2px dashed #e0e0e0",background:"#fff",color:"#888",fontWeight:700,cursor:"pointer",fontSize:12}}>+ Add Topic</button>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── BANNERS TAB ── */}
+      {tab==="banners"&&(
+        <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"1fr 1fr",gap:22,alignItems:"start"}}>
+          <div style={{background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
+            <h3 style={{fontWeight:900,marginBottom:4}}>{editingBanner?"✏️ Edit Banner":"🖼️ Add Banner"}</h3>
+            <p style={{color:"#888",fontSize:13,marginBottom:16}}>Banners auto-scroll on the home page</p>
+            {bannerMsg&&<div style={{padding:"9px 14px",borderRadius:9,marginBottom:12,fontSize:13,fontWeight:700,background:bannerMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:bannerMsg.startsWith("✅")?"#166534":"#dc2626"}}>{bannerMsg}</div>}
+
+            {bannerForm.title&&(
+              <div style={{background:bannerForm.bgColor||"#FF6A00",borderRadius:12,padding:"14px 18px",marginBottom:14,position:"relative",overflow:"hidden"}}>
+                {bannerForm.imageUrl&&<img src={bannerForm.imageUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.4}}/>}
+                <div style={{position:"relative"}}>
+                  {bannerForm.badge&&<div style={{fontSize:9,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:4}}>{bannerForm.badge}</div>}
+                  <div style={{fontWeight:900,color:"#fff",fontSize:14}}>{bannerForm.title}</div>
+                  {bannerForm.subtitle&&<div style={{color:"rgba(255,255,255,.75)",fontSize:11,marginTop:3}}>{bannerForm.subtitle}</div>}
+                  {bannerForm.btnText&&<div style={{marginTop:8,display:"inline-block",background:"#fff",color:bannerForm.bgColor||"#FF6A00",padding:"4px 12px",borderRadius:7,fontSize:11,fontWeight:800}}>{bannerForm.btnText}</div>}
+                </div>
+              </div>
+            )}
+
+            <label style={LS}>Title *</label>
+            <input value={bannerForm.title} onChange={e=>setBannerForm(f=>({...f,title:e.target.value}))} style={IS} placeholder="e.g. SSC CGL 2025 Dates Released!"/>
+            <label style={LS}>Subtitle</label>
+            <input value={bannerForm.subtitle} onChange={e=>setBannerForm(f=>({...f,subtitle:e.target.value}))} style={IS} placeholder="Short description..."/>
+            <label style={LS}>Badge</label>
+            <input value={bannerForm.badge} onChange={e=>setBannerForm(f=>({...f,badge:e.target.value}))} style={IS} placeholder="🔥 NEW · IMPORTANT"/>
+            <label style={LS}>Background Color</label>
+            <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
+              <input type="color" value={bannerForm.bgColor} onChange={e=>setBannerForm(f=>({...f,bgColor:e.target.value}))} style={{width:44,height:38,borderRadius:8,border:"2px solid #f0f0f0",cursor:"pointer"}}/>
+              <input value={bannerForm.bgColor} onChange={e=>setBannerForm(f=>({...f,bgColor:e.target.value}))} style={{...IS,marginBottom:0,flex:1}}/>
+              {["#FF6A00","#1d4ed8","#16a34a","#7c3aed","#dc2626","#000"].map(c=>(
+                <div key={c} onClick={()=>setBannerForm(f=>({...f,bgColor:c}))} style={{width:22,height:22,borderRadius:"50%",background:c,cursor:"pointer",border:bannerForm.bgColor===c?"3px solid #333":"2px solid #e0e0e0",flexShrink:0}}/>
+              ))}
+            </div>
+            <label style={LS}>Image URL (optional)</label>
+            <input value={bannerForm.imageUrl} onChange={e=>setBannerForm(f=>({...f,imageUrl:e.target.value}))} style={IS} placeholder="https://..."/>
+            <label style={LS}>Button Text</label>
+            <input value={bannerForm.btnText} onChange={e=>setBannerForm(f=>({...f,btnText:e.target.value}))} style={IS} placeholder="Apply Now"/>
+            <label style={LS}>Button Link</label>
+            <input value={bannerForm.btnLink} onChange={e=>setBannerForm(f=>({...f,btnLink:e.target.value}))} style={IS} placeholder="https://..."/>
+            <label style={LS}>Display Order (0 = first)</label>
+            <input type="number" value={bannerForm.order} onChange={e=>setBannerForm(f=>({...f,order:parseInt(e.target.value)||0}))} style={IS}/>
+
+            <div style={{display:"flex",gap:10}}>
+              <button onClick={saveBanner} disabled={bannerSaving} style={{flex:2,padding:"12px 0",borderRadius:11,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                {bannerSaving&&<Spinner size={16} color="#fff"/>}{editingBanner?"💾 Update":"🖼️ Add Banner"}
+              </button>
+              {editingBanner&&<button onClick={()=>{setEditingBanner(null);setBannerForm({title:"",subtitle:"",badge:"",imageUrl:"",bgColor:"#FF6A00",btnText:"",btnLink:"",order:adminBanners.length});}} style={{flex:1,padding:"12px 0",borderRadius:11,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>}
+            </div>
+          </div>
+
+          <div style={{background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+              <h3 style={{fontWeight:900,margin:0}}>Live Banners</h3>
+              <span style={{background:"#FF6A00",color:"#fff",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:800}}>{adminBanners.length} · ☁️</span>
+            </div>
+            {adminBanners.length===0?(
+              <div style={{textAlign:"center",padding:40,color:"#aaa"}}>
+                <div style={{fontSize:48,marginBottom:12}}>🖼️</div>
+                <p>No banners yet. Add one to show it on the home page.</p>
+              </div>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                {adminBanners.map((b,i)=>(
+                  <div key={b.id} style={{borderRadius:12,overflow:"hidden",border:"2px solid #f0f0f0"}}>
+                    <div style={{background:b.bgColor||"#FF6A00",padding:"12px 16px",position:"relative",overflow:"hidden",minHeight:60}}>
+                      {b.imageUrl&&<img src={b.imageUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.35}}/>}
+                      <div style={{position:"relative"}}>
+                        {b.badge&&<div style={{fontSize:9,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:3}}>{b.badge}</div>}
+                        <div style={{fontWeight:800,color:"#fff",fontSize:13}}>{b.title}</div>
+                        {b.subtitle&&<div style={{color:"rgba(255,255,255,.7)",fontSize:11,marginTop:2}}>{b.subtitle}</div>}
+                      </div>
+                    </div>
+                    <div style={{padding:"8px 12px",display:"flex",gap:6,alignItems:"center",background:"#f9f9f9"}}>
+                      <button onClick={()=>moveBanner(b.id,-1)} disabled={i===0} style={{padding:"4px 8px",borderRadius:6,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",opacity:i===0?.4:1}}>↑</button>
+                      <button onClick={()=>moveBanner(b.id,1)} disabled={i===adminBanners.length-1} style={{padding:"4px 8px",borderRadius:6,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",opacity:i===adminBanners.length-1?.4:1}}>↓</button>
+                      <button onClick={()=>{setEditingBanner(b.id);setBannerForm({title:b.title||"",subtitle:b.subtitle||"",badge:b.badge||"",imageUrl:b.imageUrl||"",bgColor:b.bgColor||"#FF6A00",btnText:b.btnText||"",btnLink:b.btnLink||"",order:b.order||0});}} style={{flex:1,padding:"5px 0",borderRadius:7,border:"2px solid #FF6A00",background:"#fff5ee",color:"#FF6A00",fontWeight:700,fontSize:11,cursor:"pointer"}}>✏️ Edit</button>
+                      {delBannerId===b.id?(
+                        <><button onClick={()=>deleteBanner(b.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#dc2626",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>Delete</button>
+                        <button onClick={()=>setDelBannerId(null)} style={{padding:"5px 8px",borderRadius:7,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:10,cursor:"pointer"}}>✕</button></>
+                      ):(
+                        <button onClick={()=>setDelBannerId(b.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontWeight:700,fontSize:11,cursor:"pointer"}}>🗑️</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* SETTINGS */}
       {tab==="settings"&&(
@@ -2184,17 +2558,26 @@ document.head.appendChild(spinStyle);
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App(){
   const {user:fbUser, justLoggedIn, clearJustLoggedIn} = useAuth();
+  const examTypes = useExamTypes(); // live from Firestore
   const [page,setPage]   = useState("home");
   const [examType,setExamType] = useState("ssc");
   const [activeTest,setActiveTest] = useState(null);
   const [testResult,setTestResult] = useState(null);
   const [notices,setNotices] = useState([]);
+  const [banners,setBanners] = useState([]);
   const [showNoticeModal,setShowNoticeModal] = useState(false);
   const [showNotifPanel,setShowNotifPanel] = useState(false);
   const [unreadCount,setUnreadCount] = useState(0);
 
   // Seed admin account on first load
   useEffect(()=>{ ensureAdminExists(); },[]);
+
+  // Load banners from Firestore
+  useEffect(()=>{
+    const q=query(collection(db,"banners"),orderBy("order","asc"),limit(10));
+    const unsub=onSnapshot(q,snap=>setBanners(snap.docs.map(d=>({id:d.id,...d.data()}))));
+    return unsub;
+  },[]);
 
   // Load notices from Firestore
   useEffect(()=>{
@@ -2275,10 +2658,10 @@ export default function App(){
 
       {showNoticeModal && notices.length>0 && <NoticeModal notices={notices} onClose={()=>setShowNoticeModal(false)}/>}
       {showNotifPanel && <NotifPanel notices={notices} onClose={()=>setShowNotifPanel(false)}/>}
-      {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
+      {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType} banners={banners} examTypes={examTypes}/>}
       {page==="auth"      && !fbUser      && <AuthPage    onLogin={handleLogin}/>}
       {page==="auth"      && fbUser       && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
-      {page==="tests"     && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType}/>}
+      {page==="tests"     && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType} examTypes={examTypes}/>}
       {page==="result"    && testResult   && <ResultPage    result={testResult} onViewSolutions={()=>setPage("solutions")} onBack={()=>setPage("tests")}/>}
       {page==="solutions" && testResult   && <SolutionsPage result={testResult} onBack={()=>setPage("result")}/>}
       {page==="dashboard" && fbUser       && <DashboardPage user={fbUser} setPage={setPage}/>}
