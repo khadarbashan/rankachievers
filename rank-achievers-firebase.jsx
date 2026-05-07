@@ -8,12 +8,12 @@ import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collec
 // Get from: https://console.firebase.google.com → Your Project → Settings → Web App
 
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey: "AIzaSyCdjsy9rF3a9yQMK9T7el980wnrQyO1Atk",
+  authDomain: "rank-achievers.firebaseapp.com",
+  projectId: "rank-achievers",
+  storageBucket: "rank-achievers.firebasestorage.app",
+  messagingSenderId: "945705830932",
+  appId: "1:945705830932:web:6f373103a09fbd2512b501"
 };
 
 const app  = initializeApp(firebaseConfig);
