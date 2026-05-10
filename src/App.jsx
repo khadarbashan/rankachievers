@@ -1767,22 +1767,32 @@ function AdminPage(){
 
   // Seed all generated questions to Firestore (one-time)
   const seedAllQuestions=async()=>{
-    setSeedLoading(true);setSeedMsg("");
+    setSeedLoading(true);setSeedMsg("");setSeedDone(false);
     try{
       const allTests=getAllTests();
-      let total=0;
+      let added=0;let skipped=0;
       for(const test of allTests){
+        // Check how many questions exist for this test
+        const existing=await getDocs(query(
+          collection(db,"questions"),
+          where("testId","==",test.id),
+          limit(30)
+        ));
+        if(existing.docs.length>=30){
+          skipped+=30;
+          continue; // already fully seeded
+        }
+        // Seed missing questions
         const qs=generateQuestionsForTest(test);
-        // Check if already seeded
-        const existing=await getDocs(query(collection(db,"questions"),where("testId","==",test.id),limit(1)));
-        if(existing.docs.length>0){ total+=30; continue; }
-        // Batch write 30 questions
+        const existingIds=new Set(existing.docs.map(d=>d.data().id));
         for(const q of qs){
-          await addDoc(collection(db,"questions"),{...q,createdAt:serverTimestamp()});
-          total++;
+          if(!existingIds.has(q.id)){
+            await addDoc(collection(db,"questions"),{...q,createdAt:serverTimestamp()});
+            added++;
+          }
         }
       }
-      setSeedMsg(`✅ ${total} questions seeded to Firestore!`);
+      setSeedMsg(`✅ Added ${added} questions · ${skipped} already existed`);
       setSeedDone(true);
     }catch(e){
       setSeedMsg("❌ Error: "+e.message);
@@ -1792,8 +1802,9 @@ function AdminPage(){
   useEffect(()=>{
     if(tab!=="editq") return;
     setQLoading(true);
-    // Load up to 500 questions (all seeded + manually added)
-    const q=query(collection(db,"questions"),orderBy("createdAt","asc"),limit(500));
+    // Load up to 2000 questions (all seeded + manually added)
+    // SSC alone = 6 topics × 3 diffs × 30 = 540, total 3 exams = 1620+
+    const q=query(collection(db,"questions"),limit(2000));
     const unsub=onSnapshot(q,snap=>{
       setAllQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
       setQLoading(false);
@@ -2314,6 +2325,28 @@ function AdminPage(){
               {qSaveMsg&&<div style={{padding:"8px 16px",borderRadius:10,fontSize:13,fontWeight:700,background:qSaveMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:qSaveMsg.startsWith("✅")?"#166534":"#dc2626"}}>{qSaveMsg}</div>}
             </div>
 
+            {/* Seed / Re-seed banner */}
+            {!qLoading&&(
+              <div style={{background:"#f8f8f8",borderRadius:12,padding:"12px 18px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                <div>
+                  <span style={{fontSize:13,fontWeight:700,color:"#333"}}>📊 Question Bank Status</span>
+                  <div style={{fontSize:12,color:"#888",marginTop:2}}>
+                    {EXAM_TYPES.map(et=>{
+                      const cnt=allQuestions.filter(q=>q.examType===et.id).length;
+                      const expected=et.topics.length*3*30;
+                      return <span key={et.id} style={{marginRight:14,color:cnt>=expected?"#22c55e":cnt>0?"#f59e0b":"#ef4444"}}>
+                        {et.icon} {et.label}: {cnt}/{expected}
+                      </span>;
+                    })}
+                  </div>
+                </div>
+                <button onClick={seedAllQuestions} disabled={seedLoading||seedDone} style={{padding:"8px 18px",borderRadius:9,border:"none",background:seedDone?"#22c55e":seedLoading?"#aaa":"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:700,fontSize:12,cursor:seedLoading||seedDone?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                  {seedLoading&&<Spinner size={12} color="#fff"/>}
+                  {seedLoading?"Seeding...":seedDone?"✅ Done":"⬆️ Seed / Fix Missing"}
+                </button>
+              </div>
+            )}
+
             {/* Seed banner — show if no questions yet */}
             {!qLoading&&allQuestions.length<100&&(
               <div style={{background:"linear-gradient(135deg,#1a0800,#2d1000)",borderRadius:14,padding:"18px 22px",border:"2px solid #FF6A0050",marginBottom:16}}>
@@ -2385,11 +2418,16 @@ function AdminPage(){
           {/* Search */}
           <input value={qSearch} onChange={e=>setQSearch(e.target.value)} placeholder="🔍 Search by question text, topic or test name..." style={{...IS,marginBottom:14}}/>
 
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
             <span style={{fontSize:13,color:"#555",fontWeight:600}}>
-              Showing <b style={{color:"#FF6A00"}}>{filteredQs.length}</b> of {allQuestions.length} questions
+              Showing <b style={{color:"#FF6A00"}}>{filteredQs.length}</b>
+              {qExamFilter&&<> of <b>{allQuestions.filter(q=>q.examType===qExamFilter).length}</b> {qExamFilter.toUpperCase()} questions</>}
+              {!qExamFilter&&<> of <b>{allQuestions.length}</b> total questions</>}
             </span>
-            <span style={{fontSize:12,color:"#22c55e",fontWeight:600}}>☁️ Live from Firestore</span>
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <span style={{fontSize:12,color:"#22c55e",fontWeight:600}}>☁️ Live</span>
+              {qLoading&&<Spinner size={14} color="#FF6A00"/>}
+            </div>
           </div>
 
           {qLoading?(
