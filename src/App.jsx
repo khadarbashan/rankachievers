@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { initializeApp } from "firebase/app";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, increment } from "firebase/firestore";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
 // Replace these values with your Firebase project config
@@ -15,7 +15,6 @@ const firebaseConfig = {
   messagingSenderId: "945705830932",
   appId: "1:945705830932:web:6f373103a09fbd2512b501"
 };
-
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -1912,11 +1911,28 @@ function AdminPage(){
   };
 
   const importBulk=async()=>{
+    if(!examType){alert("Please select an exam type first");return;}
+    if(!topicId&&!curTopic?.id){alert("Please select a topic first");return;}
     setUpLoading(true);
     try{
-      const batch=upRows.map(r=>addDoc(collection(db,"questions"),{...r,examType,topicId:curTopic.id,topicName:curTopic.name,createdAt:serverTimestamp()}));
+      // Use the explicitly selected exam type and topic from bulk upload selectors
+      const selET=liveExamTypes.find(e=>e.id===examType)||et;
+      const selTopic=(selET.topics||[]).find(t=>t.id===topicId)||curTopic;
+      const diff=qf.difficulty||"easy";
+      const batch=upRows.map(r=>addDoc(collection(db,"questions"),{
+        ...r,
+        examType:examType,
+        topicId:topicId||curTopic.id,
+        topicName:selTopic?.name||curTopic.name,
+        difficulty:r.difficulty||diff,
+        testId:`${topicId||curTopic.id}_${r.difficulty||diff}`,
+        testTitle:`${selTopic?.name||curTopic.name} – ${r.difficulty||diff}`,
+        createdAt:serverTimestamp(),
+        isSeeded:false,
+        addedByAdmin:true,
+      }));
       await Promise.all(batch);
-      setUpMsg(`✅ ${upRows.length} questions saved to Firestore!`);
+      setUpMsg(`✅ ${upRows.length} questions saved under ${selET.label} → ${selTopic?.name} (${diff})!`);
       setUpRows([]);setUpFile(null);if(fRef.current)fRef.current.value="";
     }catch(err){setUpMsg("❌ Import failed: "+err.message);}
     finally{setUpLoading(false);}
@@ -2504,49 +2520,158 @@ function AdminPage(){
       )}
 
       {/* BULK UPLOAD */}
-      {tab==="bulk"&&(
-        <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
-          <h3 style={{fontWeight:900,marginBottom:6}}>Bulk Upload to Firestore</h3>
-          <p style={{color:"#888",marginBottom:20,fontSize:13}}>Upload CSV — each row saved as a Firestore question document</p>
-          <div style={{display:"flex",gap:10,marginBottom:18}}>
-            {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>setExamType(e.id)} style={{flex:1,padding:"8px 0",borderRadius:9,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,cursor:"pointer",fontSize:12}}>{e.icon} {e.label}</button>)}
-          </div>
-          <div onClick={()=>fRef.current?.click()} style={{border:"2px dashed #FF6A00",borderRadius:14,padding:"40px 32px",marginBottom:18,background:"#fff8f0",textAlign:"center",cursor:"pointer"}}
-            onMouseOver={e=>e.currentTarget.style.background="#fff0e0"} onMouseOut={e=>e.currentTarget.style.background="#fff8f0"}>
-            <div style={{fontSize:40,marginBottom:8}}>📂</div>
-            <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>{upFile?`📄 ${upFile.name}`:"Click to Choose CSV File"}</div>
-            <div style={{color:"#888",fontSize:12}}>{upFile?`${upRows.length} rows detected`:"Rows will be saved to Firebase Firestore"}</div>
-            <input ref={fRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{display:"none"}}/>
-          </div>
-          {upMsg&&<div style={{padding:"10px 16px",borderRadius:9,marginBottom:14,fontSize:13,fontWeight:600,background:upMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:upMsg.startsWith("✅")?"#16a34a":"#dc2626"}}>{upMsg}</div>}
-          {upRows.length>0&&(
-            <>
-              <div style={{overflowX:"auto",marginBottom:18}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
-                  <thead><tr style={{background:"#000",color:"#FF6A00"}}>{["#","Question","A","B","Ans","Diff"].map(h=><th key={h} style={{padding:"7px 9px",textAlign:"left",fontWeight:700}}>{h}</th>)}</tr></thead>
-                  <tbody>{upRows.slice(0,5).map((r,i)=>(
-                    <tr key={i} style={{borderBottom:"1px solid #f0f0f0",background:i%2?"#f9f9f9":"#fff"}}>
-                      <td style={{padding:"7px"}}>{i+1}</td>
-                      <td style={{padding:"7px",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.question_text}</td>
-                      <td style={{padding:"7px"}}>{r.option_a}</td><td style={{padding:"7px"}}>{r.option_b}</td>
-                      <td style={{padding:"7px",color:"#FF6A00",fontWeight:700}}>{r.correct_answer?.toUpperCase()}</td>
-                      <td style={{padding:"7px"}}>{r.difficulty||"easy"}</td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-                {upRows.length>5&&<div style={{textAlign:"center",color:"#aaa",fontSize:11,marginTop:5}}>...and {upRows.length-5} more</div>}
+      {tab==="bulk"&&(()=>{
+        const bulkET=liveExamTypes.find(e=>e.id===examType)||liveExamTypes[0];
+        const bulkTopics=bulkET?.topics||[];
+        const bulkTopic=bulkTopics.find(t=>t.id===topicId);
+        const bulkDiff=qf.difficulty||"easy";
+        const allSelected=!!examType&&!!topicId;
+        return(
+          <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+            <h3 style={{fontWeight:900,marginBottom:4}}>📤 Bulk Upload Questions</h3>
+            <p style={{color:"#888",marginBottom:20,fontSize:13}}>3 steps: choose exam → choose topic → upload CSV</p>
+
+            {/* STEP 1 — Exam */}
+            <div style={{background:"#f8f8f8",borderRadius:14,padding:"16px 18px",marginBottom:14,border:"2px solid",borderColor:examType?"#FF6A00":"#e0e0e0"}}>
+              <div style={{fontWeight:800,fontSize:13,marginBottom:10,color:examType?"#FF6A00":"#555"}}>
+                {examType?"✅":"1️⃣"} Choose Exam Type
               </div>
-              <button onClick={importBulk} disabled={upLoading} style={{padding:"12px 32px",borderRadius:11,border:"none",background:upLoading?"#ccc":"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:14,cursor:upLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:8}}>
-                {upLoading&&<Spinner size={16} color="#fff"/>}⬆️ Import {upRows.length} Questions to Firestore
-              </button>
-            </>
-          )}
-          <div style={{marginTop:20,background:"#f8f8f8",borderRadius:11,padding:16}}>
-            <div style={{fontWeight:800,marginBottom:8,fontSize:13}}>📋 CSV Format:</div>
-            <code style={{fontSize:11,color:"#333",display:"block",whiteSpace:"pre",lineHeight:1.8,overflowX:"auto"}}>{`question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,youtube_link,difficulty\n"What is 15% of 200?","20","25","30","35","c","15/100×200=30","","easy"`}</code>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {liveExamTypes.filter(e=>e.visible!==false).map(e=>(
+                  <button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{padding:"10px 20px",borderRadius:10,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,cursor:"pointer",fontSize:13,transition:"all .2s"}}>
+                    {e.icon} {e.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* STEP 2 — Topic */}
+            <div style={{background:"#f8f8f8",borderRadius:14,padding:"16px 18px",marginBottom:14,border:"2px solid",borderColor:topicId?"#FF6A00":"#e0e0e0",opacity:examType?1:0.5}}>
+              <div style={{fontWeight:800,fontSize:13,marginBottom:10,color:topicId?"#FF6A00":"#555"}}>
+                {topicId?"✅":"2️⃣"} Choose Topic {!examType&&"— select exam first"}
+              </div>
+              {examType?(
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {bulkTopics.map(t=>(
+                    <button key={t.id} onClick={()=>setTopicId(t.id)} style={{padding:"8px 16px",borderRadius:20,border:"2px solid",borderColor:topicId===t.id?"#000":"#e0e0e0",background:topicId===t.id?"#000":"#fff",color:topicId===t.id?"#fff":"#555",fontWeight:700,cursor:"pointer",fontSize:12,transition:"all .2s"}}>
+                      {t.icon} {t.name}
+                    </button>
+                  ))}
+                </div>
+              ):(
+                <p style={{color:"#ccc",fontSize:13,margin:0}}>Select an exam type first</p>
+              )}
+            </div>
+
+            {/* STEP 3 — Difficulty */}
+            <div style={{background:"#f8f8f8",borderRadius:14,padding:"16px 18px",marginBottom:14,border:"2px solid",borderColor:topicId?"#FF6A00":"#e0e0e0",opacity:topicId?1:0.5}}>
+              <div style={{fontWeight:800,fontSize:13,marginBottom:10,color:"#555"}}>
+                3️⃣ Choose Difficulty Level
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                {["easy","medium","hard"].map(d=>(
+                  <button key={d} onClick={()=>setQf(f=>({...f,difficulty:d}))} style={{padding:"8px 24px",borderRadius:10,border:"2px solid",borderColor:bulkDiff===d?DCOL[d]:"#e0e0e0",background:bulkDiff===d?DBG[d]:"#fff",color:bulkDiff===d?DCOL[d]:"#555",fontWeight:800,cursor:"pointer",fontSize:13,transition:"all .2s"}}>
+                    {d.charAt(0).toUpperCase()+d.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Destination banner */}
+            {allSelected&&(
+              <div style={{background:bulkET.bg||"#fff5ee",border:`2px solid ${bulkET.color}`,borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontSize:11,color:"#888",fontWeight:600,marginBottom:4}}>📌 Questions will be saved to Firestore under:</div>
+                  <div style={{fontWeight:900,fontSize:17,display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{color:bulkET.color}}>{bulkET.icon} {bulkET.label}</span>
+                    <span style={{color:"#ccc"}}>→</span>
+                    <span style={{color:"#333"}}>{bulkTopic?.icon} {bulkTopic?.name}</span>
+                  </div>
+                </div>
+                <div style={{textAlign:"center"}}>
+                  <span style={{background:DBG[bulkDiff],color:DCOL[bulkDiff],padding:"6px 16px",borderRadius:20,fontSize:13,fontWeight:800,display:"block"}}>{bulkDiff.toUpperCase()}</span>
+                  <span style={{fontSize:11,color:"#888",marginTop:4,display:"block"}}>difficulty</span>
+                </div>
+              </div>
+            )}
+
+            {/* File Upload */}
+            {!allSelected?(
+              <div style={{textAlign:"center",padding:"32px 20px",background:"#f8f8f8",borderRadius:14,border:"2px dashed #e0e0e0",marginBottom:16}}>
+                <div style={{fontSize:48,marginBottom:12}}>☝️</div>
+                <p style={{color:"#888",fontSize:14,fontWeight:600}}>Complete Steps 1 &amp; 2 above</p>
+                <p style={{color:"#aaa",fontSize:12}}>Select exam type and topic to unlock file upload</p>
+              </div>
+            ):(
+              <div onClick={()=>fRef.current?.click()} style={{border:"2px dashed #FF6A00",borderRadius:14,padding:"32px",marginBottom:16,background:"#fff8f0",textAlign:"center",cursor:"pointer",transition:"background .2s"}}
+                onMouseOver={e=>e.currentTarget.style.background="#fff0e0"} onMouseOut={e=>e.currentTarget.style.background="#fff8f0"}>
+                <div style={{fontSize:44,marginBottom:10}}>📂</div>
+                <div style={{fontWeight:800,fontSize:15,marginBottom:6}}>{upFile?`📄 ${upFile.name}`:"Click to Choose CSV File"}</div>
+                <div style={{color:"#888",fontSize:12}}>{upFile?`${upRows.length} question rows detected — ready to import`:"or drag & drop your .csv file here"}</div>
+                <input ref={fRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{display:"none"}}/>
+              </div>
+            )}
+
+            {/* Status message */}
+            {upMsg&&(
+              <div style={{padding:"12px 18px",borderRadius:10,marginBottom:16,fontSize:13,fontWeight:600,background:upMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:upMsg.startsWith("✅")?"#16a34a":"#dc2626",border:`2px solid ${upMsg.startsWith("✅")?"#86efac":"#fca5a5"}`}}>
+                {upMsg}
+              </div>
+            )}
+
+            {/* Preview table + import button */}
+            {upRows.length>0&&(
+              <>
+                <div style={{overflowX:"auto",marginBottom:16}}>
+                  <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Preview (first 5 rows):</div>
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                    <thead>
+                      <tr style={{background:"#000",color:"#FF6A00"}}>
+                        {["#","Question","Opt A","Opt B","Opt C","Opt D","Answer","Difficulty"].map(h=>(
+                          <th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {upRows.slice(0,5).map((r,i)=>(
+                        <tr key={i} style={{borderBottom:"1px solid #f0f0f0",background:i%2?"#f9f9f9":"#fff"}}>
+                          <td style={{padding:"7px 10px",color:"#FF6A00",fontWeight:700}}>{i+1}</td>
+                          <td style={{padding:"7px 10px",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.question_text}</td>
+                          <td style={{padding:"7px 10px"}}>{r.option_a}</td>
+                          <td style={{padding:"7px 10px"}}>{r.option_b}</td>
+                          <td style={{padding:"7px 10px"}}>{r.option_c}</td>
+                          <td style={{padding:"7px 10px"}}>{r.option_d}</td>
+                          <td style={{padding:"7px 10px",color:"#FF6A00",fontWeight:800}}>{r.correct_answer?.toUpperCase()}</td>
+                          <td style={{padding:"7px 10px"}}><span style={{background:DBG[r.difficulty||bulkDiff],color:DCOL[r.difficulty||bulkDiff],padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:700}}>{(r.difficulty||bulkDiff).toUpperCase()}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {upRows.length>5&&<div style={{textAlign:"center",color:"#aaa",fontSize:12,marginTop:8}}>...and {upRows.length-5} more rows</div>}
+                </div>
+                <button onClick={importBulk} disabled={upLoading} style={{width:"100%",padding:"14px 0",borderRadius:12,border:"none",background:upLoading?"#ccc":"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:15,cursor:upLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:upLoading?"none":"0 4px 20px #FF6A0050"}}>
+                  {upLoading&&<Spinner size={18} color="#fff"/>}
+                  {upLoading?`Saving ${upRows.length} questions...`:`⬆️ Import ${upRows.length} Questions → ${bulkET.label} / ${bulkTopic?.name} / ${bulkDiff}`}
+                </button>
+              </>
+            )}
+
+            {/* CSV format guide */}
+            <div style={{marginTop:20,background:"#f8f8f8",borderRadius:12,padding:18}}>
+              <div style={{fontWeight:800,marginBottom:10,fontSize:13}}>📋 Required CSV Format:</div>
+              <code style={{fontSize:11,color:"#333",display:"block",whiteSpace:"pre",lineHeight:1.9,overflowX:"auto",fontFamily:"monospace"}}>
+{`question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,youtube_link,difficulty
+"What is 15% of 200?","20","25","30","35","c","15/100 × 200 = 30","https://youtube.com/embed/xxx","easy"
+"Solve: 2x + 5 = 15","3","4","5","6","c","2x=10, x=5","","medium"`}
+              </code>
+              <div style={{marginTop:10,fontSize:11,color:"#888"}}>
+                ⚠️ <b>correct_answer</b> must be: a, b, c, or d &nbsp;|&nbsp;
+                <b>difficulty</b> must be: easy, medium, or hard (optional — uses Step 3 selection if blank)
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
