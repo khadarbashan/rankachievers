@@ -837,65 +837,9 @@ function getAllTests(){
 }
 
 function TestPage({test,user,onFinish}){
-  const [questions,setQuestions]=useState([]);
-  const [qLoading,setQLoading]=useState(true);
-
-  // Load questions — simple query (no index needed), fallback to generated
-  useEffect(()=>{
-    let cancelled=false;
-    const loadQs=async()=>{
-      try{
-        // Simple single-field query — no composite index required
-        const q=query(
-          collection(db,"questions"),
-          where("testId","==",test.id),
-          limit(30)
-        );
-        const snap=await getDocs(q);
-        if(!cancelled){
-          if(snap.docs.length>=5){
-            setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
-          } else {
-            // Not enough Firestore questions — use generated
-            setQuestions(generateQuestionsForTest(test));
-          }
-          setQLoading(false);
-        }
-      }catch(err){
-        console.warn("Firestore question load failed, using generated:",err.message);
-        if(!cancelled){
-          setQuestions(generateQuestionsForTest(test));
-          setQLoading(false);
-        }
-      }
-    };
-    loadQs();
-    return ()=>{ cancelled=true; };
-  },[test.id]);
-
-  // Safety net: if loaded but empty, use generated
-  useEffect(()=>{
-    if(!qLoading && questions.length===0){
-      setQuestions(generateQuestionsForTest(test));
-    }
-  },[qLoading,questions.length]);
-
-  if(qLoading) return(
-    <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20}}>
-      <Spinner size={40} color="#FF6A00"/>
-      <div style={{color:"#fff",fontWeight:700,fontSize:16}}>Loading questions...</div>
-    </div>
-  );
-
-  if(questions.length===0) return(
-    <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20}}>
-      <Spinner size={40} color="#FF6A00"/>
-      <div style={{color:"#fff",fontWeight:700,fontSize:16}}>Preparing questions...</div>
-    </div>
-  );
-
-  const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
-  const isTimed=test.timed!==false;
+  // ── ALL HOOKS MUST BE AT TOP — NO EXCEPTIONS ──
+  const [questions,setQuestions]=useState(()=>generateQuestionsForTest(test));
+  const [qLoading,setQLoading]=useState(false);
   const [current,setCurrent]=useState(0);
   const [answers,setAnswers]=useState({});
   const [status,setStatus]=useState({});
@@ -912,7 +856,31 @@ function TestPage({test,user,onFinish}){
   const qStartRef=useRef(Date.now());
   const qTimesRef=useRef({});
 
+  // Sync qTimes ref
   useEffect(()=>{qTimesRef.current=qTimes;},[qTimes]);
+
+  // Try loading from Firestore in background — replace generated if found
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      try{
+        const snap=await getDocs(query(
+          collection(db,"questions"),
+          where("testId","==",test.id),
+          limit(30)
+        ));
+        if(!cancelled && snap.docs.length>=5){
+          setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
+        }
+      }catch(e){
+        // silently ignore — generated questions already loaded
+      }
+    })();
+    return()=>{cancelled=true;};
+  },[test.id]);
+
+  const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
+  const isTimed=test.timed!==false;
 
   useEffect(()=>{
     submitRef.current=async()=>{
@@ -932,13 +900,9 @@ function TestPage({test,user,onFinish}){
             score:cc,total:questions.length,accuracy:result.accuracy,
             timeSpent:result.timeSpent,createdAt:serverTimestamp(),
           });
-          await updateDoc(doc(db,"users",user.uid),{
-            totalTests:increment(1),
-            [`examStats.${test.examType}.tests`]:increment(1),
-            [`examStats.${test.examType}.totalScore`]:increment(cc),
-          });
+          await updateDoc(doc(db,"users",user.uid),{totalTests:increment(1)});
         }
-      }catch(e){console.error("Save attempt failed:",e);}
+      }catch(e){console.error(e);}
       finally{setSaving(false);}
       onFinish(result);
     };
@@ -976,6 +940,7 @@ function TestPage({test,user,onFinish}){
   const goTo=idx=>{saveQTime();setStatus(p=>({...p,[current]:p[current]||"visited"}));setCurrent(idx);};
   const saveAndNext=()=>{saveQTime();setStatus(p=>({...p,[current]:answers[current]?"answered":(p[current]||"visited")}));if(current<questions.length-1)setCurrent(c=>c+1);};
   const markReview=()=>{saveQTime();setStatus(p=>({...p,[current]:"review"}));if(current<questions.length-1)setCurrent(c=>c+1);};
+
   const handleSubmit=(auto=false)=>{
     clearInterval(timerRef.current);clearInterval(qTimerRef.current);
     const el=Math.floor((Date.now()-qStartRef.current)/1000);
@@ -1013,6 +978,13 @@ function TestPage({test,user,onFinish}){
     </div>
   );
 
+  if(!q) return(
+    <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20}}>
+      <Spinner size={48} color="#FF6A00"/>
+      <div style={{color:"#fff",fontWeight:700,fontSize:16}}>Preparing test...</div>
+    </div>
+  );
+
   return(
     <div style={{paddingTop:60,height:"100vh",display:"flex",flexDirection:"column",background:"#f8f8f8",overflow:"hidden"}}>
       {/* Header */}
@@ -1041,7 +1013,7 @@ function TestPage({test,user,onFinish}){
       </div>
 
       <div style={{display:"flex",flex:1,overflow:"hidden",flexDirection:window.innerWidth<=768?"column":"row"}}>
-        {/* Question panel — takes all space above palette on mobile */}
+        {/* Question panel */}
         <div style={{flex:1,padding:window.innerWidth<=768?"10px 12px":24,overflowY:"auto",minHeight:0}}>
           <div style={{background:"#fff",borderRadius:16,padding:26,boxShadow:"0 2px 16px #0000000a"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
@@ -1073,11 +1045,10 @@ function TestPage({test,user,onFinish}){
             </div>
           </div>
         </div>
-        {/* Palette — bottom bar on mobile, side panel on desktop */}
+
+        {/* Palette */}
         {window.innerWidth<=768?(
-          /* ── MOBILE: fixed bottom palette bar ── */
           <div style={{background:"#fff",borderTop:"2px solid #FF6A00",padding:"8px 12px",flexShrink:0}}>
-            {/* Progress summary */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={{fontSize:11,fontWeight:700,color:"#555"}}>Question Palette</div>
               <div style={{display:"flex",gap:10,fontSize:11}}>
@@ -1086,22 +1057,11 @@ function TestPage({test,user,onFinish}){
                 <span style={{color:"#888",fontWeight:700}}>⬜{questions.length-Object.keys(status).length}</span>
               </div>
             </div>
-            {/* Horizontal scrollable number buttons */}
             <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,WebkitOverflowScrolling:"touch"}}>
               {questions.map((_,i)=>(
-                <button key={i} onClick={()=>goTo(i)} style={{
-                  minWidth:34,height:34,borderRadius:8,border:"2px solid",
-                  borderColor:current===i?"#000":"transparent",
-                  background:pc(i),
-                  color:pc(i)==="#e5e7eb"?"#555":"#fff",
-                  fontWeight:800,fontSize:12,cursor:"pointer",flexShrink:0,
-                  boxShadow:current===i?"0 0 0 3px #FF6A0060":"none",
-                  transform:current===i?"scale(1.15)":"scale(1)",
-                  transition:"transform .15s"
-                }}>{i+1}</button>
+                <button key={i} onClick={()=>goTo(i)} style={{minWidth:34,height:34,borderRadius:8,border:"2px solid",borderColor:current===i?"#000":"transparent",background:pc(i),color:pc(i)==="#e5e7eb"?"#555":"#fff",fontWeight:800,fontSize:12,cursor:"pointer",flexShrink:0,boxShadow:current===i?"0 0 0 3px #FF6A0060":"none",transform:current===i?"scale(1.15)":"scale(1)",transition:"transform .15s"}}>{i+1}</button>
               ))}
             </div>
-            {/* Color legend */}
             <div style={{display:"flex",gap:12,marginTop:8,flexWrap:"wrap"}}>
               {[["#22c55e","Answered"],["#ef4444","Not Ans."],["#e5e7eb","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
                 <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10}}>
@@ -1112,7 +1072,6 @@ function TestPage({test,user,onFinish}){
             </div>
           </div>
         ):(
-          /* ── DESKTOP: right side panel ── */
           <div style={{width:250,background:"#fff",borderLeft:"2px solid #f0f0f0",padding:18,overflowY:"auto",flexShrink:0}}>
             <h3 style={{fontWeight:800,fontSize:13,marginBottom:12}}>Question Palette</h3>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
@@ -1125,13 +1084,7 @@ function TestPage({test,user,onFinish}){
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
               {questions.map((_,i)=>(
-                <button key={i} onClick={()=>goTo(i)} style={{
-                  width:36,height:36,borderRadius:7,border:"2px solid",
-                  borderColor:current===i?"#000":"transparent",
-                  background:pc(i),color:pc(i)==="#e5e7eb"?"#555":"#fff",
-                  fontWeight:800,fontSize:12,cursor:"pointer",
-                  boxShadow:current===i?"0 0 0 3px #00000030":"none"
-                }}>{i+1}</button>
+                <button key={i} onClick={()=>goTo(i)} style={{width:36,height:36,borderRadius:7,border:"2px solid",borderColor:current===i?"#000":"transparent",background:pc(i),color:pc(i)==="#e5e7eb"?"#555":"#fff",fontWeight:800,fontSize:12,cursor:"pointer",boxShadow:current===i?"0 0 0 3px #00000030":"none"}}>{i+1}</button>
               ))}
             </div>
             <div style={{marginTop:14,padding:12,background:"#f8f8f8",borderRadius:10}}>
@@ -1159,7 +1112,7 @@ function TestPage({test,user,onFinish}){
                 <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:13,color:"#555"}}>{l}</span><span style={{fontWeight:800,color:c}}>{v}</span></div>
               ))}
             </div>
-            <p style={{fontSize:12,color:"#888",marginBottom:18}}>☁️ Results will be saved to cloud automatically</p>
+            <p style={{fontSize:12,color:"#888",marginBottom:18}}>☁️ Results will be saved to cloud</p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setShowSubmitModal(false)} style={{flex:1,padding:"11px 0",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:800,cursor:"pointer"}}>Continue</button>
               <button onClick={()=>{setShowSubmitModal(false);handleSubmit();}} style={{flex:1,padding:"11px 0",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"}}>Submit →</button>
@@ -1184,7 +1137,6 @@ function TestPage({test,user,onFinish}){
   );
 }
 
-// ─── RESULT PAGE ─────────────────────────────────────────────────────────────
 function ResultPage({result,onViewSolutions,onBack}){
   const {score,total,accuracy,timeSpent,test,auto}=result;
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
