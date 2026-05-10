@@ -1828,6 +1828,51 @@ function AdminPage(){
     }catch(e){alert("Delete failed: "+e.message);}
   };
 
+  // ── Bulk delete state ──
+  const [bulkDelMode,setBulkDelMode]=useState(false);
+  const [bulkDelExam,setBulkDelExam]=useState("");
+  const [bulkDelTopic,setBulkDelTopic]=useState("");
+  const [bulkDelDiff,setBulkDelDiff]=useState("");
+  const [bulkDelLoading,setBulkDelLoading]=useState(false);
+  const [bulkDelMsg,setBulkDelMsg]=useState("");
+  const [bulkDelConfirm,setBulkDelConfirm]=useState(false);
+
+  // Count questions matching bulk delete selection
+  const bulkDelCount=allQuestions.filter(q=>{
+    if(bulkDelExam&&q.examType!==bulkDelExam) return false;
+    if(bulkDelTopic&&q.topicId!==bulkDelTopic&&q.topicName!==bulkDelTopic) return false;
+    if(bulkDelDiff&&q.difficulty!==bulkDelDiff) return false;
+    return true;
+  }).length;
+
+  const bulkDeleteQuestions=async()=>{
+    if(!bulkDelExam){alert("Select at least an exam type");return;}
+    setBulkDelLoading(true);setBulkDelMsg("");
+    try{
+      // Get all matching question docs
+      let q=query(collection(db,"questions"),where("examType","==",bulkDelExam),limit(2000));
+      const snap=await getDocs(q);
+      let toDelete=snap.docs;
+      // Filter further by topic/difficulty client-side
+      if(bulkDelTopic) toDelete=toDelete.filter(d=>{
+        const data=d.data();
+        return data.topicId===bulkDelTopic||data.topicName===bulkDelTopic;
+      });
+      if(bulkDelDiff) toDelete=toDelete.filter(d=>d.data().difficulty===bulkDelDiff);
+      // Delete in batches
+      let deleted=0;
+      for(const d of toDelete){
+        await deleteDoc(doc(db,"questions",d.id));
+        deleted++;
+      }
+      setBulkDelMsg(`✅ Deleted ${deleted} questions from Firestore`);
+      setBulkDelConfirm(false);
+      setBulkDelExam("");setBulkDelTopic("");setBulkDelDiff("");
+    }catch(e){
+      setBulkDelMsg("❌ Error: "+e.message);
+    }finally{setBulkDelLoading(false);}
+  };
+
   const [qTopicFilter,setQTopicFilter]=useState("");
   const [qDiffFilter,setQDiffFilter]=useState("");
 
@@ -2373,22 +2418,129 @@ function AdminPage(){
 
             {/* Stats row */}
             {!qLoading&&allQuestions.length>0&&(
-              <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:4}}>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:4,alignItems:"center"}}>
                 {EXAM_TYPES.map(et=>{
                   const cnt=allQuestions.filter(q=>q.examType===et.id).length;
+                  const expected=et.topics?.length*3*30||0;
                   return(
-                    <div key={et.id} style={{background:et.bg,border:`2px solid ${et.color}30`,borderRadius:10,padding:"8px 16px",display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:16}}>{et.icon}</span>
+                    <div key={et.id} style={{background:et.bg||"#fff5ee",border:`2px solid ${et.color}30`,borderRadius:10,padding:"8px 14px",display:"flex",gap:6,alignItems:"center"}}>
+                      <span style={{fontSize:14}}>{et.icon}</span>
                       <span style={{fontWeight:700,fontSize:13,color:et.color}}>{cnt}</span>
-                      <span style={{fontSize:12,color:"#888"}}>{et.label}</span>
+                      <span style={{fontSize:11,color:"#888"}}>/ {expected}</span>
+                      <span style={{fontSize:11,color:"#888"}}>{et.label}</span>
                     </div>
                   );
                 })}
-                <div style={{background:"#f0fdf4",border:"2px solid #86efac",borderRadius:10,padding:"8px 16px",display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{fontSize:16}}>📚</span>
+                <div style={{background:"#f0fdf4",border:"2px solid #86efac",borderRadius:10,padding:"8px 14px",display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{fontSize:14}}>📚</span>
                   <span style={{fontWeight:700,fontSize:13,color:"#16a34a"}}>{allQuestions.length}</span>
-                  <span style={{fontSize:12,color:"#888"}}>Total</span>
+                  <span style={{fontSize:11,color:"#888"}}>Total</span>
                 </div>
+                <button onClick={()=>setBulkDelMode(m=>!m)} style={{padding:"8px 14px",borderRadius:10,border:"2px solid #dc2626",background:bulkDelMode?"#dc2626":"#fff",color:bulkDelMode?"#fff":"#dc2626",fontWeight:700,fontSize:12,cursor:"pointer",marginLeft:"auto"}}>
+                  {bulkDelMode?"✕ Close":"🗑️ Bulk Delete by Topic"}
+                </button>
+              </div>
+            )}
+
+            {/* ── BULK DELETE PANEL ── */}
+            {bulkDelMode&&(
+              <div style={{background:"#fff5f5",border:"2px solid #fca5a5",borderRadius:14,padding:"18px 20px",marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                  <span style={{fontSize:22}}>🗑️</span>
+                  <div>
+                    <div style={{fontWeight:900,fontSize:15,color:"#dc2626"}}>Bulk Delete Questions from Firestore</div>
+                    <div style={{fontSize:12,color:"#888",marginTop:2}}>Select exam, topic, difficulty — then delete all matching questions permanently</div>
+                  </div>
+                </div>
+
+                {/* Step 1: Exam */}
+                <div style={{marginBottom:12}}>
+                  <label style={{...LS,color:"#dc2626"}}>Step 1 — Select Exam *</label>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {EXAM_TYPES.map(e=>(
+                      <button key={e.id} onClick={()=>{setBulkDelExam(e.id);setBulkDelTopic("");setBulkDelDiff("");setBulkDelConfirm(false);}} style={{padding:"8px 16px",borderRadius:10,border:"2px solid",borderColor:bulkDelExam===e.id?e.color:"#e0e0e0",background:bulkDelExam===e.id?e.color:"#fff",color:bulkDelExam===e.id?"#fff":"#555",fontWeight:700,cursor:"pointer",fontSize:12}}>
+                        {e.icon} {e.label} ({allQuestions.filter(q=>q.examType===e.id).length})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Step 2: Topic */}
+                {bulkDelExam&&(
+                  <div style={{marginBottom:12}}>
+                    <label style={{...LS,color:"#dc2626"}}>Step 2 — Select Topic (optional — leave blank to delete ALL topics)</label>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      <button onClick={()=>{setBulkDelTopic("");setBulkDelConfirm(false);}} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:!bulkDelTopic?"#dc2626":"#e0e0e0",background:!bulkDelTopic?"#fee2e2":"#fff",color:!bulkDelTopic?"#dc2626":"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>
+                        All Topics ({allQuestions.filter(q=>q.examType===bulkDelExam).length})
+                      </button>
+                      {(EXAM_TYPES.find(e=>e.id===bulkDelExam)?.topics||[]).map(t=>{
+                        const cnt=allQuestions.filter(q=>q.examType===bulkDelExam&&(q.topicId===t.id||q.topicName===t.name)).length;
+                        return(
+                          <button key={t.id} onClick={()=>{setBulkDelTopic(t.id);setBulkDelConfirm(false);}} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:bulkDelTopic===t.id?"#dc2626":"#e0e0e0",background:bulkDelTopic===t.id?"#fee2e2":"#fff",color:bulkDelTopic===t.id?"#dc2626":"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>
+                            {t.icon} {t.name} ({cnt})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Difficulty */}
+                {bulkDelExam&&(
+                  <div style={{marginBottom:16}}>
+                    <label style={{...LS,color:"#dc2626"}}>Step 3 — Select Difficulty (optional)</label>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      <button onClick={()=>{setBulkDelDiff("");setBulkDelConfirm(false);}} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:!bulkDelDiff?"#dc2626":"#e0e0e0",background:!bulkDelDiff?"#fee2e2":"#fff",color:!bulkDelDiff?"#dc2626":"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>All Levels</button>
+                      {["easy","medium","hard"].map(d=>(
+                        <button key={d} onClick={()=>{setBulkDelDiff(d);setBulkDelConfirm(false);}} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:bulkDelDiff===d?DCOL[d]:"#e0e0e0",background:bulkDelDiff===d?DBG[d]:"#fff",color:bulkDelDiff===d?DCOL[d]:"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>{d.charAt(0).toUpperCase()+d.slice(1)}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary + Confirm */}
+                {bulkDelExam&&(
+                  <div style={{background:"#fff",borderRadius:12,padding:"14px 18px",border:"2px solid #fca5a5",marginBottom:12}}>
+                    <div style={{fontSize:13,color:"#555",marginBottom:8}}>
+                      ⚠️ This will permanently delete{" "}
+                      <b style={{color:"#dc2626",fontSize:16}}>{bulkDelCount}</b>{" "}
+                      questions from Firestore matching:
+                    </div>
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                      <span style={{background:"#fee2e2",color:"#dc2626",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:700}}>
+                        {EXAM_TYPES.find(e=>e.id===bulkDelExam)?.icon} {EXAM_TYPES.find(e=>e.id===bulkDelExam)?.label}
+                      </span>
+                      {bulkDelTopic?(
+                        <span style={{background:"#fee2e2",color:"#dc2626",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:700}}>
+                          {(EXAM_TYPES.find(e=>e.id===bulkDelExam)?.topics||[]).find(t=>t.id===bulkDelTopic)?.name||"Topic"}
+                        </span>
+                      ):<span style={{background:"#fee2e2",color:"#dc2626",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:700}}>All Topics</span>}
+                      {bulkDelDiff?(
+                        <span style={{background:DBG[bulkDelDiff],color:DCOL[bulkDelDiff],padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:700}}>{bulkDelDiff.toUpperCase()}</span>
+                      ):<span style={{background:"#f0f0f0",color:"#888",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:700}}>All Difficulties</span>}
+                    </div>
+                    {bulkDelCount===0&&<div style={{color:"#888",fontSize:12,marginTop:8}}>No questions match this selection.</div>}
+                  </div>
+                )}
+
+                {bulkDelMsg&&<div style={{padding:"10px 16px",borderRadius:9,marginBottom:12,fontSize:13,fontWeight:600,background:bulkDelMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:bulkDelMsg.startsWith("✅")?"#16a34a":"#dc2626"}}>{bulkDelMsg}</div>}
+
+                {bulkDelExam&&bulkDelCount>0&&(
+                  !bulkDelConfirm?(
+                    <button onClick={()=>setBulkDelConfirm(true)} style={{padding:"11px 28px",borderRadius:10,border:"none",background:"#dc2626",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer"}}>
+                      🗑️ Delete {bulkDelCount} Questions →
+                    </button>
+                  ):(
+                    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                      <div style={{fontWeight:700,color:"#dc2626",fontSize:14}}>⚠️ Are you sure? This cannot be undone!</div>
+                      <button onClick={bulkDeleteQuestions} disabled={bulkDelLoading} style={{padding:"11px 24px",borderRadius:10,border:"none",background:"#dc2626",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+                        {bulkDelLoading&&<Spinner size={14} color="#fff"/>}
+                        {bulkDelLoading?`Deleting...`:`Yes, Delete ${bulkDelCount} Questions`}
+                      </button>
+                      <button onClick={()=>setBulkDelConfirm(false)} style={{padding:"11px 20px",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                    </div>
+                  )
+                )}
               </div>
             )}
           </div>
