@@ -840,37 +840,57 @@ function TestPage({test,user,onFinish}){
   const [questions,setQuestions]=useState([]);
   const [qLoading,setQLoading]=useState(true);
 
-  // Load questions from Firestore first, fall back to generated
+  // Load questions — simple query (no index needed), fallback to generated
   useEffect(()=>{
+    let cancelled=false;
     const loadQs=async()=>{
       try{
+        // Simple single-field query — no composite index required
         const q=query(
           collection(db,"questions"),
           where("testId","==",test.id),
-          orderBy("createdAt","asc"),
           limit(30)
         );
         const snap=await getDocs(q);
-        if(snap.docs.length>=10){
-          // Use Firestore questions
-          setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
-        } else {
-          // Fall back to generated questions
-          setQuestions(generateQuestionsForTest(test));
+        if(!cancelled){
+          if(snap.docs.length>=5){
+            setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
+          } else {
+            // Not enough Firestore questions — use generated
+            setQuestions(generateQuestionsForTest(test));
+          }
+          setQLoading(false);
         }
-      }catch(e){
-        // Fall back to generated on error
-        setQuestions(generateQuestionsForTest(test));
+      }catch(err){
+        console.warn("Firestore question load failed, using generated:",err.message);
+        if(!cancelled){
+          setQuestions(generateQuestionsForTest(test));
+          setQLoading(false);
+        }
       }
-      setQLoading(false);
     };
     loadQs();
+    return ()=>{ cancelled=true; };
   },[test.id]);
+
+  // Safety net: if loaded but empty, use generated
+  useEffect(()=>{
+    if(!qLoading && questions.length===0){
+      setQuestions(generateQuestionsForTest(test));
+    }
+  },[qLoading,questions.length]);
 
   if(qLoading) return(
     <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20}}>
       <Spinner size={40} color="#FF6A00"/>
       <div style={{color:"#fff",fontWeight:700,fontSize:16}}>Loading questions...</div>
+    </div>
+  );
+
+  if(questions.length===0) return(
+    <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20}}>
+      <Spinner size={40} color="#FF6A00"/>
+      <div style={{color:"#fff",fontWeight:700,fontSize:16}}>Preparing questions...</div>
     </div>
   );
 
