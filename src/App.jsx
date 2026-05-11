@@ -1928,42 +1928,105 @@ function AdminPage(){
     setUpFile(file);setUpRows([]);setUpMsg("");
     const r=new FileReader();
     r.onload=ev=>{
-      const lines=ev.target.result.trim().split("\n").filter(Boolean);
-      if(lines.length<2){setUpMsg("❌ Need header + data rows");return;}
-      const hdrs=lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/"/g,""));
-      const miss=["question_text","option_a","option_b","correct_answer"].filter(r=>!hdrs.includes(r));
-      if(miss.length){setUpMsg(`❌ Missing: ${miss.join(", ")}`);return;}
-      const rows=lines.slice(1).map((l,i)=>{const v=l.split(",").map(x=>x.trim().replace(/"/g,""));const o={};hdrs.forEach((h,idx)=>o[h]=v[idx]||"");return{...o,_row:i+2};});
-      setUpRows(rows);setUpMsg(`✅ ${rows.length} rows ready to import`);
-    };r.readAsText(file);
+      // Proper CSV parser that handles quoted commas
+      const parseCSVLine=line=>{
+        const result=[];let cur="";let inQ=false;
+        for(let i=0;i<line.length;i++){
+          if(line[i]==='"'){inQ=!inQ;}
+          else if(line[i]===","&&!inQ){result.push(cur.trim());cur="";}
+          else{cur+=line[i];}
+        }
+        result.push(cur.trim());
+        return result;
+      };
+
+      const lines=ev.target.result.trim().split(/\r?\n/).filter(Boolean);
+      if(lines.length<2){setUpMsg("❌ Need header row + at least 1 data row");return;}
+
+      const hdrs=parseCSVLine(lines[0]).map(h=>h.toLowerCase().replace(/"/g,"").trim());
+      const miss=["question_text","option_a","option_b","correct_answer"].filter(req=>!hdrs.includes(req));
+      if(miss.length){setUpMsg(`❌ Missing required columns: ${miss.join(", ")}`);return;}
+
+      const rows=lines.slice(1).map((l,i)=>{
+        const vals=parseCSVLine(l);
+        const o={};
+        hdrs.forEach((h,idx)=>{
+          let v=(vals[idx]||"").trim().replace(/^"|"$/g,"");
+          // Normalize difficulty: Easy→easy, Medium→medium, Hard→hard
+          if(h==="difficulty") v=v.toLowerCase();
+          // Normalize correct_answer: B→b, A→a
+          if(h==="correct_answer") v=v.toLowerCase().replace(/\..*$/,"");// "B." → "b"
+          o[h]=v;
+        });
+        return{...o,_row:i+2};
+      });
+
+      // Count by difficulty
+      const diffCounts={easy:0,medium:0,hard:0};
+      rows.forEach(r=>{
+        const d=r.difficulty?.toLowerCase();
+        if(diffCounts[d]!==undefined) diffCounts[d]++;
+      });
+      const diffSummary=Object.entries(diffCounts).filter(([,v])=>v>0).map(([d,v])=>`${v} ${d}`).join(", ");
+
+      setUpRows(rows);
+      setUpMsg(`✅ ${rows.length} rows ready — ${diffSummary} · Will create 3 separate tests`);
+    };
+    r.readAsText(file);
   };
 
   const importBulk=async()=>{
-    if(!examType){alert("Please select an exam type first");return;}
-    if(!topicId&&!curTopic?.id){alert("Please select a topic first");return;}
+    if(!examType){alert("Select exam type first");return;}
+    if(!topicId){alert("Select a topic first");return;}
     setUpLoading(true);
     try{
-      // Use the explicitly selected exam type and topic from bulk upload selectors
-      const selET=liveExamTypes.find(e=>e.id===examType)||et;
-      const selTopic=(selET.topics||[]).find(t=>t.id===topicId)||curTopic;
-      const diff=qf.difficulty||"easy";
-      const batch=upRows.map(r=>addDoc(collection(db,"questions"),{
-        ...r,
-        examType:examType,
-        topicId:topicId||curTopic.id,
-        topicName:selTopic?.name||curTopic.name,
-        difficulty:r.difficulty||diff,
-        testId:`${topicId||curTopic.id}_${r.difficulty||diff}`,
-        testTitle:`${selTopic?.name||curTopic.name} – ${r.difficulty||diff}`,
-        createdAt:serverTimestamp(),
-        isSeeded:false,
-        addedByAdmin:true,
-      }));
-      await Promise.all(batch);
-      setUpMsg(`✅ ${upRows.length} questions saved under ${selET.label} → ${selTopic?.name} (${diff})!`);
+      const selET=liveExamTypes.find(e=>e.id===examType)||DEFAULT_EXAM_TYPES.find(e=>e.id===examType);
+      const selTopic=(selET?.topics||[]).find(t=>t.id===topicId);
+      const fallbackDiff=qf.difficulty||"easy";
+
+      // Group rows by difficulty — each difficulty gets its own testId
+      const VALID_DIFFS=["easy","medium","hard"];
+      let saved=0;const summary={easy:0,medium:0,hard:0};
+
+      for(const r of upRows){
+        // Use row's own difficulty if valid, else fall back to Step 3 selection
+        const rowDiff=VALID_DIFFS.includes(r.difficulty?.trim().toLowerCase())
+          ? r.difficulty.trim().toLowerCase()
+          : fallbackDiff;
+
+        const testId=`${topicId}_${rowDiff}`;
+        const testTitle=`${selTopic?.name||topicId} – Test ${VALID_DIFFS.indexOf(rowDiff)+1}`;
+
+        await addDoc(collection(db,"questions"),{
+          question_text: r.question_text||"",
+          option_a:      r.option_a||"",
+          option_b:      r.option_b||"",
+          option_c:      r.option_c||"",
+          option_d:      r.option_d||"",
+          correct_answer:(r.correct_answer||"a").toLowerCase().trim(),
+          explanation:   r.explanation||"",
+          youtube_link:  r.youtube_link||"",
+          difficulty:    rowDiff,
+          examType:      examType,
+          topicId:       topicId,
+          topicName:     selTopic?.name||topicId,
+          testId:        testId,
+          testTitle:     testTitle,
+          createdAt:     serverTimestamp(),
+          isSeeded:      false,
+          addedByAdmin:  true,
+        });
+        saved++;
+        if(summary[rowDiff]!==undefined) summary[rowDiff]++;
+        else summary[rowDiff]=1;
+      }
+
+      const parts=Object.entries(summary).filter(([,v])=>v>0).map(([d,v])=>`${v} ${d}`);
+      setUpMsg(`✅ ${saved} questions saved → ${selET?.label} / ${selTopic?.name}: ${parts.join(" · ")} (3 separate tests)`);
       setUpRows([]);setUpFile(null);if(fRef.current)fRef.current.value="";
-    }catch(err){setUpMsg("❌ Import failed: "+err.message);}
-    finally{setUpLoading(false);}
+    }catch(err){
+      setUpMsg("❌ Import failed: "+err.message);
+    }finally{setUpLoading(false);}
   };
 
   const filtStu=students.filter(s=>s.name?.toLowerCase().includes(search.toLowerCase())||s.email?.toLowerCase().includes(search.toLowerCase()));
@@ -2785,31 +2848,60 @@ function AdminPage(){
             {upRows.length>0&&(
               <>
                 <div style={{overflowX:"auto",marginBottom:16}}>
+                  {/* Difficulty split summary */}
+                  {(()=>{
+                    const dc={easy:0,medium:0,hard:0};
+                    upRows.forEach(r=>{const d=r.difficulty?.toLowerCase();if(dc[d]!==undefined)dc[d]++;});
+                    const hasMix=Object.values(dc).filter(v=>v>0).length>1;
+                    return hasMix&&(
+                      <div style={{background:"#f0fdf4",border:"2px solid #86efac",borderRadius:12,padding:"12px 16px",marginBottom:12}}>
+                        <div style={{fontWeight:800,fontSize:13,color:"#16a34a",marginBottom:8}}>✅ Auto-split into 3 separate tests by difficulty:</div>
+                        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                          {Object.entries(dc).filter(([,v])=>v>0).map(([d,v])=>{
+                            const tid=`${topicId}_${d}`;
+                            const selET=liveExamTypes.find(e=>e.id===examType);
+                            const selTopic=(selET?.topics||[]).find(t=>t.id===topicId);
+                            return(
+                              <div key={d} style={{background:DBG[d],border:`2px solid ${DCOL[d]}40`,borderRadius:10,padding:"8px 16px"}}>
+                                <div style={{fontWeight:800,color:DCOL[d],fontSize:13}}>{d.toUpperCase()} — {v} questions</div>
+                                <div style={{fontSize:11,color:"#888",marginTop:2}}>→ {selTopic?.name} – Test {["easy","medium","hard"].indexOf(d)+1}</div>
+                                <div style={{fontSize:10,color:"#aaa"}}>testId: {tid}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Preview (first 5 rows):</div>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                     <thead>
                       <tr style={{background:"#000",color:"#FF6A00"}}>
-                        {["#","Question","Opt A","Opt B","Opt C","Opt D","Answer","Difficulty"].map(h=>(
+                        {["#","Question","Opt A","Opt B","Ans","Difficulty → Test"].map(h=>(
                           <th key={h} style={{padding:"8px 10px",textAlign:"left",fontWeight:700}}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {upRows.slice(0,5).map((r,i)=>(
-                        <tr key={i} style={{borderBottom:"1px solid #f0f0f0",background:i%2?"#f9f9f9":"#fff"}}>
-                          <td style={{padding:"7px 10px",color:"#FF6A00",fontWeight:700}}>{i+1}</td>
-                          <td style={{padding:"7px 10px",maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.question_text}</td>
-                          <td style={{padding:"7px 10px"}}>{r.option_a}</td>
-                          <td style={{padding:"7px 10px"}}>{r.option_b}</td>
-                          <td style={{padding:"7px 10px"}}>{r.option_c}</td>
-                          <td style={{padding:"7px 10px"}}>{r.option_d}</td>
-                          <td style={{padding:"7px 10px",color:"#FF6A00",fontWeight:800}}>{r.correct_answer?.toUpperCase()}</td>
-                          <td style={{padding:"7px 10px"}}><span style={{background:DBG[r.difficulty||bulkDiff],color:DCOL[r.difficulty||bulkDiff],padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:700}}>{(r.difficulty||bulkDiff).toUpperCase()}</span></td>
-                        </tr>
-                      ))}
+                      {upRows.slice(0,8).map((r,i)=>{
+                        const rowDiff=["easy","medium","hard"].includes(r.difficulty?.toLowerCase())?r.difficulty.toLowerCase():(qf.difficulty||"easy");
+                        return(
+                          <tr key={i} style={{borderBottom:"1px solid #f0f0f0",background:i%2?"#f9f9f9":"#fff"}}>
+                            <td style={{padding:"7px 10px",color:"#FF6A00",fontWeight:700}}>{i+1}</td>
+                            <td style={{padding:"7px 10px",maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.question_text}</td>
+                            <td style={{padding:"7px 10px",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.option_a}</td>
+                            <td style={{padding:"7px 10px",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.option_b}</td>
+                            <td style={{padding:"7px 10px",color:"#FF6A00",fontWeight:800}}>{r.correct_answer?.toUpperCase()}</td>
+                            <td style={{padding:"7px 10px"}}>
+                              <span style={{background:DBG[rowDiff],color:DCOL[rowDiff],padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:700}}>{rowDiff.toUpperCase()}</span>
+                              <span style={{fontSize:9,color:"#aaa",marginLeft:6}}>Test {["easy","medium","hard"].indexOf(rowDiff)+1}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
-                  {upRows.length>5&&<div style={{textAlign:"center",color:"#aaa",fontSize:12,marginTop:8}}>...and {upRows.length-5} more rows</div>}
+                  {upRows.length>8&&<div style={{textAlign:"center",color:"#aaa",fontSize:12,marginTop:8}}>...and {upRows.length-8} more rows</div>}
                 </div>
                 <button onClick={importBulk} disabled={upLoading} style={{width:"100%",padding:"14px 0",borderRadius:12,border:"none",background:upLoading?"#ccc":"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:15,cursor:upLoading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:upLoading?"none":"0 4px 20px #FF6A0050"}}>
                   {upLoading&&<Spinner size={18} color="#fff"/>}
