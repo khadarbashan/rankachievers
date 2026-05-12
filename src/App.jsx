@@ -609,28 +609,31 @@ function HomePage({setPage,user,setExamType,banners=[],examTypes}){
 
         <div style={{flex:1,display:"flex",position:"relative",maxWidth:1200,margin:"0 auto",width:"100%",padding:isMobile?"16px":"28px 40px",gap:32,alignItems:"flex-start",flexDirection:isMobile?"column":"row",justifyContent:"center",overflowY:"auto"}}>
 
-          {/* LEFT */}
+          {/* LEFT — Claude.ai style minimal hero */}
           <div style={{flex:1,textAlign:isMobile?"center":"left",paddingTop:isMobile?8:40}}>
-            <div style={{display:"inline-block",background:"#FF6A00",color:"#fff",padding:"5px 18px",borderRadius:20,fontSize:12,fontWeight:700,letterSpacing:2,marginBottom:20}}>ANANTAPUR'S #1 EXAM PREP PLATFORM</div>
-            <h1 style={{fontSize:isMobile?"clamp(28px,8vw,40px)":"clamp(36px,5vw,60px)",fontWeight:900,color:"#fff",lineHeight:1.05,margin:"0 0 16px",letterSpacing:-2}}>
-              Crack Your<br/><span style={{color:"#FF6A00"}}>Dream Exam.</span><br/><span style={{fontSize:"60%",color:"#888"}}>Right Here in Anantapur.</span>
-            </h1>
-            <p style={{color:"#888",fontSize:isMobile?14:16,maxWidth:480,marginBottom:isMobile?20:28,lineHeight:1.7}}>
-              India's most focused aptitude practice platform for SSC, Banking & Railways. Real exam simulation · Video solutions · Cloud scores.
-            </p>
 
-            {/* Banner Slider — shown in left panel */}
+            {/* SVG Journey illustration */}
+            <div style={{marginBottom:isMobile?20:28}}>
+              <img
+                src="/journey.svg"
+                alt="Student exam journey"
+                style={{width:"100%",maxWidth:520,borderRadius:16,opacity:.92,display:"block",margin:isMobile?"0 auto":0}}
+                onError={e=>{e.target.style.display="none";}}
+              />
+            </div>
+
+            {/* Banner Slider */}
             <BannerSlider banners={banners}/>
 
-            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:28,justifyContent:isMobile?"center":"flex-start"}}>
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:24,justifyContent:isMobile?"center":"flex-start"}}>
               <button onClick={()=>user?setPage("tests"):setPage("auth")} style={{padding:"13px 32px",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 24px #FF6A0070"}}>Start Practice →</button>
               <button onClick={()=>setPage("leaderboard")} style={{padding:"13px 24px",borderRadius:12,border:"2px solid #FF6A00",background:"transparent",color:"#FF6A00",fontSize:14,fontWeight:700,cursor:"pointer"}}>🏆 Leaderboard</button>
             </div>
 
             <div style={{display:"flex",gap:24,flexWrap:"wrap",justifyContent:isMobile?"center":"flex-start"}}>
-              {[["50K+","Students"],["10K+","Questions"],["95%","Pass Rate"],["☁️","Cloud"]].map(([v,l])=>(
+              {[["50K+","Students"],["1620+","Questions"],["3","Exam Types"],["☁️","Cloud Saved"]].map(([v,l])=>(
                 <div key={l} style={{textAlign:"center"}}>
-                  <div style={{fontSize:isMobile?20:24,fontWeight:900,color:"#FF6A00"}}>{v}</div>
+                  <div style={{fontSize:isMobile?18:22,fontWeight:900,color:"#FF6A00"}}>{v}</div>
                   <div style={{fontSize:10,color:"#666",fontWeight:600}}>{l}</div>
                 </div>
               ))}
