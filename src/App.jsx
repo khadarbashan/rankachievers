@@ -536,6 +536,263 @@ function AuthPage({onLogin}){
 }
 
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
+// ─── CSS KEYFRAME INJECTION ──────────────────────────────────────────────────
+const heroCSS = document.createElement("style");
+heroCSS.textContent = `
+  @keyframes fadeUp    { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
+  @keyframes slideIn   { from{opacity:0;transform:translateX(-18px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes pulse     { 0%,100%{opacity:1} 50%{opacity:.5} }
+  @keyframes blink     { 0%,100%{opacity:1} 50%{opacity:0} }
+  @keyframes progressW { from{width:0%} to{width:80%} }
+  @keyframes drift     { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-8px)} }
+  @keyframes glow      { 0%,100%{box-shadow:0 0 20px #FF6A0040} 50%{box-shadow:0 0 40px #FF6A0090} }
+  @keyframes typewriter{
+    0%  { width:0 }
+    20% { width:4.5ch }
+    35% { width:4.5ch }
+    55% { width:8ch }
+    70% { width:8ch }
+    90% { width:12.5ch }
+    100%{ width:12.5ch }
+  }
+  @keyframes examFloat {
+    0%  { transform:translateY(0px) rotate(0deg) }
+    33% { transform:translateY(-6px) rotate(1deg) }
+    66% { transform:translateY(-3px) rotate(-1deg) }
+    100%{ transform:translateY(0px) rotate(0deg) }
+  }
+  .hero-card:hover { transform:translateY(-4px) scale(1.02)!important; box-shadow:0 12px 40px #FF6A0040!important; }
+  .hero-card { transition: transform .3s ease, box-shadow .3s ease !important; }
+`;
+if(!document.getElementById("hero-css")){
+  heroCSS.id="hero-css";
+  document.head.appendChild(heroCSS);
+}
+
+// ─── HERO ANIMATION COMPONENT ─────────────────────────────────────────────────
+function HeroAnimation({isMobile}){
+  const [step,setStep]=useState(0);
+  const [visible,setVisible]=useState(false);
+  const [typedIdx,setTypedIdx]=useState(0);
+  const steps=["Login","Choose Exam","Pick Topic","Select Mode","Take Test","Results","Solutions","Dashboard"];
+
+  useEffect(()=>{
+    setTimeout(()=>setVisible(true),100);
+    const iv=setInterval(()=>setStep(s=>(s+1)%steps.length),2200);
+    return()=>clearInterval(iv);
+  },[]);
+
+  useEffect(()=>{
+    setTypedIdx(0);
+    const iv=setInterval(()=>setTypedIdx(i=>i<steps[step].length?i+1:i),60);
+    return()=>clearInterval(iv);
+  },[step]);
+
+  const cards=[
+    {icon:"🔐",label:"Login",color:"#FF6A00",desc:"Google or Email"},
+    {icon:"🎯",label:"Choose Exam",color:"#1d4ed8",desc:"SSC / Banking / Railways"},
+    {icon:"📚",label:"Pick Topic",color:"#16a34a",desc:"6 topics per exam"},
+    {icon:"⚙️",label:"Select Mode",color:"#7c3aed",desc:"Timed or Practice"},
+    {icon:"✏️",label:"Take Test",color:"#FF6A00",desc:"30 questions · timer"},
+    {icon:"📊",label:"View Results",color:"#059669",desc:"Score + analysis"},
+    {icon:"💡",label:"Solutions",color:"#d97706",desc:"Step-by-step · Video"},
+    {icon:"🏆",label:"Dashboard",color:"#dc2626",desc:"Cloud progress"},
+  ];
+
+  return(
+    <div style={{marginBottom:28,opacity:visible?1:0,transition:"opacity .8s ease",animation:visible?"fadeUp .8s ease both":"none"}}>
+
+      {/* ── Main animated card ── */}
+      <div style={{background:"linear-gradient(135deg,#0d0d0d,#1a0800)",border:"1.5px solid #FF6A0030",borderRadius:20,padding:isMobile?"20px 16px":"24px 28px",marginBottom:16,position:"relative",overflow:"hidden",animation:"glow 3s ease-in-out infinite"}}>
+
+        {/* Background grid */}
+        <div style={{position:"absolute",inset:0,opacity:.06,backgroundImage:"linear-gradient(#FF6A00 1px,transparent 1px),linear-gradient(90deg,#FF6A00 1px,transparent 1px)",backgroundSize:"28px 28px",borderRadius:20}}/>
+
+        {/* Floating orb */}
+        <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#FF6A0025,transparent 70%)",animation:"drift 4s ease-in-out infinite",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",bottom:-30,left:-30,width:120,height:120,borderRadius:"50%",background:"radial-gradient(circle,#1d4ed820,transparent 70%)",animation:"drift 5s ease-in-out infinite reverse",pointerEvents:"none"}}/>
+
+        {/* Step indicator bar */}
+        <div style={{display:"flex",gap:5,marginBottom:20,position:"relative",zIndex:1}}>
+          {steps.map((_,i)=>(
+            <div key={i} style={{flex:1,height:3,borderRadius:4,background:i===step?"#FF6A00":i<step?"#FF6A0050":"#333",transition:"background .4s ease"}}/>
+          ))}
+        </div>
+
+        {/* Current step display */}
+        <div style={{position:"relative",zIndex:1}}>
+          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
+            {/* Animated icon */}
+            <div style={{width:52,height:52,borderRadius:14,background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,animation:"examFloat 3s ease-in-out infinite",boxShadow:"0 8px 24px #FF6A0050",flexShrink:0}}>
+              {cards[step].icon}
+            </div>
+            <div>
+              <div style={{fontSize:11,color:"#FF6A00",fontWeight:700,letterSpacing:2,marginBottom:4}}>STEP {step+1} OF {steps.length}</div>
+              {/* Typewriter effect */}
+              <div style={{fontSize:isMobile?20:24,fontWeight:900,color:"#fff",lineHeight:1.1,overflow:"hidden",whiteSpace:"nowrap",borderRight:"2px solid #FF6A00",animation:"blink 1s step-end infinite",paddingRight:4,minWidth:"14ch"}}>
+                {steps[step].substring(0,typedIdx)}
+              </div>
+            </div>
+          </div>
+
+          {/* Step-specific mini UI */}
+          <div style={{background:"rgba(0,0,0,.4)",borderRadius:12,padding:"12px 14px",border:"1px solid #ffffff10"}}>
+            {step===0&&(
+              <div style={{animation:"slideIn .4s ease"}}>
+                <div style={{display:"flex",gap:8,marginBottom:8}}>
+                  <div style={{flex:1,background:"#1a1a1a",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#aaa",border:"1px solid #333"}}>📧 email@gmail.com</div>
+                  <div style={{background:"#FF6A00",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>Login →</div>
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1,background:"#1a1a1a",borderRadius:8,padding:"8px 12px",border:"1px solid #333",display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{width:16,height:16,borderRadius:"50%",background:"linear-gradient(135deg,#4285f4,#34a853)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff",flexShrink:0}}>G</div>
+                    <span style={{fontSize:11,color:"#888"}}>Continue with Google</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {step===1&&(
+              <div style={{display:"flex",gap:8,animation:"slideIn .4s ease",flexWrap:"wrap"}}>
+                {[{l:"SSC",c:"#FF6A00",i:"🏛️",s:true},{l:"Banking",c:"#1d4ed8",i:"🏦"},{l:"Railways",c:"#16a34a",i:"🚂"}].map(e=>(
+                  <div key={e.l} style={{padding:"8px 14px",borderRadius:10,border:`2px solid ${e.s?e.c:"#333"}`,background:e.s?e.c+"22":"#1a1a1a",color:e.s?e.c:"#888",fontWeight:e.s?800:400,fontSize:12,display:"flex",alignItems:"center",gap:6,transition:"all .3s",cursor:"pointer"}}>
+                    {e.i} {e.l}
+                    {e.s&&<span style={{fontSize:10}}>✓</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {step===2&&(
+              <div style={{animation:"slideIn .4s ease"}}>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                  {[{n:"➕ Arithmetic",s:true},{n:"🔣 Algebra"},{n:"🔢 Number System"},{n:"✖️ Simplify"},{n:"📊 Data Interp."},{n:"📐 Geometry"}].map(t=>(
+                    <div key={t.n} style={{padding:"5px 10px",borderRadius:20,background:t.s?"#FF6A00":"#1a1a1a",border:`1px solid ${t.s?"#FF6A00":"#333"}`,color:t.s?"#fff":"#666",fontSize:10,fontWeight:t.s?700:400,cursor:"pointer"}}>{t.n}</div>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  {[{d:"Easy",c:"#22c55e"},{d:"Medium",c:"#f59e0b"},{d:"Hard",c:"#ef4444"}].map(d=>(
+                    <div key={d.d} style={{flex:1,padding:"6px",borderRadius:8,border:`1px solid ${d.c}40`,background:d.c+"15",color:d.c,fontSize:11,fontWeight:700,textAlign:"center"}}>{d.d}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {step===3&&(
+              <div style={{display:"flex",gap:10,animation:"slideIn .4s ease"}}>
+                <div style={{flex:1,padding:"12px 14px",borderRadius:12,border:"2px solid #FF6A00",background:"#FF6A0015"}}>
+                  <div style={{fontSize:22,marginBottom:4}}>⏱️</div>
+                  <div style={{fontWeight:700,fontSize:13,color:"#FF6A00",marginBottom:2}}>Timed Mode</div>
+                  <div style={{fontSize:10,color:"#888"}}>30-min countdown</div>
+                  <div style={{marginTop:8,background:"#FF6A00",borderRadius:6,padding:"3px 0",textAlign:"center",fontSize:10,fontWeight:700,color:"#fff"}}>Selected ✓</div>
+                </div>
+                <div style={{flex:1,padding:"12px 14px",borderRadius:12,border:"1px solid #333",background:"#1a1a1a"}}>
+                  <div style={{fontSize:22,marginBottom:4}}>🧘</div>
+                  <div style={{fontWeight:700,fontSize:13,color:"#aaa",marginBottom:2}}>Practice</div>
+                  <div style={{fontSize:10,color:"#555"}}>No time limit</div>
+                </div>
+              </div>
+            )}
+            {step===4&&(
+              <div style={{animation:"slideIn .4s ease"}}>
+                <div style={{background:"#0a0a0a",borderRadius:10,overflow:"hidden",border:"1px solid #222"}}>
+                  <div style={{background:"#000",padding:"7px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:11,fontWeight:700,color:"#fff"}}>🏛️ SSC Arithmetic – Test 1</span>
+                    <div style={{display:"flex",gap:6}}>
+                      <span style={{background:"#22c55e",color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>⏱ 28:34</span>
+                      <span style={{background:"#334155",color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>🕐 01:12</span>
+                    </div>
+                  </div>
+                  <div style={{padding:"10px 12px"}}>
+                    <div style={{fontSize:11,color:"#ccc",marginBottom:8,fontWeight:600}}>Q.7: If sum of two numbers is 24 and difference is 8, find product.</div>
+                    {[{o:"A",t:"118"},{o:"B",t:"128 ✓",sel:true},{o:"C",t:"138"},{o:"D",t:"148"}].map(opt=>(
+                      <div key={opt.o} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:7,marginBottom:3,border:`1px solid ${opt.sel?"#FF6A00":"#222"}`,background:opt.sel?"#FF6A0015":"transparent",cursor:"pointer"}}>
+                        <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${opt.sel?"#FF6A00":"#444"}`,background:opt.sel?"#FF6A00":"transparent",flexShrink:0}}/>
+                        <span style={{fontSize:10,color:opt.sel?"#FF6A00":"#666",fontWeight:opt.sel?700:400}}>{opt.o}. {opt.t}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {step===5&&(
+              <div style={{animation:"slideIn .4s ease"}}>
+                <div style={{display:"flex",gap:8,marginBottom:10}}>
+                  {[{l:"Score",v:"24/30",c:"#FF6A00"},{l:"Accuracy",v:"80%",c:"#22c55e"},{l:"Time",v:"22:16",c:"#f59e0b"}].map(s=>(
+                    <div key={s.l} style={{flex:1,background:"#0d0d0d",borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid #222"}}>
+                      <div style={{fontSize:18,fontWeight:900,color:s.c}}>{s.v}</div>
+                      <div style={{fontSize:9,color:"#555",marginTop:2}}>{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{background:"#0d0d0d",borderRadius:8,padding:"6px 10px",border:"1px solid #222"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                    <span style={{fontSize:10,color:"#888"}}>Performance</span>
+                    <span style={{fontSize:10,fontWeight:700,color:"#FF6A00"}}>80%</span>
+                  </div>
+                  <div style={{background:"#1a1a1a",borderRadius:4,height:6,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:"80%",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",borderRadius:4,animation:"progressW 1.2s ease both"}}/>
+                  </div>
+                </div>
+              </div>
+            )}
+            {step===6&&(
+              <div style={{animation:"slideIn .4s ease"}}>
+                {[{q:7,ans:"B. 128",ok:true,exp:"x+y=24, x−y=8 → x=16, y=8 → 16×8=128"},{q:13,ans:"C. 45%",ok:false,exp:"Profit% = (SP−CP)/CP × 100"}].map((r,i)=>(
+                  <div key={i} style={{background:"#0d0d0d",borderRadius:8,padding:"8px 10px",marginBottom:6,border:`1px solid ${r.ok?"#22c55e30":"#ef444430"}`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:10,background:r.ok?"#dcfce7":"#fee2e2",color:r.ok?"#16a34a":"#dc2626",borderRadius:6,padding:"1px 6px",fontWeight:700}}>{r.ok?"✅":"❌"} Q.{r.q}</span>
+                        <span style={{fontSize:10,color:"#666"}}>{r.ans}</span>
+                      </div>
+                      <span style={{fontSize:12,color:"#FF6A00"}}>▶</span>
+                    </div>
+                    <div style={{fontSize:9,color:"#555"}}>💡 {r.exp}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {step===7&&(
+              <div style={{animation:"slideIn .4s ease"}}>
+                {[{e:"SSC",p:80,c:"#FF6A00"},{e:"Banking",p:65,c:"#1d4ed8"},{e:"Railways",p:72,c:"#16a34a"}].map(s=>(
+                  <div key={s.e} style={{marginBottom:8}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                      <span style={{fontSize:10,color:"#888"}}>{s.e}</span>
+                      <span style={{fontSize:10,fontWeight:700,color:s.c}}>{s.p}%</span>
+                    </div>
+                    <div style={{background:"#1a1a1a",borderRadius:4,height:5,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:s.p+"%",background:s.c,borderRadius:4,transition:"width 1s ease"}}/>
+                    </div>
+                  </div>
+                ))}
+                <div style={{background:"#0d0d0d",borderRadius:8,padding:"6px 10px",border:"1px solid #222",marginTop:4}}>
+                  <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
+                    {[{r:"🥇",n:"Arjun",s:"93%"},{r:"🥈",n:"Priya",s:"90%"},{r:"🎯",n:"You",s:"80% #3",hl:true}].map(l=>(
+                      <div key={l.n} style={{textAlign:"center"}}>
+                        <div style={{fontSize:10}}>{l.r}</div>
+                        <div style={{fontSize:9,color:l.hl?"#FF6A00":"#888",fontWeight:l.hl?800:400}}>{l.n}</div>
+                        <div style={{fontSize:9,color:l.hl?"#FF6A00":"#555",fontWeight:700}}>{l.s}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 8 mini step chips ── */}
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:isMobile?"center":"flex-start"}}>
+        {cards.map((c,i)=>(
+          <div key={i} onClick={()=>setStep(i)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,border:"1px solid",borderColor:step===i?c.color:"#222",background:step===i?c.color+"15":"#0d0d0d",cursor:"pointer",transition:"all .2s"}}>
+            <span style={{fontSize:12}}>{c.icon}</span>
+            <span style={{fontSize:10,fontWeight:step===i?700:400,color:step===i?c.color:"#555"}}>{c.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── BANNER SLIDER ───────────────────────────────────────────────────────────
 function BannerSlider({banners}){
   const [idx,setIdx]=useState(0);
@@ -609,29 +866,16 @@ function HomePage({setPage,user,setExamType,banners=[],examTypes}){
 
         <div style={{flex:1,display:"flex",position:"relative",maxWidth:1200,margin:"0 auto",width:"100%",padding:isMobile?"16px":"28px 40px",gap:32,alignItems:"flex-start",flexDirection:isMobile?"column":"row",justifyContent:"center",overflowY:"auto"}}>
 
-          {/* LEFT — Claude.ai style minimal hero */}
+          {/* LEFT — Animated Hero */}
           <div style={{flex:1,textAlign:isMobile?"center":"left",paddingTop:isMobile?8:40}}>
-
-            {/* SVG Journey illustration */}
-            <div style={{marginBottom:isMobile?20:28}}>
-              <img
-                src="/journey.svg"
-                alt="Student exam journey"
-                style={{width:"100%",maxWidth:520,borderRadius:16,opacity:.92,display:"block",margin:isMobile?"0 auto":0}}
-                onError={e=>{e.target.style.display="none";}}
-              />
-            </div>
-
-            {/* Banner Slider */}
+            <HeroAnimation isMobile={isMobile}/>
             <BannerSlider banners={banners}/>
-
             <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:24,justifyContent:isMobile?"center":"flex-start"}}>
-              <button onClick={()=>user?setPage("tests"):setPage("auth")} style={{padding:"13px 32px",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 24px #FF6A0070"}}>Start Practice →</button>
+              <button onClick={()=>user?setPage("tests"):setPage("auth")} style={{padding:"13px 32px",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 24px #FF6A0070",transition:"transform .15s"}} onMouseOver={e=>e.currentTarget.style.transform="scale(1.03)"} onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}>Start Practice →</button>
               <button onClick={()=>setPage("leaderboard")} style={{padding:"13px 24px",borderRadius:12,border:"2px solid #FF6A00",background:"transparent",color:"#FF6A00",fontSize:14,fontWeight:700,cursor:"pointer"}}>🏆 Leaderboard</button>
             </div>
-
             <div style={{display:"flex",gap:24,flexWrap:"wrap",justifyContent:isMobile?"center":"flex-start"}}>
-              {[["50K+","Students"],["1620+","Questions"],["3","Exam Types"],["☁️","Cloud Saved"]].map(([v,l])=>(
+              {[["50K+","Students"],["1620+","Questions"],["3","Exam Types"],["☁️","Cloud"]].map(([v,l])=>(
                 <div key={l} style={{textAlign:"center"}}>
                   <div style={{fontSize:isMobile?18:22,fontWeight:900,color:"#FF6A00"}}>{v}</div>
                   <div style={{fontSize:10,color:"#666",fontWeight:600}}>{l}</div>
