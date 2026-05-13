@@ -536,259 +536,359 @@ function AuthPage({onLogin}){
 }
 
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
-// ─── CSS KEYFRAME INJECTION ──────────────────────────────────────────────────
-const heroCSS = document.createElement("style");
-heroCSS.textContent = `
-  @keyframes fadeUp    { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes fadeIn    { from{opacity:0} to{opacity:1} }
-  @keyframes slideIn   { from{opacity:0;transform:translateX(-18px)} to{opacity:1;transform:translateX(0)} }
-  @keyframes pulse     { 0%,100%{opacity:1} 50%{opacity:.5} }
-  @keyframes blink     { 0%,100%{opacity:1} 50%{opacity:0} }
-  @keyframes progressW { from{width:0%} to{width:80%} }
-  @keyframes drift     { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-8px)} }
-  @keyframes glow      { 0%,100%{box-shadow:0 0 20px #FF6A0040} 50%{box-shadow:0 0 40px #FF6A0090} }
-  @keyframes typewriter{
-    0%  { width:0 }
-    20% { width:4.5ch }
-    35% { width:4.5ch }
-    55% { width:8ch }
-    70% { width:8ch }
-    90% { width:12.5ch }
-    100%{ width:12.5ch }
-  }
-  @keyframes examFloat {
-    0%  { transform:translateY(0px) rotate(0deg) }
-    33% { transform:translateY(-6px) rotate(1deg) }
-    66% { transform:translateY(-3px) rotate(-1deg) }
-    100%{ transform:translateY(0px) rotate(0deg) }
-  }
-  .hero-card:hover { transform:translateY(-4px) scale(1.02)!important; box-shadow:0 12px 40px #FF6A0040!important; }
-  .hero-card { transition: transform .3s ease, box-shadow .3s ease !important; }
+// ─── CSS KEYFRAMES ────────────────────────────────────────────────────────────
+const _heroStyle = document.createElement("style");
+_heroStyle.id = "ra-hero-css";
+_heroStyle.textContent = `
+  @keyframes raFadeUp   { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes raFadeIn   { from{opacity:0} to{opacity:1} }
+  @keyframes raSlideIn  { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes raSlideUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes raPulseRing{ 0%,100%{box-shadow:0 0 0 0 rgba(255,106,0,.4)} 50%{box-shadow:0 0 0 12px rgba(255,106,0,0)} }
+  @keyframes raDrift    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes raOrb      { 0%{transform:translate(0,0) scale(1)} 33%{transform:translate(20px,-15px) scale(1.05)} 66%{transform:translate(-10px,10px) scale(.97)} 100%{transform:translate(0,0) scale(1)} }
+  @keyframes raSpin     { to{transform:rotate(360deg)} }
+  @keyframes raProgress { from{width:0} to{width:var(--pct)} }
+  @keyframes raBlink    { 0%,100%{opacity:1} 49%{opacity:1} 50%,99%{opacity:0} }
+  @keyframes raTypeIn   { from{max-width:0} to{max-width:300px} }
+  @keyframes raScoreIn  { from{stroke-dasharray:0 251} }
+  .ra-step-card { transition: all .35s cubic-bezier(.4,0,.2,1) !important; }
+  .ra-step-card:hover { transform: scale(1.01) !important; }
+  .ra-chip { transition: all .2s ease !important; cursor:pointer; }
+  .ra-chip:hover { transform: translateY(-1px) !important; }
 `;
-if(!document.getElementById("hero-css")){
-  heroCSS.id="hero-css";
-  document.head.appendChild(heroCSS);
-}
+if(!document.getElementById("ra-hero-css")) document.head.appendChild(_heroStyle);
 
-// ─── HERO ANIMATION COMPONENT ─────────────────────────────────────────────────
+// ─── HERO ANIMATION ────────────────────────────────────────────────────────────
 function HeroAnimation({isMobile}){
-  const [step,setStep]=useState(0);
-  const [visible,setVisible]=useState(false);
-  const [typedIdx,setTypedIdx]=useState(0);
-  const steps=["Login","Choose Exam","Pick Topic","Select Mode","Take Test","Results","Solutions","Dashboard"];
+  const [step,setStep]    = useState(0);
+  const [visible,setVisible] = useState(false);
+  const [typed,setTyped]  = useState(0);
+  const [autoPlay,setAutoPlay] = useState(true);
+  const autoRef = useRef(null);
 
-  useEffect(()=>{
-    setTimeout(()=>setVisible(true),100);
-    const iv=setInterval(()=>setStep(s=>(s+1)%steps.length),2200);
-    return()=>clearInterval(iv);
+  const STEPS = [
+    { id:0, icon:"🔐", label:"Login",        color:"#FF6A00", sub:"Google or email — instant access" },
+    { id:1, icon:"🎯", label:"Choose Exam",   color:"#1d4ed8", sub:"SSC · Banking · Railways" },
+    { id:2, icon:"📚", label:"Pick Topic",    color:"#16a34a", sub:"6 topics · 3 difficulty levels" },
+    { id:3, icon:"⚙️", label:"Select Mode",   color:"#7c3aed", sub:"Timed 30-min or Practice" },
+    { id:4, icon:"✏️", label:"Take the Exam", color:"#FF6A00", sub:"30 questions · live timer" },
+    { id:5, icon:"📊", label:"View Results",  color:"#059669", sub:"Score · accuracy · time analysis" },
+    { id:6, icon:"💡", label:"Solutions",     color:"#d97706", sub:"Step-by-step + YouTube video" },
+    { id:7, icon:"🏆", label:"Dashboard",     color:"#dc2626", sub:"Cloud progress + leaderboard" },
+  ];
+
+  const startAuto=useCallback(()=>{
+    clearInterval(autoRef.current);
+    autoRef.current=setInterval(()=>setStep(s=>(s+1)%STEPS.length),2800);
   },[]);
 
   useEffect(()=>{
-    setTypedIdx(0);
-    const iv=setInterval(()=>setTypedIdx(i=>i<steps[step].length?i+1:i),60);
+    setTimeout(()=>setVisible(true),80);
+    startAuto();
+    return()=>clearInterval(autoRef.current);
+  },[]);
+
+  useEffect(()=>{
+    setTyped(0);
+    const iv=setInterval(()=>setTyped(t=>t<STEPS[step].label.length?t+1:t),55);
     return()=>clearInterval(iv);
   },[step]);
 
-  const cards=[
-    {icon:"🔐",label:"Login",color:"#FF6A00",desc:"Google or Email"},
-    {icon:"🎯",label:"Choose Exam",color:"#1d4ed8",desc:"SSC / Banking / Railways"},
-    {icon:"📚",label:"Pick Topic",color:"#16a34a",desc:"6 topics per exam"},
-    {icon:"⚙️",label:"Select Mode",color:"#7c3aed",desc:"Timed or Practice"},
-    {icon:"✏️",label:"Take Test",color:"#FF6A00",desc:"30 questions · timer"},
-    {icon:"📊",label:"View Results",color:"#059669",desc:"Score + analysis"},
-    {icon:"💡",label:"Solutions",color:"#d97706",desc:"Step-by-step · Video"},
-    {icon:"🏆",label:"Dashboard",color:"#dc2626",desc:"Cloud progress"},
-  ];
+  const goTo=i=>{
+    setStep(i);
+    clearInterval(autoRef.current);
+    autoRef.current=setInterval(()=>setStep(s=>(s+1)%STEPS.length),2800);
+  };
+
+  const cur = STEPS[step];
 
   return(
-    <div style={{marginBottom:28,opacity:visible?1:0,transition:"opacity .8s ease",animation:visible?"fadeUp .8s ease both":"none"}}>
+    <div style={{width:"100%",maxWidth:560,opacity:visible?1:0,transition:"opacity .7s ease",animation:visible?"raFadeUp .7s ease both":"none"}}>
 
-      {/* ── Main animated card ── */}
-      <div style={{background:"linear-gradient(135deg,#0d0d0d,#1a0800)",border:"1.5px solid #FF6A0030",borderRadius:20,padding:isMobile?"20px 16px":"24px 28px",marginBottom:16,position:"relative",overflow:"hidden",animation:"glow 3s ease-in-out infinite"}}>
+      {/* ═══ MAIN HERO CARD ═══ */}
+      <div className="ra-step-card" style={{background:"#0c0c0c",borderRadius:24,overflow:"hidden",border:`1px solid ${cur.color}30`,marginBottom:16,position:"relative",minHeight:420,transition:"border-color .4s ease"}}>
 
-        {/* Background grid */}
-        <div style={{position:"absolute",inset:0,opacity:.06,backgroundImage:"linear-gradient(#FF6A00 1px,transparent 1px),linear-gradient(90deg,#FF6A00 1px,transparent 1px)",backgroundSize:"28px 28px",borderRadius:20}}/>
+        {/* Animated background orbs */}
+        <div style={{position:"absolute",top:-60,right:-60,width:280,height:280,borderRadius:"50%",background:`radial-gradient(circle,${cur.color}18,transparent 70%)`,animation:"raOrb 8s ease-in-out infinite",pointerEvents:"none",transition:"background .5s"}}/>
+        <div style={{position:"absolute",bottom:-80,left:-40,width:200,height:200,borderRadius:"50%",background:"radial-gradient(circle,#1d4ed815,transparent 70%)",animation:"raOrb 11s ease-in-out infinite reverse",pointerEvents:"none"}}/>
 
-        {/* Floating orb */}
-        <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,borderRadius:"50%",background:"radial-gradient(circle,#FF6A0025,transparent 70%)",animation:"drift 4s ease-in-out infinite",pointerEvents:"none"}}/>
-        <div style={{position:"absolute",bottom:-30,left:-30,width:120,height:120,borderRadius:"50%",background:"radial-gradient(circle,#1d4ed820,transparent 70%)",animation:"drift 5s ease-in-out infinite reverse",pointerEvents:"none"}}/>
+        {/* Progress bar */}
+        <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"#111",zIndex:2}}>
+          <div style={{height:"100%",background:`linear-gradient(90deg,${cur.color},${cur.color}bb)`,transition:"width .6s cubic-bezier(.4,0,.2,1)",width:`${((step+1)/STEPS.length)*100}%`}}/>
+        </div>
 
-        {/* Step indicator bar */}
-        <div style={{display:"flex",gap:5,marginBottom:20,position:"relative",zIndex:1}}>
-          {steps.map((_,i)=>(
-            <div key={i} style={{flex:1,height:3,borderRadius:4,background:i===step?"#FF6A00":i<step?"#FF6A0050":"#333",transition:"background .4s ease"}}/>
+        {/* Step dots */}
+        <div style={{position:"absolute",top:12,left:0,right:0,display:"flex",justifyContent:"center",gap:6,zIndex:2}}>
+          {STEPS.map((_,i)=>(
+            <div key={i} onClick={()=>goTo(i)} style={{width:i===step?20:6,height:6,borderRadius:3,background:i===step?cur.color:i<step?cur.color+"60":"#222",transition:"all .3s ease",cursor:"pointer"}}/>
           ))}
         </div>
 
-        {/* Current step display */}
-        <div style={{position:"relative",zIndex:1}}>
-          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:16}}>
-            {/* Animated icon */}
-            <div style={{width:52,height:52,borderRadius:14,background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,animation:"examFloat 3s ease-in-out infinite",boxShadow:"0 8px 24px #FF6A0050",flexShrink:0}}>
-              {cards[step].icon}
+        {/* Content area */}
+        <div style={{padding:"40px 32px 32px",position:"relative",zIndex:1}}>
+
+          {/* Step header */}
+          <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
+            {/* Icon with pulse ring */}
+            <div style={{width:64,height:64,borderRadius:18,background:`linear-gradient(135deg,${cur.color},${cur.color}aa)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30,flexShrink:0,animation:"raDrift 3.5s ease-in-out infinite",boxShadow:`0 8px 32px ${cur.color}50`,transition:"background .4s,box-shadow .4s"}}>
+              {cur.icon}
             </div>
-            <div>
-              <div style={{fontSize:11,color:"#FF6A00",fontWeight:700,letterSpacing:2,marginBottom:4}}>STEP {step+1} OF {steps.length}</div>
-              {/* Typewriter effect */}
-              <div style={{fontSize:isMobile?20:24,fontWeight:900,color:"#fff",lineHeight:1.1,overflow:"hidden",whiteSpace:"nowrap",borderRight:"2px solid #FF6A00",animation:"blink 1s step-end infinite",paddingRight:4,minWidth:"14ch"}}>
-                {steps[step].substring(0,typedIdx)}
+            <div style={{flex:1}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.15em",color:cur.color,marginBottom:6,transition:"color .4s"}}>
+                STEP {step+1} OF {STEPS.length}
               </div>
+              {/* Typewriter title */}
+              <div style={{fontSize:28,fontWeight:900,color:"#fff",lineHeight:1.1,display:"flex",alignItems:"center",gap:4}}>
+                <span style={{overflow:"hidden",whiteSpace:"nowrap"}}>
+                  {cur.label.substring(0,typed)}
+                </span>
+                <span style={{display:"inline-block",width:2,height:28,background:cur.color,borderRadius:2,animation:"raBlink 1s step-end infinite",transition:"background .4s"}}/>
+              </div>
+              <div style={{fontSize:13,color:"#555",marginTop:4}}>{cur.sub}</div>
             </div>
           </div>
 
-          {/* Step-specific mini UI */}
-          <div style={{background:"rgba(0,0,0,.4)",borderRadius:12,padding:"12px 14px",border:"1px solid #ffffff10"}}>
-            {step===0&&(
-              <div style={{animation:"slideIn .4s ease"}}>
-                <div style={{display:"flex",gap:8,marginBottom:8}}>
-                  <div style={{flex:1,background:"#1a1a1a",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#aaa",border:"1px solid #333"}}>📧 email@gmail.com</div>
-                  <div style={{background:"#FF6A00",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>Login →</div>
+          {/* ── STEP CONTENT PANELS ── */}
+
+          {/* STEP 0: Login */}
+          {step===0&&(
+            <div style={{animation:"raSlideIn .4s ease"}}>
+              <div style={{background:"#141414",borderRadius:16,padding:20,border:"1px solid #1e1e1e"}}>
+                <div style={{display:"flex",gap:10,marginBottom:12}}>
+                  <div style={{flex:1,background:"#0d0d0d",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#888",border:"1px solid #1e1e1e"}}>📧 email@gmail.com</div>
+                  <div style={{background:"linear-gradient(90deg,#FF6A00,#ff9a00)",borderRadius:10,padding:"10px 18px",fontSize:13,fontWeight:700,color:"#fff",whiteSpace:"nowrap",boxShadow:"0 4px 20px #FF6A0050"}}>Login →</div>
                 </div>
-                <div style={{display:"flex",gap:8}}>
-                  <div style={{flex:1,background:"#1a1a1a",borderRadius:8,padding:"8px 12px",border:"1px solid #333",display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{width:16,height:16,borderRadius:"50%",background:"linear-gradient(135deg,#4285f4,#34a853)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff",flexShrink:0}}>G</div>
-                    <span style={{fontSize:11,color:"#888"}}>Continue with Google</span>
-                  </div>
+                <div style={{display:"flex",gap:8,alignItems:"center",background:"#0d0d0d",borderRadius:10,padding:"10px 14px",border:"1px solid #1e1e1e"}}>
+                  <div style={{width:20,height:20,borderRadius:"50%",background:"linear-gradient(135deg,#4285f4,#34a853,#fbbc05,#ea4335)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#fff",flexShrink:0}}>G</div>
+                  <span style={{fontSize:13,color:"#777"}}>Continue with Google</span>
+                </div>
+                <div style={{marginTop:12,padding:"8px 12px",background:"#FF6A0010",borderRadius:8,border:"1px solid #FF6A0020"}}>
+                  <div style={{fontSize:10,color:"#666"}}>✓ 8+ chars &nbsp;✓ Uppercase &nbsp;✓ Number &nbsp;✓ Symbol</div>
                 </div>
               </div>
-            )}
-            {step===1&&(
-              <div style={{display:"flex",gap:8,animation:"slideIn .4s ease",flexWrap:"wrap"}}>
-                {[{l:"SSC",c:"#FF6A00",i:"🏛️",s:true},{l:"Banking",c:"#1d4ed8",i:"🏦"},{l:"Railways",c:"#16a34a",i:"🚂"}].map(e=>(
-                  <div key={e.l} style={{padding:"8px 14px",borderRadius:10,border:`2px solid ${e.s?e.c:"#333"}`,background:e.s?e.c+"22":"#1a1a1a",color:e.s?e.c:"#888",fontWeight:e.s?800:400,fontSize:12,display:"flex",alignItems:"center",gap:6,transition:"all .3s",cursor:"pointer"}}>
-                    {e.i} {e.l}
-                    {e.s&&<span style={{fontSize:10}}>✓</span>}
+            </div>
+          )}
+
+          {/* STEP 1: Choose Exam */}
+          {step===1&&(
+            <div style={{animation:"raSlideIn .4s ease",display:"flex",flexDirection:"column",gap:10}}>
+              {[{l:"SSC",c:"#FF6A00",i:"🏛️",d:"CGL · CHSL · MTS · CPO",sel:true},{l:"Banking",c:"#1d4ed8",i:"🏦",d:"IBPS PO · SBI · RBI · LIC"},{l:"Railways",c:"#16a34a",i:"🚂",d:"NTPC · Group D · ALP"}].map(e=>(
+                <div key={e.l} style={{background:e.sel?`linear-gradient(135deg,${e.c}22,${e.c}11)`:"#0f0f0f",borderRadius:14,padding:"14px 16px",border:`1.5px solid ${e.sel?e.c+"80":"#1a1a1a"}`,display:"flex",alignItems:"center",gap:14,transition:"all .3s"}}>
+                  <div style={{width:40,height:40,borderRadius:11,background:e.c+"20",border:`1px solid ${e.c}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{e.i}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:800,fontSize:15,color:e.sel?e.c:"#555"}}>{e.l}</div>
+                    <div style={{fontSize:11,color:"#444"}}>{e.d}</div>
+                  </div>
+                  {e.sel&&<div style={{background:e.c,borderRadius:20,padding:"3px 12px",fontSize:10,fontWeight:700,color:"#fff"}}>Selected ✓</div>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* STEP 2: Pick Topic */}
+          {step===2&&(
+            <div style={{animation:"raSlideIn .4s ease"}}>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+                {[{n:"➕ Arithmetic",s:true},{n:"🔣 Algebra"},{n:"🔢 Number System"},{n:"✖️ Simplification"},{n:"📊 Data Interpretation"},{n:"📐 Geometry"}].map(t=>(
+                  <div key={t.n} style={{padding:"7px 13px",borderRadius:20,background:t.s?"#FF6A00":"#111",border:`1px solid ${t.s?"#FF6A00":"#222"}`,color:t.s?"#fff":"#555",fontSize:11,fontWeight:t.s?700:400}}>{t.n}</div>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                {[{d:"Easy",c:"#22c55e",n:30},{d:"Medium",c:"#f59e0b",n:30},{d:"Hard",c:"#ef4444",n:30}].map(d=>(
+                  <div key={d.d} style={{flex:1,background:`${d.c}10`,borderRadius:12,padding:"14px 10px",textAlign:"center",border:`1px solid ${d.c}30`}}>
+                    <div style={{fontSize:16,fontWeight:900,color:d.c}}>{d.n}</div>
+                    <div style={{fontSize:10,color:d.c+"aa",fontWeight:700,marginTop:2}}>{d.d}</div>
+                    <div style={{fontSize:9,color:"#444",marginTop:2}}>questions</div>
                   </div>
                 ))}
               </div>
-            )}
-            {step===2&&(
-              <div style={{animation:"slideIn .4s ease"}}>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-                  {[{n:"➕ Arithmetic",s:true},{n:"🔣 Algebra"},{n:"🔢 Number System"},{n:"✖️ Simplify"},{n:"📊 Data Interp."},{n:"📐 Geometry"}].map(t=>(
-                    <div key={t.n} style={{padding:"5px 10px",borderRadius:20,background:t.s?"#FF6A00":"#1a1a1a",border:`1px solid ${t.s?"#FF6A00":"#333"}`,color:t.s?"#fff":"#666",fontSize:10,fontWeight:t.s?700:400,cursor:"pointer"}}>{t.n}</div>
-                  ))}
-                </div>
-                <div style={{display:"flex",gap:6}}>
-                  {[{d:"Easy",c:"#22c55e"},{d:"Medium",c:"#f59e0b"},{d:"Hard",c:"#ef4444"}].map(d=>(
-                    <div key={d.d} style={{flex:1,padding:"6px",borderRadius:8,border:`1px solid ${d.c}40`,background:d.c+"15",color:d.c,fontSize:11,fontWeight:700,textAlign:"center"}}>{d.d}</div>
-                  ))}
-                </div>
+            </div>
+          )}
+
+          {/* STEP 3: Select Mode */}
+          {step===3&&(
+            <div style={{animation:"raSlideIn .4s ease",display:"flex",gap:12}}>
+              <div style={{flex:1,background:"#FF6A0012",borderRadius:16,padding:"20px 16px",border:"1.5px solid #FF6A0050",textAlign:"center"}}>
+                <div style={{fontSize:36,marginBottom:8}}>⏱️</div>
+                <div style={{fontWeight:800,fontSize:15,color:"#FF6A00",marginBottom:4}}>Timed Mode</div>
+                <div style={{fontSize:11,color:"#666",marginBottom:12}}>30-minute countdown<br/>Auto-submit on timeout</div>
+                <div style={{background:"#FF6A00",borderRadius:20,padding:"5px 0",fontSize:11,fontWeight:700,color:"#fff",animation:"raPulseRing 2s ease-in-out infinite"}}>Selected ✓</div>
               </div>
-            )}
-            {step===3&&(
-              <div style={{display:"flex",gap:10,animation:"slideIn .4s ease"}}>
-                <div style={{flex:1,padding:"12px 14px",borderRadius:12,border:"2px solid #FF6A00",background:"#FF6A0015"}}>
-                  <div style={{fontSize:22,marginBottom:4}}>⏱️</div>
-                  <div style={{fontWeight:700,fontSize:13,color:"#FF6A00",marginBottom:2}}>Timed Mode</div>
-                  <div style={{fontSize:10,color:"#888"}}>30-min countdown</div>
-                  <div style={{marginTop:8,background:"#FF6A00",borderRadius:6,padding:"3px 0",textAlign:"center",fontSize:10,fontWeight:700,color:"#fff"}}>Selected ✓</div>
-                </div>
-                <div style={{flex:1,padding:"12px 14px",borderRadius:12,border:"1px solid #333",background:"#1a1a1a"}}>
-                  <div style={{fontSize:22,marginBottom:4}}>🧘</div>
-                  <div style={{fontWeight:700,fontSize:13,color:"#aaa",marginBottom:2}}>Practice</div>
-                  <div style={{fontSize:10,color:"#555"}}>No time limit</div>
-                </div>
+              <div style={{flex:1,background:"#111",borderRadius:16,padding:"20px 16px",border:"1px solid #1e1e1e",textAlign:"center"}}>
+                <div style={{fontSize:36,marginBottom:8}}>🧘</div>
+                <div style={{fontWeight:800,fontSize:15,color:"#444",marginBottom:4}}>Practice Mode</div>
+                <div style={{fontSize:11,color:"#333",marginBottom:12}}>No time limit<br/>Per-question stopwatch</div>
+                <div style={{background:"#1a1a1a",borderRadius:20,padding:"5px 0",fontSize:11,color:"#444"}}>Select →</div>
               </div>
-            )}
-            {step===4&&(
-              <div style={{animation:"slideIn .4s ease"}}>
-                <div style={{background:"#0a0a0a",borderRadius:10,overflow:"hidden",border:"1px solid #222"}}>
-                  <div style={{background:"#000",padding:"7px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <span style={{fontSize:11,fontWeight:700,color:"#fff"}}>🏛️ SSC Arithmetic – Test 1</span>
-                    <div style={{display:"flex",gap:6}}>
-                      <span style={{background:"#22c55e",color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>⏱ 28:34</span>
-                      <span style={{background:"#334155",color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:700}}>🕐 01:12</span>
-                    </div>
+            </div>
+          )}
+
+          {/* STEP 4: Take Exam */}
+          {step===4&&(
+            <div style={{animation:"raSlideIn .4s ease"}}>
+              <div style={{background:"#080808",borderRadius:16,overflow:"hidden",border:"1px solid #1a1a1a"}}>
+                {/* Exam header */}
+                <div style={{background:"#000",padding:"10px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:12,fontWeight:700,color:"#ccc"}}>🏛️ Arithmetic – Test 1</span>
+                  <div style={{display:"flex",gap:6}}>
+                    <span style={{background:"#22c55e",color:"#fff",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,fontFamily:"monospace"}}>⏱ 28:34</span>
+                    <span style={{background:"#1e293b",color:"#94a3b8",borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,fontFamily:"monospace"}}>🕐 01:12</span>
                   </div>
-                  <div style={{padding:"10px 12px"}}>
-                    <div style={{fontSize:11,color:"#ccc",marginBottom:8,fontWeight:600}}>Q.7: If sum of two numbers is 24 and difference is 8, find product.</div>
-                    {[{o:"A",t:"118"},{o:"B",t:"128 ✓",sel:true},{o:"C",t:"138"},{o:"D",t:"148"}].map(opt=>(
-                      <div key={opt.o} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 8px",borderRadius:7,marginBottom:3,border:`1px solid ${opt.sel?"#FF6A00":"#222"}`,background:opt.sel?"#FF6A0015":"transparent",cursor:"pointer"}}>
-                        <div style={{width:14,height:14,borderRadius:"50%",border:`2px solid ${opt.sel?"#FF6A00":"#444"}`,background:opt.sel?"#FF6A00":"transparent",flexShrink:0}}/>
-                        <span style={{fontSize:10,color:opt.sel?"#FF6A00":"#666",fontWeight:opt.sel?700:400}}>{opt.o}. {opt.t}</span>
+                </div>
+                <div style={{padding:"16px"}}>
+                  <div style={{fontSize:13,color:"#bbb",marginBottom:12,lineHeight:1.5,fontWeight:600}}>Q.7: If the sum of two numbers is 24 and their difference is 8, find their product.</div>
+                  {[{o:"A",t:"118"},{o:"B",t:"128",sel:true},{o:"C",t:"138"},{o:"D",t:"148"}].map(opt=>(
+                    <div key={opt.o} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:9,marginBottom:6,border:`1px solid ${opt.sel?"#FF6A00":"#1a1a1a"}`,background:opt.sel?"#FF6A0012":"transparent",cursor:"pointer"}}>
+                      <div style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${opt.sel?"#FF6A00":"#333"}`,background:opt.sel?"#FF6A00":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {opt.sel&&<div style={{width:6,height:6,borderRadius:"50%",background:"#fff"}}/>}
                       </div>
+                      <span style={{fontSize:12,color:opt.sel?"#FF6A00":"#555",fontWeight:opt.sel?700:400}}>{opt.o}. {opt.t} {opt.sel?"✓":""}</span>
+                    </div>
+                  ))}
+                  {/* Palette strip */}
+                  <div style={{display:"flex",gap:4,marginTop:12,flexWrap:"wrap"}}>
+                    {Array.from({length:10},(_,i)=>(
+                      <div key={i} style={{width:28,height:28,borderRadius:6,background:i<6?"#22c55e":i===6?"#ef4444":i===7?"#FF6A00":"#1e1e1e",border:i===6?"2px solid #000":"1px solid transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#fff"}}>{i+1}</div>
                     ))}
+                    <div style={{fontSize:9,color:"#333",alignSelf:"center",marginLeft:4}}>+20 more →</div>
                   </div>
                 </div>
               </div>
-            )}
-            {step===5&&(
-              <div style={{animation:"slideIn .4s ease"}}>
-                <div style={{display:"flex",gap:8,marginBottom:10}}>
-                  {[{l:"Score",v:"24/30",c:"#FF6A00"},{l:"Accuracy",v:"80%",c:"#22c55e"},{l:"Time",v:"22:16",c:"#f59e0b"}].map(s=>(
-                    <div key={s.l} style={{flex:1,background:"#0d0d0d",borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid #222"}}>
-                      <div style={{fontSize:18,fontWeight:900,color:s.c}}>{s.v}</div>
-                      <div style={{fontSize:9,color:"#555",marginTop:2}}>{s.l}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{background:"#0d0d0d",borderRadius:8,padding:"6px 10px",border:"1px solid #222"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <span style={{fontSize:10,color:"#888"}}>Performance</span>
-                    <span style={{fontSize:10,fontWeight:700,color:"#FF6A00"}}>80%</span>
-                  </div>
-                  <div style={{background:"#1a1a1a",borderRadius:4,height:6,overflow:"hidden"}}>
-                    <div style={{height:"100%",width:"80%",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",borderRadius:4,animation:"progressW 1.2s ease both"}}/>
-                  </div>
-                </div>
-              </div>
-            )}
-            {step===6&&(
-              <div style={{animation:"slideIn .4s ease"}}>
-                {[{q:7,ans:"B. 128",ok:true,exp:"x+y=24, x−y=8 → x=16, y=8 → 16×8=128"},{q:13,ans:"C. 45%",ok:false,exp:"Profit% = (SP−CP)/CP × 100"}].map((r,i)=>(
-                  <div key={i} style={{background:"#0d0d0d",borderRadius:8,padding:"8px 10px",marginBottom:6,border:`1px solid ${r.ok?"#22c55e30":"#ef444430"}`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <span style={{fontSize:10,background:r.ok?"#dcfce7":"#fee2e2",color:r.ok?"#16a34a":"#dc2626",borderRadius:6,padding:"1px 6px",fontWeight:700}}>{r.ok?"✅":"❌"} Q.{r.q}</span>
-                        <span style={{fontSize:10,color:"#666"}}>{r.ans}</span>
-                      </div>
-                      <span style={{fontSize:12,color:"#FF6A00"}}>▶</span>
-                    </div>
-                    <div style={{fontSize:9,color:"#555"}}>💡 {r.exp}</div>
+            </div>
+          )}
+
+          {/* STEP 5: Results */}
+          {step===5&&(
+            <div style={{animation:"raSlideIn .4s ease"}}>
+              <div style={{display:"flex",gap:10,marginBottom:12}}>
+                {[{l:"Score",v:"24/30",c:"#FF6A00"},{l:"Accuracy",v:"80%",c:"#22c55e"},{l:"Time",v:"22:16",c:"#f59e0b"}].map(s=>(
+                  <div key={s.l} style={{flex:1,background:"#0d0d0d",borderRadius:12,padding:"14px 10px",textAlign:"center",border:"1px solid #1a1a1a"}}>
+                    <div style={{fontSize:22,fontWeight:900,color:s.c}}>{s.v}</div>
+                    <div style={{fontSize:10,color:"#444",marginTop:3}}>{s.l}</div>
                   </div>
                 ))}
               </div>
-            )}
-            {step===7&&(
-              <div style={{animation:"slideIn .4s ease"}}>
-                {[{e:"SSC",p:80,c:"#FF6A00"},{e:"Banking",p:65,c:"#1d4ed8"},{e:"Railways",p:72,c:"#16a34a"}].map(s=>(
-                  <div key={s.e} style={{marginBottom:8}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                      <span style={{fontSize:10,color:"#888"}}>{s.e}</span>
-                      <span style={{fontSize:10,fontWeight:700,color:s.c}}>{s.p}%</span>
-                    </div>
-                    <div style={{background:"#1a1a1a",borderRadius:4,height:5,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:s.p+"%",background:s.c,borderRadius:4,transition:"width 1s ease"}}/>
-                    </div>
-                  </div>
-                ))}
-                <div style={{background:"#0d0d0d",borderRadius:8,padding:"6px 10px",border:"1px solid #222",marginTop:4}}>
-                  <div style={{display:"flex",gap:8,justifyContent:"space-between"}}>
-                    {[{r:"🥇",n:"Arjun",s:"93%"},{r:"🥈",n:"Priya",s:"90%"},{r:"🎯",n:"You",s:"80% #3",hl:true}].map(l=>(
-                      <div key={l.n} style={{textAlign:"center"}}>
-                        <div style={{fontSize:10}}>{l.r}</div>
-                        <div style={{fontSize:9,color:l.hl?"#FF6A00":"#888",fontWeight:l.hl?800:400}}>{l.n}</div>
-                        <div style={{fontSize:9,color:l.hl?"#FF6A00":"#555",fontWeight:700}}>{l.s}</div>
-                      </div>
-                    ))}
-                  </div>
+              <div style={{background:"#0d0d0d",borderRadius:12,padding:"14px 16px",border:"1px solid #1a1a1a",marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                  <span style={{fontSize:11,color:"#555"}}>Performance</span>
+                  <span style={{fontSize:11,fontWeight:700,color:"#FF6A00"}}>80%</span>
+                </div>
+                <div style={{background:"#1a1a1a",borderRadius:4,height:8,overflow:"hidden"}}>
+                  <div style={{height:"100%",borderRadius:4,background:"linear-gradient(90deg,#FF6A00,#ff9a00)","--pct":"80%",animation:"raProgress 1.2s ease both",width:"80%"}}/>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:10}}>
+                  <span style={{color:"#22c55e"}}>✅ 24 correct</span>
+                  <span style={{color:"#ef4444"}}>❌ 6 wrong</span>
+                  <span style={{color:"#555"}}>⬜ 0 skipped</span>
                 </div>
               </div>
-            )}
-          </div>
+              {/* Top slow Qs */}
+              <div style={{fontSize:10,color:"#444",marginBottom:6}}>⏰ Slowest questions:</div>
+              {[{q:7,t:"2m 34s",w:90},{q:13,t:"1m 58s",w:71},{q:22,t:"1m 20s",w:51}].map(r=>(
+                <div key={r.q} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                  <span style={{fontSize:10,color:"#555",width:36}}>Q.{r.q}</span>
+                  <div style={{flex:1,background:"#0d0d0d",borderRadius:3,height:5,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:r.w+"%",background:"#ef4444",borderRadius:3}}/>
+                  </div>
+                  <span style={{fontSize:10,color:"#ef4444",width:52,textAlign:"right"}}>{r.t}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* STEP 6: Solutions */}
+          {step===6&&(
+            <div style={{animation:"raSlideIn .4s ease"}}>
+              <div style={{display:"flex",gap:6,marginBottom:12}}>
+                {["All (30)","✅ Correct 24","❌ Wrong 6","⬜ Skipped 0"].map((f,i)=>(
+                  <div key={f} style={{padding:"5px 10px",borderRadius:20,background:i===0?"#FF6A00":"#111",border:`1px solid ${i===0?"#FF6A00":"#222"}`,color:i===0?"#fff":"#555",fontSize:10,fontWeight:i===0?700:400,cursor:"pointer"}}>{f}</div>
+                ))}
+              </div>
+              {[{q:7,ok:true,ans:"B. 128",exp:"x+y=24, x-y=8 → x=16, y=8 → 16×8=128"},{q:13,ok:false,ans:"C. 45%",exp:"Profit% = (SP−CP)/CP × 100 = 45%"},{q:3,ok:true,ans:"A. 25%",exp:"SP = 125, CP = 100 → 25% profit"}].map((r,i)=>(
+                <div key={i} style={{background:"#0d0d0d",borderRadius:12,padding:"12px 14px",marginBottom:8,border:`1px solid ${r.ok?"#22c55e18":"#ef444418"}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:10,background:r.ok?"#dcfce720":"#fee2e220",color:r.ok?"#22c55e":"#ef4444",borderRadius:6,padding:"2px 8px",fontWeight:700,border:`1px solid ${r.ok?"#22c55e30":"#ef444430"}`}}>{r.ok?"✅":"❌"} Q.{r.q}</span>
+                      <span style={{fontSize:11,color:"#888"}}>{r.ans}</span>
+                    </div>
+                    <span style={{fontSize:13,color:"#FF6A00",cursor:"pointer"}}>▶ Video</span>
+                  </div>
+                  <div style={{fontSize:10,color:"#555",paddingLeft:2}}>💡 {r.exp}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* STEP 7: Dashboard */}
+          {step===7&&(
+            <div style={{animation:"raSlideIn .4s ease"}}>
+              {[{e:"SSC",p:80,c:"#FF6A00",i:"🏛️"},{e:"Banking",p:65,c:"#1d4ed8",i:"🏦"},{e:"Railways",p:72,c:"#16a34a",i:"🚂"}].map(s=>(
+                <div key={s.e} style={{marginBottom:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                    <span style={{fontSize:12,color:"#888",display:"flex",alignItems:"center",gap:6}}><span>{s.i}</span>{s.e}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:s.c}}>{s.p}%</span>
+                  </div>
+                  <div style={{background:"#111",borderRadius:6,height:8,overflow:"hidden"}}>
+                    <div style={{height:"100%",width:s.p+"%",background:s.c,borderRadius:6,transition:"width 1.2s ease"}}/>
+                  </div>
+                </div>
+              ))}
+              <div style={{background:"#080808",borderRadius:14,padding:"14px 16px",border:"1px solid #1a1a1a",marginTop:10}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#FF6A00",marginBottom:10}}>🏆 Leaderboard</div>
+                {[{r:"🥇",n:"Arjun Sharma",s:93,hl:false},{r:"🥈",n:"Priya Reddy",s:90,hl:false},{r:"🎯",n:"You",s:80,hl:true,rank:"#3"}].map(l=>(
+                  <div key={l.n} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid #111"}}>
+                    <span style={{fontSize:16}}>{l.r}</span>
+                    <span style={{flex:1,fontSize:12,color:l.hl?"#FF6A00":"#777",fontWeight:l.hl?800:400}}>{l.n}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:l.hl?"#FF6A00":"#555"}}>{l.s}%{l.rank?` (${l.rank})`:""}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{marginTop:10,padding:"7px 12px",background:"#0a1a0a",borderRadius:8,border:"1px solid #1a2a1a"}}>
+                <span style={{fontSize:10,color:"#22c55e"}}>☁️ All scores synced in real-time across all devices</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── 8 mini step chips ── */}
+      {/* ═══ STEP CHIPS ═══ */}
       <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:isMobile?"center":"flex-start"}}>
-        {cards.map((c,i)=>(
-          <div key={i} onClick={()=>setStep(i)} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,border:"1px solid",borderColor:step===i?c.color:"#222",background:step===i?c.color+"15":"#0d0d0d",cursor:"pointer",transition:"all .2s"}}>
-            <span style={{fontSize:12}}>{c.icon}</span>
-            <span style={{fontSize:10,fontWeight:step===i?700:400,color:step===i?c.color:"#555"}}>{c.label}</span>
+        {STEPS.map((s,i)=>(
+          <div key={i} className="ra-chip" onClick={()=>goTo(i)} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:20,border:`1px solid ${step===i?s.color+"60":"#1e1e1e"}`,background:step===i?s.color+"18":"#0a0a0a",boxShadow:step===i?`0 0 12px ${s.color}30`:"none"}}>
+            <span style={{fontSize:13}}>{s.icon}</span>
+            <span style={{fontSize:11,fontWeight:step===i?700:400,color:step===i?s.color:"#444"}}>{s.label}</span>
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── NOTICE STRIP ────────────────────────────────────────────────────────────
+function NoticeStrip({notices,setShowNoticeModal}){
+  const [idx,setIdx]=useState(0);
+  useEffect(()=>{
+    if(notices.length<=1) return;
+    const t=setInterval(()=>setIdx(i=>(i+1)%notices.length),3500);
+    return()=>clearInterval(t);
+  },[notices.length]);
+  if(!notices.length) return null;
+  const n=notices[idx];
+  return(
+    <div onClick={()=>setShowNoticeModal&&setShowNoticeModal(true)} style={{background:"rgba(255,106,0,0.08)",borderRadius:12,padding:"10px 14px",border:"1px solid rgba(255,106,0,0.2)",cursor:"pointer",display:"flex",alignItems:"center",gap:10,transition:"background .2s"}}
+      onMouseOver={e=>e.currentTarget.style.background="rgba(255,106,0,0.14)"}
+      onMouseOut={e=>e.currentTarget.style.background="rgba(255,106,0,0.08)"}>
+      <span style={{fontSize:16,flexShrink:0}}>📢</span>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontWeight:700,fontSize:12,color:"#FF6A00",marginBottom:1}}>{n.title}</div>
+        <div style={{fontSize:11,color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.body}</div>
+      </div>
+      {notices.length>1&&(
+        <div style={{display:"flex",gap:3,flexShrink:0}}>
+          {notices.map((_,i)=><div key={i} style={{width:i===idx?16:5,height:5,borderRadius:3,background:i===idx?"#FF6A00":"#444",transition:"all .3s"}}/>)}
+        </div>
+      )}
     </div>
   );
 }
@@ -852,7 +952,7 @@ function BannerSlider({banners}){
   );
 }
 
-function HomePage({setPage,user,setExamType,banners=[],examTypes}){
+function HomePage({setPage,user,setExamType,banners=[],examTypes,notices=[],setShowNoticeModal}){
   const [sel,setSel]=useState(null);
   const ETs=examTypes||EXAM_TYPES;
   const isMobile=window.innerWidth<=768;
@@ -864,56 +964,72 @@ function HomePage({setPage,user,setExamType,banners=[],examTypes}){
         <div style={{position:"absolute",top:-100,right:-100,width:500,height:500,borderRadius:"50%",background:"radial-gradient(#FF6A0030,transparent 70%)"}}/>
         <div style={{position:"absolute",bottom:-100,left:-100,width:400,height:400,borderRadius:"50%",background:"radial-gradient(#FF6A0020,transparent 70%)"}}/>
 
-        <div style={{flex:1,display:"flex",position:"relative",maxWidth:1200,margin:"0 auto",width:"100%",padding:isMobile?"16px":"28px 40px",gap:32,alignItems:"flex-start",flexDirection:isMobile?"column":"row",justifyContent:"center",overflowY:"auto"}}>
+        <div style={{flex:1,display:"flex",position:"relative",maxWidth:1400,margin:"0 auto",width:"100%",padding:isMobile?"12px":"0",gap:0,alignItems:"stretch",flexDirection:isMobile?"column":"row",overflowY:isMobile?"auto":"hidden"}}>
 
-          {/* LEFT — Animated Hero */}
-          <div style={{flex:1,textAlign:isMobile?"center":"left",paddingTop:isMobile?8:40}}>
-            <HeroAnimation isMobile={isMobile}/>
-            <BannerSlider banners={banners}/>
-            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:24,justifyContent:isMobile?"center":"flex-start"}}>
-              <button onClick={()=>user?setPage("tests"):setPage("auth")} style={{padding:"13px 32px",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 24px #FF6A0070",transition:"transform .15s"}} onMouseOver={e=>e.currentTarget.style.transform="scale(1.03)"} onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}>Start Practice →</button>
-              <button onClick={()=>setPage("leaderboard")} style={{padding:"13px 24px",borderRadius:12,border:"2px solid #FF6A00",background:"transparent",color:"#FF6A00",fontSize:14,fontWeight:700,cursor:"pointer"}}>🏆 Leaderboard</button>
+          {/* ── LEFT HALF: Courses, Banners, Notices ── */}
+          <div style={{flex:"0 0 42%",maxWidth:isMobile?"100%":"42%",padding:isMobile?"16px":"40px 32px 40px 40px",overflowY:"auto",borderRight:isMobile?"none":"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",gap:20}}>
+
+            {/* Banners */}
+            {banners.length>0&&<BannerSlider banners={banners}/>}
+
+            {/* Notices strip */}
+            <NoticeStrip notices={notices} setShowNoticeModal={setShowNoticeModal}/>
+
+            {/* Courses/Exam cards */}
+            <div>
+              <div style={{color:"#aaa",fontSize:11,fontWeight:700,letterSpacing:2,marginBottom:12}}>CHOOSE YOUR COURSE</div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {ETs.filter(et=>et.visible!==false).map((et,idx)=>(
+                  <div key={et.id}
+                    onClick={()=>{setSel(et.id);setExamType(et.id);if(user)setPage("tests");else setPage("auth");}}
+                    style={{background:sel===et.id?`linear-gradient(135deg,${et.color},${et.color}dd)`:"rgba(255,255,255,0.04)",borderRadius:14,padding:"14px 18px",cursor:"pointer",border:"1px solid",borderColor:sel===et.id?et.color:"rgba(255,255,255,0.08)",transition:"all .25s",animation:`fadeUp .5s ease ${idx*0.1}s both`}}
+                    onMouseOver={e=>{if(sel!==et.id){e.currentTarget.style.background="rgba(255,255,255,0.08)";e.currentTarget.style.borderColor=et.color+"80";}}}
+                    onMouseOut={e=>{if(sel!==et.id){e.currentTarget.style.background="rgba(255,255,255,0.04)";e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";}}}
+                  >
+                    <div style={{display:"flex",alignItems:"center",gap:14}}>
+                      <div style={{width:44,height:44,borderRadius:12,background:sel===et.id?"rgba(255,255,255,.2)":et.color+"25",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0,border:`1px solid ${et.color}40`}}>{et.icon}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:800,fontSize:15,color:sel===et.id?"#fff":et.color,marginBottom:2}}>{et.label}</div>
+                        <div style={{fontSize:11,color:sel===et.id?"rgba(255,255,255,.7)":"#666",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{et.fullName}</div>
+                        <div style={{fontSize:10,color:sel===et.id?"rgba(255,255,255,.5)":"#444",marginTop:3}}>{et.desc}</div>
+                      </div>
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                        <span style={{fontSize:10,color:sel===et.id?"rgba(255,255,255,.6)":"#555"}}>{et.topics?.length||6} topics</span>
+                        <span style={{background:sel===et.id?"rgba(255,255,255,.2)":et.color+"20",color:sel===et.id?"#fff":et.color,borderRadius:20,padding:"2px 10px",fontSize:10,fontWeight:700}}>{sel===et.id?"Selected ✓":"Start →"}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{display:"flex",gap:24,flexWrap:"wrap",justifyContent:isMobile?"center":"flex-start"}}>
-              {[["50K+","Students"],["1620+","Questions"],["3","Exam Types"],["☁️","Cloud"]].map(([v,l])=>(
-                <div key={l} style={{textAlign:"center"}}>
-                  <div style={{fontSize:isMobile?18:22,fontWeight:900,color:"#FF6A00"}}>{v}</div>
-                  <div style={{fontSize:10,color:"#666",fontWeight:600}}>{l}</div>
+
+            {/* Stats row */}
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+              {[["50K+","Students","#FF6A00"],["1620+","Questions","#22c55e"],["3","Exams","#1d4ed8"],["☁️","Cloud Sync","#f59e0b"]].map(([v,l,c])=>(
+                <div key={l} style={{flex:1,minWidth:80,background:"rgba(255,255,255,0.04)",borderRadius:12,padding:"12px 10px",textAlign:"center",border:"1px solid rgba(255,255,255,0.06)"}}>
+                  <div style={{fontSize:18,fontWeight:900,color:c}}>{v}</div>
+                  <div style={{fontSize:10,color:"#555",marginTop:3}}>{l}</div>
                 </div>
               ))}
             </div>
+
+            {/* Login CTA if not logged in */}
+            {!user&&(
+              <button onClick={()=>setPage("auth")} style={{width:"100%",padding:"14px 0",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:16,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 24px #FF6A0060"}} onMouseOver={e=>e.currentTarget.style.filter="brightness(1.1)"} onMouseOut={e=>e.currentTarget.style.filter="brightness(1)"}>
+                Get Started Free →
+              </button>
+            )}
+            {user&&(
+              <div style={{display:"flex",gap:10}}>
+                <button onClick={()=>setPage("tests")} style={{flex:2,padding:"13px 0",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:15,fontWeight:800,cursor:"pointer"}}>Start Practice →</button>
+                <button onClick={()=>setPage("leaderboard")} style={{flex:1,padding:"13px 0",borderRadius:12,border:"1px solid #FF6A00",background:"transparent",color:"#FF6A00",fontSize:13,fontWeight:700,cursor:"pointer"}}>🏆 Board</button>
+              </div>
+            )}
           </div>
 
-          {/* RIGHT — Exam Selector (dynamic from Firestore) */}
-          <div style={{width:isMobile?"100%":"320px",flexShrink:0,paddingTop:isMobile?0:40,paddingBottom:isMobile?24:0}}>
-            <div style={{background:"rgba(255,255,255,0.06)",backdropFilter:"blur(10px)",borderRadius:24,padding:isMobile?"16px":"24px",border:"1px solid rgba(255,106,0,0.25)"}}>
-              <div style={{color:"#FF6A00",fontWeight:800,fontSize:14,marginBottom:4,letterSpacing:1}}>CHOOSE YOUR EXAM</div>
-              <div style={{color:"#666",fontSize:12,marginBottom:16}}>Select to start your preparation</div>
-
-              {ETs.filter(et=>et.visible!==false).map(et=>(
-                <div key={et.id}
-                  onClick={()=>{setSel(et.id);setExamType(et.id);if(user)setPage("tests");else setPage("auth");}}
-                  style={{background:sel===et.id?"linear-gradient(135deg,#FF6A00,#ff9a00)":"rgba(255,255,255,0.05)",borderRadius:16,padding:"16px 18px",marginBottom:10,cursor:"pointer",border:"2px solid",borderColor:sel===et.id?"#FF6A00":"rgba(255,255,255,0.1)",transition:"all .2s"}}
-                  onMouseOver={e=>{if(sel!==et.id){e.currentTarget.style.borderColor="#FF6A00";e.currentTarget.style.background="rgba(255,106,0,0.12)";}}}
-                  onMouseOut={e=>{if(sel!==et.id){e.currentTarget.style.borderColor="rgba(255,255,255,0.1)";e.currentTarget.style.background="rgba(255,255,255,0.05)";}}}
-                >
-                  <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <span style={{fontSize:28}}>{et.icon}</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:800,fontSize:15,color:"#fff"}}>{et.label}</div>
-                      <div style={{fontSize:11,color:sel===et.id?"rgba(255,255,255,.75)":"#777",marginTop:2}}>{et.desc}</div>
-                    </div>
-                    <span style={{color:sel===et.id?"#fff":"#555",fontSize:14}}>→</span>
-                  </div>
-                </div>
-              ))}
-
-              {!user&&(
-                <div style={{marginTop:8,padding:"10px 14px",background:"rgba(255,106,0,.1)",borderRadius:10,border:"1px solid rgba(255,106,0,.3)",textAlign:"center"}}>
-                  <span style={{color:"#FF6A00",fontSize:13,fontWeight:600}}>Login required to practice →</span>
-                </div>
-              )}
-            </div>
+          {/* ── RIGHT HALF: Animated Hero ── */}
+          <div style={{flex:1,padding:isMobile?"16px":"40px 40px 40px 32px",display:"flex",alignItems:"center",justifyContent:"center",minHeight:isMobile?"auto":"calc(100vh - 120px)"}}>
+            <HeroAnimation isMobile={isMobile}/>
           </div>
         </div>
       </div>
@@ -3285,7 +3401,7 @@ export default function App(){
 
       {showNoticeModal && notices.length>0 && <NoticeModal notices={notices} onClose={()=>setShowNoticeModal(false)}/>}
       {showNotifPanel && <NotifPanel notices={notices} onClose={()=>setShowNotifPanel(false)}/>}
-      {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType} banners={banners} examTypes={examTypes}/>}
+      {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType} banners={banners} examTypes={examTypes} notices={notices} setShowNoticeModal={setShowNoticeModal}/>}
       {page==="auth"      && !fbUser      && <AuthPage    onLogin={handleLogin}/>}
       {page==="auth"      && fbUser       && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
       {page==="tests"     && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType} examTypes={examTypes}/>}
