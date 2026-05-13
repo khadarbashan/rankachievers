@@ -1820,48 +1820,157 @@ function DashboardPage({user,setPage}){
 
 // ─── LEADERBOARD ─────────────────────────────────────────────────────────────
 function LeaderboardPage(){
-  const [leaders,setLeaders]=useState([]);
+  const [allAttempts,setAllAttempts]=useState([]);
   const [loading,setLoading]=useState(true);
   const [examFilter,setExamFilter]=useState("all");
+  const [diffFilter,setDiffFilter]=useState("all");
+  const [lastUpdate,setLastUpdate]=useState(null);
 
   useEffect(()=>{
-    const q=query(collection(db,"attempts"),orderBy("accuracy","desc"),orderBy("createdAt","desc"),limit(50));
-    getDocs(q).then(snap=>{
-      const seen=new Set();
-      const top=snap.docs.map(d=>({id:d.id,...d.data()})).filter(a=>{
-        const key=`${a.userId}_${a.testId}`;
-        if(seen.has(key)) return false;
-        seen.add(key);return true;
-      }).slice(0,20);
-      setLeaders(top);setLoading(false);
-    }).catch(()=>setLoading(false));
+    // onSnapshot = live updates, no composite index needed (just limit)
+    const q=query(collection(db,"attempts"),orderBy("createdAt","desc"),limit(200));
+    const unsub=onSnapshot(q,snap=>{
+      const attempts=snap.docs.map(d=>({id:d.id,...d.data()}));
+      setAllAttempts(attempts);
+      setLoading(false);
+      setLastUpdate(new Date());
+    },err=>{
+      console.error("Leaderboard error:",err);
+      // fallback: no orderBy
+      getDocs(query(collection(db,"attempts"),limit(200))).then(snap=>{
+        setAllAttempts(snap.docs.map(d=>({id:d.id,...d.data()})));
+        setLoading(false);
+        setLastUpdate(new Date());
+      });
+    });
+    return unsub;
   },[]);
 
-  const filtered=examFilter==="all"?leaders:leaders.filter(l=>l.examType===examFilter);
+  // Build leaderboard: best attempt per student per exam
+  const buildLeaderboard=(attempts,examF,diffF)=>{
+    let filtered=attempts;
+    if(examF!=="all") filtered=filtered.filter(a=>a.examType===examF);
+    if(diffF!=="all") filtered=filtered.filter(a=>a.difficulty===diffF);
+
+    // Best attempt per user (highest accuracy, then score, then fastest time)
+    const best={};
+    filtered.forEach(a=>{
+      const key=a.userId;
+      if(!key) return;
+      const prev=best[key];
+      if(!prev
+        ||(a.accuracy||0)>(prev.accuracy||0)
+        ||((a.accuracy||0)===(prev.accuracy||0)&&(a.score||0)>(prev.score||0))
+        ||((a.accuracy||0)===(prev.accuracy||0)&&(a.score||0)===(prev.score||0)&&(a.timeSpent||9999)<(prev.timeSpent||9999))
+      ){best[key]=a;}
+    });
+
+    return Object.values(best)
+      .sort((a,b)=>(b.accuracy||0)-(a.accuracy||0)||(b.score||0)-(a.score||0)||(a.timeSpent||9999)-(b.timeSpent||9999))
+      .slice(0,20);
+  };
+
+  const leaders=buildLeaderboard(allAttempts,examFilter,diffFilter);
+  const isMobile=window.innerWidth<=768;
 
   return(
-    <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:700,margin:"0 auto"}}>
-      <div style={{textAlign:"center",marginBottom:28}}><div style={{fontSize:44,marginBottom:8}}>🏆</div><h1 style={{fontSize:28,fontWeight:900}}>Live <span style={{color:"#FF6A00"}}>Leaderboard</span></h1><p style={{color:"#888",fontSize:13}}>Real scores from Rank Achievers students · Updated live ☁️</p></div>
-      <div style={{display:"flex",gap:8,marginBottom:20,justifyContent:"center",flexWrap:"wrap"}}>
-        <button onClick={()=>setExamFilter("all")} style={{padding:"7px 16px",borderRadius:20,border:"2px solid",borderColor:examFilter==="all"?"#FF6A00":"#e0e0e0",background:examFilter==="all"?"#FF6A00":"#fff",color:examFilter==="all"?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>All Exams</button>
-        {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>setExamFilter(e.id)} style={{padding:"7px 16px",borderRadius:20,border:"2px solid",borderColor:examFilter===e.id?e.color:"#e0e0e0",background:examFilter===e.id?e.color:"#fff",color:examFilter===e.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
+    <div style={{paddingTop:80,padding:isMobile?"70px 16px 32px":"80px 40px 40px",maxWidth:800,margin:"0 auto"}}>
+
+      {/* Header */}
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <div style={{fontSize:48,marginBottom:8}}>🏆</div>
+        <h1 style={{fontSize:28,fontWeight:900,margin:"0 0 6px"}}>Live <span style={{color:"#FF6A00"}}>Leaderboard</span></h1>
+        <p style={{color:"#888",fontSize:13,margin:0}}>
+          Real scores · Updates instantly when students submit tests ☁️
+          {lastUpdate&&<span style={{marginLeft:8,color:"#22c55e",fontWeight:600}}>● Live</span>}
+        </p>
       </div>
-      <div style={{background:"#fff",borderRadius:18,overflow:"hidden",border:"2px solid #f0f0f0"}}>
-        <div style={{background:"#000",padding:"12px 22px",display:"flex",gap:14}}>{["#","Student","Exam","Score","Acc","Time"].map((h,i)=><div key={h} style={{color:"#FF6A00",fontWeight:800,fontSize:12,flex:i===1?2:1}}>{h}</div>)}</div>
+
+      {/* Stats bar */}
+      {!loading&&(
+        <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap",justifyContent:"center"}}>
+          {[
+            {l:"Total Attempts",v:allAttempts.length,c:"#FF6A00"},
+            {l:"Students",v:new Set(allAttempts.map(a=>a.userId)).size,c:"#1d4ed8"},
+            {l:"Avg Accuracy",v:allAttempts.length?Math.round(allAttempts.reduce((s,a)=>s+(a.accuracy||0),0)/allAttempts.length)+"%":"—",c:"#22c55e"},
+            {l:"Top Score",v:allAttempts.length?(Math.max(...allAttempts.map(a=>a.accuracy||0))+"%"):"—",c:"#f59e0b"},
+          ].map(s=>(
+            <div key={s.l} style={{background:"#fff",borderRadius:12,padding:"10px 18px",border:"2px solid #f0f0f0",textAlign:"center",minWidth:100}}>
+              <div style={{fontWeight:900,fontSize:18,color:s.c}}>{s.v}</div>
+              <div style={{fontSize:10,color:"#888",marginTop:2}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{display:"flex",gap:8,marginBottom:12,justifyContent:"center",flexWrap:"wrap"}}>
+        <button onClick={()=>setExamFilter("all")} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:examFilter==="all"?"#FF6A00":"#e0e0e0",background:examFilter==="all"?"#FF6A00":"#fff",color:examFilter==="all"?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>All Exams</button>
+        {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>setExamFilter(e.id)} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:examFilter===e.id?e.color:"#e0e0e0",background:examFilter===e.id?e.color:"#fff",color:examFilter===e.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:20,justifyContent:"center",flexWrap:"wrap"}}>
+        <button onClick={()=>setDiffFilter("all")} style={{padding:"5px 12px",borderRadius:20,border:"2px solid",borderColor:diffFilter==="all"?"#555":"#e0e0e0",background:diffFilter==="all"?"#555":"#fff",color:diffFilter==="all"?"#fff":"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>All Levels</button>
+        {["easy","medium","hard"].map(d=><button key={d} onClick={()=>setDiffFilter(d)} style={{padding:"5px 12px",borderRadius:20,border:"2px solid",borderColor:diffFilter===d?DCOL[d]:"#e0e0e0",background:diffFilter===d?DBG[d]:"#fff",color:diffFilter===d?DCOL[d]:"#555",fontWeight:700,fontSize:11,cursor:"pointer"}}>{d.charAt(0).toUpperCase()+d.slice(1)}</button>)}
+      </div>
+
+      {/* Table */}
+      <div style={{background:"#fff",borderRadius:18,overflow:"hidden",border:"2px solid #f0f0f0",boxShadow:"0 4px 24px #00000008"}}>
+        <div style={{background:"#000",padding:"12px 20px",display:"flex",gap:10,alignItems:"center"}}>
+          <div style={{color:"#FF6A00",fontWeight:800,fontSize:12,width:36}}>#</div>
+          <div style={{color:"#FF6A00",fontWeight:800,fontSize:12,flex:2}}>Student</div>
+          <div style={{color:"#FF6A00",fontWeight:800,fontSize:12,flex:1}}>Exam</div>
+          {!isMobile&&<div style={{color:"#FF6A00",fontWeight:800,fontSize:12,width:60}}>Score</div>}
+          <div style={{color:"#FF6A00",fontWeight:800,fontSize:12,width:60}}>Accuracy</div>
+          {!isMobile&&<div style={{color:"#FF6A00",fontWeight:800,fontSize:12,width:56}}>Time</div>}
+        </div>
+
         {loading?(
-          <div style={{display:"flex",justifyContent:"center",padding:32}}><Spinner/></div>
-        ):filtered.length===0?(
-          <div style={{textAlign:"center",padding:32,color:"#aaa"}}>No attempts yet. Be the first!</div>
-        ):filtered.slice(0,10).map((l,i)=>(
-          <div key={l.id} style={{padding:"13px 22px",display:"flex",gap:14,alignItems:"center",borderBottom:"1px solid #f0f0f0",background:i<3?"#fff8f0":"#fff"}}>
-            <div style={{flex:1,fontWeight:900,fontSize:16}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</div>
-            <div style={{flex:2,fontWeight:700,fontSize:13}}>{l.userName||"Student"}</div>
-            <div style={{flex:1,fontSize:12}}>{EXAM_TYPES.find(e=>e.id===l.examType)?.icon}</div>
-            <div style={{flex:1,color:"#FF6A00",fontWeight:800,fontSize:13}}>{l.score}/{l.total}</div>
-            <div style={{flex:1}}><span style={{background:"#dcfce7",color:"#16a34a",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:700}}>{l.accuracy}%</span></div>
-            <div style={{flex:1,color:"#666",fontSize:12}}>{fmtT(l.timeSpent||0)}</div>
+          <div style={{display:"flex",justifyContent:"center",padding:40}}><Spinner/></div>
+        ):leaders.length===0?(
+          <div style={{textAlign:"center",padding:40}}>
+            <div style={{fontSize:40,marginBottom:12}}>🎯</div>
+            <p style={{color:"#aaa",marginBottom:16}}>No attempts yet for this filter.</p>
+            <p style={{color:"#ccc",fontSize:13}}>Be the first to submit a test!</p>
           </div>
-        ))}
+        ):leaders.map((l,i)=>{
+          const et=EXAM_TYPES.find(e=>e.id===l.examType);
+          const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+          return(
+            <div key={l.id||i} style={{padding:"12px 20px",display:"flex",gap:10,alignItems:"center",borderBottom:"1px solid #f8f8f8",background:i===0?"linear-gradient(90deg,#fff8f0,#fff)":i<3?"#fffcf9":"#fff",transition:"background .2s"}}
+              onMouseOver={e=>e.currentTarget.style.background="#fff5ee"}
+              onMouseOut={e=>e.currentTarget.style.background=i===0?"linear-gradient(90deg,#fff8f0,#fff)":i<3?"#fffcf9":"#fff"}>
+              {/* Rank */}
+              <div style={{width:36,fontWeight:900,fontSize:medal?20:14,color:medal?"inherit":"#aaa"}}>
+                {medal||`#${i+1}`}
+              </div>
+              {/* Student */}
+              <div style={{flex:2,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.userName||"Student"}</div>
+                {l.testTitle&&<div style={{fontSize:10,color:"#aaa",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.testTitle}</div>}
+              </div>
+              {/* Exam */}
+              <div style={{flex:1}}>
+                <span style={{background:et?.color+"20"||"#f0f0f0",color:et?.color||"#888",padding:"3px 8px",borderRadius:10,fontSize:10,fontWeight:700}}>{et?.icon} {l.examType?.toUpperCase()}</span>
+              </div>
+              {/* Score */}
+              {!isMobile&&<div style={{width:60,fontWeight:700,fontSize:13,color:"#FF6A00"}}>{l.score}/{l.total}</div>}
+              {/* Accuracy */}
+              <div style={{width:60}}>
+                <div style={{fontWeight:800,fontSize:13,color:l.accuracy>=80?"#16a34a":l.accuracy>=60?"#d97706":"#dc2626"}}>{l.accuracy}%</div>
+                <div style={{background:"#f0f0f0",height:3,borderRadius:2,marginTop:3,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:l.accuracy+"%",background:l.accuracy>=80?"#22c55e":l.accuracy>=60?"#f59e0b":"#ef4444",borderRadius:2}}/>
+                </div>
+              </div>
+              {/* Time */}
+              {!isMobile&&<div style={{width:56,fontSize:12,color:"#888"}}>{fmtT(l.timeSpent||0)}</div>}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer note */}
+      <div style={{textAlign:"center",marginTop:16,fontSize:12,color:"#aaa"}}>
+        Showing best attempt per student · Updates live as tests are submitted
       </div>
     </div>
   );
