@@ -22,17 +22,9 @@ const db   = getFirestore(app);
 const gProvider = new GoogleAuthProvider();
 
 // ─── ADMIN EMAIL ──────────────────────────────────────────────────────────────
-const ADMIN_EMAIL    = "nkhadar@gmail.com";
-const ADMIN_PASSWORD = "Khadar@ra2";
-
-// Auto-create admin account in Firebase on first load
-async function ensureAdminExists(){
-  try {
-    await createUserWithEmailAndPassword(auth, ADMIN_EMAIL, ADMIN_PASSWORD);
-  } catch(e) {
-    // Already exists — that's fine
-  }
-}
+// Admin email — used only for role detection, NOT for login
+// Admin account must be created manually in Firebase Console
+const ADMIN_EMAIL = "nkhadar@gmail.com";
 
 // ─── EXAM TYPES ───────────────────────────────────────────────────────────────
 // ── Default exam types (fallback if Firestore not loaded yet) ──
@@ -74,6 +66,37 @@ const DIFFS  = ["easy","medium","hard"];
 const DCOL   = {easy:"#22c55e",medium:"#f59e0b",hard:"#ef4444"};
 const DBG    = {easy:"#f0fdf4",medium:"#fffbeb",hard:"#fef2f2"};
 const fmtT   = s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+
+// ─── RESPONSIVE HOOK ─────────────────────────────────────────────────────────
+function useMobile(){
+  const [mobile,setMobile]=useState(window.innerWidth<=768);
+  useEffect(()=>{
+    const handler=()=>setMobile(window.innerWidth<=768);
+    window.addEventListener("resize",handler);
+    return()=>window.removeEventListener("resize",handler);
+  },[]);
+  return mobile;
+}
+
+// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={hasError:false,error:null};}
+  static getDerivedStateFromError(error){return{hasError:true,error};}
+  componentDidCatch(error,info){console.error("App error:",error,info);}
+  render(){
+    if(this.state.hasError){
+      return(
+        <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20,padding:32,textAlign:"center"}}>
+          <div style={{fontSize:48}}>⚠️</div>
+          <div style={{color:"#fff",fontWeight:700,fontSize:18}}>Something went wrong</div>
+          <div style={{color:"#888",fontSize:13,maxWidth:400}}>{this.state.error?.message||"An unexpected error occurred."}</div>
+          <button onClick={()=>window.location.reload()} style={{padding:"10px 28px",borderRadius:10,border:"none",background:"#FF6A00",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",marginTop:8}}>Reload App</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── UI PRIMITIVES ────────────────────────────────────────────────────────────
 const IS = {width:"100%",padding:"12px 16px",borderRadius:10,border:"2px solid #f0f0f0",fontSize:14,marginBottom:6,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff"};
@@ -139,8 +162,8 @@ function useAuth(){
             profile.photoURL=fbUser.photoURL;
           }
         } else {
-          const isAdmin=fbUser.email===ADMIN_EMAIL;
-          profile={uid:fbUser.uid,name:fbUser.displayName||fbUser.email.split("@")[0],email:fbUser.email,role:isAdmin?"admin":"student",photoURL:fbUser.photoURL||null,googleLogin:true,createdAt:serverTimestamp(),accessEnabled:false};
+          // Role always "student" from frontend — admin set manually in Firestore
+          profile={uid:fbUser.uid,name:fbUser.displayName||fbUser.email.split("@")[0],email:fbUser.email,role:"student",photoURL:fbUser.photoURL||null,googleLogin:true,createdAt:serverTimestamp(),accessEnabled:false};
           await setDoc(doc(db,"users",fbUser.uid),profile);
         }
         setUser(profile);
@@ -165,11 +188,11 @@ async function loginEmail(email,password){
   return result.user;
 }
 
-async function registerEmail(email,password,name,phone,role){
+async function registerEmail(email,password,name,phone){
+  // Role is ALWAYS student from frontend — admin is set manually in Firebase Console
   const result=await createUserWithEmailAndPassword(auth,email,password);
   await updateProfile(result.user,{displayName:name});
-  const isAdmin=email===ADMIN_EMAIL;
-  const profile={uid:result.user.uid,name,email,phone:phone||"",role:isAdmin?"admin":role,googleLogin:false,createdAt:serverTimestamp(),accessEnabled:false};
+  const profile={uid:result.user.uid,name,email,phone:phone||"",role:"student",googleLogin:false,createdAt:serverTimestamp(),accessEnabled:false};
   await setDoc(doc(db,"users",result.user.uid),profile);
   return result.user;
 }
@@ -336,204 +359,94 @@ function NotifPanel({notices,onClose}){
 
 // ─── AUTH PAGE ────────────────────────────────────────────────────────────────
 function AuthPage({onLogin}){
-  const [mode,setMode]=useState("login");
-  const [form,setForm]=useState({name:"",email:"",phone:"",password:"",confirm:"",role:"student"});
-  const [errors,setErrors]=useState({});
   const [loading,setLoading]=useState(false);
-  const [gLoading,setGLoading]=useState(false);
-  const [success,setSuccess]=useState("");
-
-  const f=(k,v)=>{setForm(p=>({...p,[k]:v}));setErrors(p=>({...p,[k]:""}));};
-
-  const validate=()=>{
-    const e={};
-    const emailReg=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const pwdUpper=/[A-Z]/;
-    const pwdLower=/[a-z]/;
-    const pwdNum=/[0-9]/;
-    const pwdSpecial=/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/;
-
-    if(mode!=="forgot"){
-      // Email rules
-      if(!form.email.trim())
-        e.email="Email is required";
-      else if(!emailReg.test(form.email))
-        e.email="Enter a valid email address (e.g. name@gmail.com)";
-
-      // Password rules
-      if(!form.password)
-        e.password="Password is required";
-      else if(form.password.length<8)
-        e.password="Password must be at least 8 characters";
-      else if(!pwdUpper.test(form.password))
-        e.password="Password must contain at least one uppercase letter (A-Z)";
-      else if(!pwdLower.test(form.password))
-        e.password="Password must contain at least one lowercase letter (a-z)";
-      else if(!pwdNum.test(form.password))
-        e.password="Password must contain at least one number (0-9)";
-      else if(!pwdSpecial.test(form.password))
-        e.password="Password must contain at least one special character (!@#$%...)";
-    }
-
-    if(mode==="register"){
-      if(!form.name.trim())
-        e.name="Full name is required";
-      else if(form.name.trim().length<3)
-        e.name="Name must be at least 3 characters";
-      if(form.phone&&!/^[0-9]{10}$/.test(form.phone))
-        e.phone="Enter a valid 10-digit mobile number";
-      if(!form.confirm)
-        e.confirm="Please confirm your password";
-      else if(form.confirm!==form.password)
-        e.confirm="Passwords do not match";
-    }
-
-    if(mode==="forgot"){
-      if(!form.email.trim()) e.email="Email is required";
-      else if(!emailReg.test(form.email)) e.email="Enter a valid email address";
-    }
-
-    setErrors(e);
-    return Object.keys(e).length===0;
-  };
-
-  // Password strength indicator
-  const getPwdStrength=(pwd)=>{
-    if(!pwd) return null;
-    let score=0;
-    if(pwd.length>=8) score++;
-    if(/[A-Z]/.test(pwd)) score++;
-    if(/[a-z]/.test(pwd)) score++;
-    if(/[0-9]/.test(pwd)) score++;
-    if(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) score++;
-    if(score<=2) return {label:"Weak",color:"#ef4444",width:"33%"};
-    if(score===3||score===4) return {label:"Medium",color:"#f59e0b",width:"66%"};
-    return {label:"Strong 💪",color:"#22c55e",width:"100%"};
-  };
-  const pwdStrength=mode==="register"?getPwdStrength(form.password):null;
+  const [error,setError]=useState("");
 
   const handleGoogle=async()=>{
-    setGLoading(true);
-    setErrors({});
+    setLoading(true);setError("");
     try{
       await loginGoogle();
-      // onAuthStateChanged in useAuth will detect login and redirect automatically
       onLogin();
     }catch(err){
-      const msg = err.code==="auth/popup-closed-by-user"?"Popup closed. Please try again."
-        : err.code==="auth/cancelled-popup-request"?"Another popup is open. Please try again."
-        : err.code==="auth/unauthorized-domain"?"Domain not authorized. Add this domain in Firebase Console → Authentication → Authorized Domains."
-        : err.message;
-      setErrors({google:msg});
-    }finally{setGLoading(false);}
-  };
-
-  const handleSubmit=async()=>{
-    if(!validate()) return;
-    setLoading(true);
-    setErrors({});
-    try{
-      if(mode==="register"){
-        await registerEmail(form.email,form.password,form.name,form.phone,form.role);
-        onLogin();
-      } else if(mode==="login"){
-        await loginEmail(form.email,form.password);
-        onLogin();
-      } else {
-        setSuccess("Password hint sent! (Demo: check browser console)");
-      }
-    }catch(err){
-      const msg=err.code==="auth/user-not-found"||err.code==="auth/invalid-credential"?"Invalid email or password. Try again."
-        :err.code==="auth/wrong-password"?"Incorrect password. Try again."
-        :err.code==="auth/email-already-in-use"?"Email already registered. Please login."
-        :err.code==="auth/too-many-requests"?"Too many attempts. Please wait a moment and try again."
-        :err.code==="auth/network-request-failed"?"Network error. Check your internet connection."
-        :err.message;
-      setErrors({submit:msg});
+      const msg=err.code==="auth/popup-closed-by-user"?"Popup closed. Please try again."
+        :err.code==="auth/cancelled-popup-request"?"Please try again."
+        :err.code==="auth/unauthorized-domain"?"Domain not authorized. Contact admin."
+        :err.code==="auth/network-request-failed"?"No internet connection."
+        :"Login failed. Please try again.";
+      setError(msg);
     }finally{setLoading(false);}
   };
 
-  const sw=m=>{setMode(m);setErrors({});setSuccess("");};
-
   return(
-    <div style={{paddingTop:60,minHeight:"100vh",background:"linear-gradient(135deg,#000 0%,#1a0500 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:window.innerWidth<=768?"70px 16px 32px":"80px 20px 40px"}}>
-      <div style={{background:"#fff",borderRadius:24,padding:window.innerWidth<=768?"28px 20px 24px":"40px 40px 32px",width:"100%",maxWidth:440,boxShadow:"0 24px 80px #FF6A0040"}}>
-        <div style={{textAlign:"center",marginBottom:24}}>
-          <Logo/>
-          <h2 style={{marginTop:16,fontWeight:900,fontSize:22}}>{mode==="login"?"Welcome Back 👋":mode==="register"?"Create Account 🚀":"Reset Password 🔑"}</h2>
-          <p style={{color:"#888",fontSize:13,marginTop:4}}>Rank Achievers Academy · Anantapur</p>
-        </div>
+    <div style={{paddingTop:60,minHeight:"100vh",background:"linear-gradient(135deg,#000 0%,#1a0800 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:window.innerWidth<=768?"70px 20px 40px":"80px 20px 40px"}}>
+      {/* Background grid */}
+      <div style={{position:"fixed",inset:0,opacity:.04,backgroundImage:"linear-gradient(#FF6A00 1px,transparent 1px),linear-gradient(90deg,#FF6A00 1px,transparent 1px)",backgroundSize:"36px 36px",pointerEvents:"none"}}/>
+      {/* Glow orbs */}
+      <div style={{position:"fixed",top:-100,left:"50%",transform:"translateX(-50%)",width:600,height:600,borderRadius:"50%",background:"radial-gradient(#FF6A0018,transparent 70%)",pointerEvents:"none"}}/>
 
-        {/* Google Button */}
-        <button onClick={handleGoogle} disabled={gLoading} style={{width:"100%",padding:"13px 0",borderRadius:12,border:"2px solid #e0e0e0",background:"#fff",display:"flex",alignItems:"center",justifyContent:"center",gap:10,fontWeight:700,fontSize:15,cursor:gLoading?"wait":"pointer",marginBottom:14,boxShadow:"0 2px 8px #00000010",transition:"box-shadow .2s"}}
-          onMouseOver={e=>e.currentTarget.style.boxShadow="0 4px 16px #00000020"}
-          onMouseOut={e=>e.currentTarget.style.boxShadow="0 2px 8px #00000010"}>
-          {gLoading?<Spinner size={20}/>:<svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.5 1.2 8.9 3.2l6.6-6.6C35.4 2.5 30.1 0 24 0 14.8 0 7 5.4 3.2 13.2l7.7 6C12.7 13.2 17.9 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.1-10 6.1-17z"/><path fill="#FBBC05" d="M10.9 28.8A14.7 14.7 0 0 1 9.5 24c0-1.7.3-3.3.8-4.8l-7.7-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l8.3-6z"/><path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.4 2.2-6.1 0-11.3-3.7-13.1-9.1l-8.3 6C7 42.6 14.8 48 24 48z"/></svg>}
-          {gLoading?"Signing in with Google...":"Continue with Google"}
-        </button>
-        {errors.google&&<div style={{background:"#fee2e2",border:"2px solid #fca5a5",borderRadius:9,padding:"8px 12px",marginBottom:12,fontSize:13,color:"#dc2626"}}>{errors.google}</div>}
+      <div style={{position:"relative",width:"100%",maxWidth:420,animation:"raFadeUp .6s ease both"}}>
+        {/* Card */}
+        <div style={{background:"#0d0d0d",borderRadius:24,padding:"40px 36px",border:"1px solid #FF6A0030",boxShadow:"0 24px 80px #00000080"}}>
 
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-          <div style={{flex:1,height:1,background:"#e0e0e0"}}/><span style={{color:"#aaa",fontSize:12,fontWeight:600}}>OR</span><div style={{flex:1,height:1,background:"#e0e0e0"}}/>
-        </div>
-
-        {mode!=="forgot"&&(
-          <div style={{display:"flex",background:"#f5f5f5",borderRadius:12,padding:4,marginBottom:18}}>
-            {["login","register"].map(m=><button key={m} onClick={()=>sw(m)} style={{flex:1,padding:"9px 0",borderRadius:9,border:"none",cursor:"pointer",background:mode===m?"#FF6A00":"transparent",color:mode===m?"#fff":"#666",fontWeight:700,fontSize:14}}>{m==="login"?"Login":"Register"}</button>)}
+          {/* Logo */}
+          <div style={{textAlign:"center",marginBottom:36}}>
+            <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,fontWeight:900,color:"#fff",margin:"0 auto 16px",boxShadow:"0 8px 32px #FF6A0060"}}>RA</div>
+            <div style={{fontSize:22,fontWeight:900,color:"#fff",marginBottom:6}}>Rank Achievers</div>
+            <div style={{fontSize:12,color:"#FF6A00",fontWeight:700,letterSpacing:"0.15em"}}>ACADEMY · ANANTAPUR</div>
+            <div style={{marginTop:12,fontSize:14,color:"#555"}}>Sign in to start your preparation</div>
           </div>
-        )}
 
-        {errors.submit&&<div style={{background:"#fee2e2",border:"2px solid #fca5a5",borderRadius:9,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#dc2626",fontWeight:600}}>⚠ {errors.submit}</div>}
-        {success&&<div style={{background:"#dcfce7",border:"2px solid #86efac",borderRadius:9,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#166534",fontWeight:600}}>✅ {success}</div>}
-
-        {mode==="register"&&<><label style={LS}>Full Name *</label><input value={form.name} onChange={e=>f("name",e.target.value)} style={IS} placeholder="Your full name"/><Err m={errors.name}/></>}
-        {mode==="register"&&<><label style={LS}>Mobile Number</label><input value={form.phone} onChange={e=>f("phone",e.target.value)} style={IS} placeholder="10-digit" maxLength={10}/><Err m={errors.phone}/></>}
-
-        <label style={LS}>Email Address *</label>
-        <input value={form.email} onChange={e=>f("email",e.target.value)} type="email" placeholder="you@gmail.com" style={{...IS,borderColor:errors.email?"#fca5a5":"#f0f0f0"}}/><Err m={errors.email}/>
-
-        {mode!=="forgot"&&(
-          <>
-            <label style={LS}>{mode==="register"?"Create Password *":"Password *"}</label>
-            <PwdInput value={form.password} onChange={e=>f("password",e.target.value)} placeholder={mode==="register"?"Min 8 chars, uppercase, number, symbol":"Enter password"}/>
-            {mode==="register"&&form.password&&pwdStrength&&(
-              <div style={{marginBottom:10,marginTop:-2}}>
-                <div style={{height:5,background:"#f0f0f0",borderRadius:4,overflow:"hidden",marginBottom:4}}>
-                  <div style={{height:"100%",width:pwdStrength.width,background:pwdStrength.color,borderRadius:4,transition:"all .3s"}}/>
-                </div>
-                <div style={{fontSize:11,color:pwdStrength.color,fontWeight:700}}>{pwdStrength.label}</div>
-              </div>
-            )}
-            {mode==="register"&&!errors.password&&(
-              <div style={{fontSize:11,color:"#aaa",marginBottom:8,lineHeight:1.6}}>
-                ✓ Min 8 chars &nbsp;✓ Uppercase &nbsp;✓ Lowercase &nbsp;✓ Number &nbsp;✓ Symbol
-              </div>
-            )}
-            <Err m={errors.password}/>
-          </>
-        )}
-
-        {mode==="register"&&(
-          <>
-            <label style={LS}>Confirm Password *</label><PwdInput value={form.confirm} onChange={e=>f("confirm",e.target.value)} placeholder="Re-enter"/><Err m={errors.confirm}/>
-            <label style={LS}>I am a</label>
-            <div style={{display:"flex",gap:10,marginBottom:14}}>
-              {["student","admin"].map(r=><button key={r} onClick={()=>f("role",r)} style={{flex:1,padding:"10px 0",borderRadius:10,border:"2px solid",borderColor:form.role===r?"#FF6A00":"#e0e0e0",background:form.role===r?"#fff5ee":"#fff",color:form.role===r?"#FF6A00":"#666",fontWeight:700,fontSize:14,cursor:"pointer"}}>{r==="student"?"🎓 Student":"⚙️ Admin"}</button>)}
+          {/* Error */}
+          {error&&(
+            <div style={{background:"#1a0000",border:"1px solid #ef444440",borderRadius:12,padding:"12px 16px",marginBottom:20,fontSize:13,color:"#f87171",display:"flex",alignItems:"center",gap:8}}>
+              <span>⚠️</span>{error}
             </div>
-          </>
-        )}
+          )}
 
-        {mode==="login"&&<div style={{textAlign:"right",marginBottom:12}}><button onClick={()=>sw("forgot")} style={{background:"none",border:"none",color:"#FF6A00",fontWeight:700,fontSize:13,cursor:"pointer"}}>Forgot Password?</button></div>}
+          {/* Google Button */}
+          <button onClick={handleGoogle} disabled={loading} style={{width:"100%",padding:"16px 0",borderRadius:14,border:"1px solid #2a2a2a",background:loading?"#111":"#161616",color:"#fff",fontSize:15,fontWeight:600,cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:12,transition:"all .2s",boxShadow:loading?"none":"0 4px 24px #00000040"}}
+            onMouseOver={e=>{if(!loading){e.currentTarget.style.background="#1e1e1e";e.currentTarget.style.borderColor="#FF6A0060";e.currentTarget.style.boxShadow="0 8px 32px #FF6A0025";}}}
+            onMouseOut={e=>{if(!loading){e.currentTarget.style.background="#161616";e.currentTarget.style.borderColor="#2a2a2a";e.currentTarget.style.boxShadow="0 4px 24px #00000040";}}}>
+            {loading?(
+              <Spinner size={20} color="#FF6A00"/>
+            ):(
+              <svg width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.5 0 6.5 1.2 8.9 3.2l6.6-6.6C35.4 2.5 30.1 0 24 0 14.8 0 7 5.4 3.2 13.2l7.7 6C12.7 13.2 17.9 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.1-10 6.1-17z"/>
+                <path fill="#FBBC05" d="M10.9 28.8A14.7 14.7 0 0 1 9.5 24c0-1.7.3-3.3.8-4.8l-7.7-6A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l8.3-6z"/>
+                <path fill="#34A853" d="M24 48c6.1 0 11.2-2 14.9-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.4 2.2-6.1 0-11.3-3.7-13.1-9.1l-8.3 6C7 42.6 14.8 48 24 48z"/>
+              </svg>
+            )}
+            <span>{loading?"Signing in...":"Continue with Google"}</span>
+          </button>
 
-        <button onClick={handleSubmit} disabled={loading} style={{width:"100%",padding:"14px 0",borderRadius:12,border:"none",background:loading?"#ccc":"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontSize:16,fontWeight:800,cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
-          {loading&&<Spinner size={18} color="#fff"/>}
-          {loading?"Please wait...":mode==="login"?"Login →":mode==="register"?"Create Account →":"Send Reset Link →"}
-        </button>
-        {mode==="forgot"&&<button onClick={()=>sw("login")} style={{width:"100%",marginTop:10,padding:"11px 0",borderRadius:12,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",color:"#555"}}>← Back to Login</button>}
+          {/* Features */}
+          <div style={{marginTop:28,display:"flex",flexDirection:"column",gap:10}}>
+            {[
+              {i:"⚡",t:"Instant login","d":"No registration, no password needed"},
+              {i:"☁️",t:"Auto sync","d":"Your scores saved across all devices"},
+              {i:"🔒",t:"Secure","d":"Powered by Google authentication"},
+            ].map(f=>(
+              <div key={f.t} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 12px",borderRadius:10,background:"#111",border:"1px solid #1a1a1a"}}>
+                <span style={{fontSize:18,flexShrink:0}}>{f.i}</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>{f.t}</div>
+                  <div style={{fontSize:11,color:"#555"}}>{f.d}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div style={{marginTop:24,textAlign:"center",fontSize:11,color:"#333"}}>
+            SSC · Banking · Railways Practice Platform
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
 
 // ─── HOME PAGE ────────────────────────────────────────────────────────────────
 // ─── CSS KEYFRAMES ────────────────────────────────────────────────────────────
@@ -3421,8 +3334,7 @@ export default function App(){
   const [showNotifPanel,setShowNotifPanel] = useState(false);
   const [unreadCount,setUnreadCount] = useState(0);
 
-  // Seed admin account on first load
-  useEffect(()=>{ ensureAdminExists(); },[]);
+  // Admin is created manually in Firebase Console — no seeding needed
 
   // Load banners from Firestore
   useEffect(()=>{
