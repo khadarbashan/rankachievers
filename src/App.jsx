@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -103,6 +103,17 @@ const IS = {width:"100%",padding:"12px 16px",borderRadius:10,border:"2px solid #
 const LS = {display:"block",fontSize:12,fontWeight:700,color:"#444",marginBottom:5};
 const ES = {color:"#dc2626",fontSize:12,marginBottom:10,marginTop:-2,paddingLeft:4};
 
+// ─── HOISTED STYLE CONSTANTS (never recreated on render) ─────────────────────
+const MODAL_BACKDROP = {position:"fixed",inset:0,background:"#00000095",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20};
+const LOADING_FULL = {height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20};
+const CARD = {background:"#fff",borderRadius:14,padding:22,border:"2px solid #f0f0f0"};
+const CARD_LG = {background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"};
+const BTN_PRIMARY = {borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"};
+const BTN_OUTLINE = {borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:800,cursor:"pointer"};
+const BTN_DANGER = {borderRadius:10,border:"none",background:"#dc2626",color:"#fff",fontWeight:800,cursor:"pointer"};
+const accColor = (acc) => acc>=80?"#16a34a":acc>=60?"#854d0e":"#dc2626";
+const accBg = (acc) => acc>=80?"#dcfce7":acc>=60?"#fef9c3":"#fee2e2";
+
 function Err({m}){return m?<div style={ES}>⚠ {m}</div>:null;}
 
 function PwdInput({value,onChange,placeholder}){
@@ -115,7 +126,7 @@ function PwdInput({value,onChange,placeholder}){
   );
 }
 
-function Logo({white=false}){
+const Logo = memo(function Logo({white=false}){
   return(
     <div style={{display:"flex",alignItems:"center",gap:10}}>
       <div style={{width:40,height:40,background:"linear-gradient(135deg,#FF6A00,#ff9a00)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#fff",fontSize:18,boxShadow:"0 2px 12px #FF6A0060"}}>RA</div>
@@ -125,13 +136,13 @@ function Logo({white=false}){
       </div>
     </div>
   );
-}
+});
 
-function Spinner({size=24,color="#FF6A00"}){
+const Spinner = memo(function Spinner({size=24,color="#FF6A00"}){
   return(
     <div style={{width:size,height:size,border:`3px solid ${color}30`,borderTop:`3px solid ${color}`,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
   );
-}
+});
 
 // ─── FIREBASE HOOKS ───────────────────────────────────────────────────────────
 
@@ -222,7 +233,7 @@ async function checkAccess(uid){
 }
 
 // ─── NAVBAR ───────────────────────────────────────────────────────────────────
-function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices}){
+const NavBar = memo(function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices}){
   const [menuOpen,setMenuOpen]=useState(false);
   const isMobile=window.innerWidth<=768;
   return(
@@ -292,10 +303,10 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
       )}
     </>
   );
-}
+});
 
 // ─── NOTICE MODAL (shown after login) ─────────────────────────────────────────
-function NoticeModal({notices, onClose}){
+const NoticeModal = memo(function NoticeModal({notices, onClose}){
   const [idx,setIdx]=useState(0);
   const n=notices[idx];
   if(!n) return null;
@@ -330,10 +341,10 @@ function NoticeModal({notices, onClose}){
       </div>
     </div>
   );
-}
+});
 
 // ─── NOTIFICATION BELL PANEL ───────────────────────────────────────────────────
-function NotifPanel({notices,onClose}){
+const NotifPanel = memo(function NotifPanel({notices,onClose}){
   return(
     <div style={{position:"fixed",top:68,right:16,width:340,maxHeight:480,background:"#fff",borderRadius:16,boxShadow:"0 8px 40px #00000025",border:"2px solid #f0f0f0",zIndex:9998,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div style={{padding:"14px 18px",borderBottom:"2px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -355,7 +366,7 @@ function NotifPanel({notices,onClose}){
       </div>
     </div>
   );
-}
+});
 
 // ─── AUTH PAGE ────────────────────────────────────────────────────────────────
 function AuthPage({onLogin}){
@@ -457,7 +468,7 @@ _heroStyle.textContent = `
   @keyframes raFadeIn   { from{opacity:0} to{opacity:1} }
   @keyframes raSlideIn  { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
   @keyframes raSlideUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes raPulseRing{ 0%,100%{box-shadow:0 0 0 0 rgba(255,106,0,.4)} 50%{box-shadow:0 0 0 12px rgba(255,106,0,0)} }
+  @keyframes raPulseRing{ 0%,100%{opacity:.6} 50%{opacity:1} }
   @keyframes raDrift    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
   @keyframes raOrb      { 0%{transform:translate(0,0) scale(1)} 33%{transform:translate(20px,-15px) scale(1.05)} 66%{transform:translate(-10px,10px) scale(.97)} 100%{transform:translate(0,0) scale(1)} }
   @keyframes raSpin     { to{transform:rotate(360deg)} }
@@ -465,59 +476,72 @@ _heroStyle.textContent = `
   @keyframes raBlink    { 0%,100%{opacity:1} 49%{opacity:1} 50%,99%{opacity:0} }
   @keyframes raTypeIn   { from{max-width:0} to{max-width:300px} }
   @keyframes raScoreIn  { from{stroke-dasharray:0 251} }
-  .ra-step-card { transition: all .35s cubic-bezier(.4,0,.2,1) !important; }
-  .ra-step-card:hover { transform: scale(1.01) !important; }
-  .ra-chip { transition: all .2s ease !important; cursor:pointer; }
-  .ra-chip:hover { transform: translateY(-1px) !important; }
+  @keyframes spin       { to{transform:rotate(360deg)} }
+  .ra-step-card { transition: border-color .4s ease !important; will-change:transform; transform:translateZ(0); }
+  .ra-step-card:hover { transform: scale(1.01) translateZ(0) !important; }
+  .ra-chip { transition: transform .2s ease, opacity .2s ease !important; cursor:pointer; will-change:transform; }
+  .ra-chip:hover { transform: translateY(-1px) translateZ(0) !important; }
+  nav { transform:translateZ(0); will-change:transform; }
 `;
 if(!document.getElementById("ra-hero-css")) document.head.appendChild(_heroStyle);
 
+// HERO_STEPS hoisted outside component — never recreated on render
+const HERO_STEPS = [
+  { id:0, icon:"🔐", label:"Login",        color:"#FF6A00", sub:"Google or email — instant access" },
+  { id:1, icon:"🎯", label:"Choose Exam",   color:"#1d4ed8", sub:"SSC · Banking · Railways" },
+  { id:2, icon:"📚", label:"Pick Topic",    color:"#16a34a", sub:"6 topics · 3 difficulty levels" },
+  { id:3, icon:"⚙️", label:"Select Mode",   color:"#7c3aed", sub:"Timed 30-min or Practice" },
+  { id:4, icon:"✏️", label:"Take the Exam", color:"#FF6A00", sub:"30 questions · live timer" },
+  { id:5, icon:"📊", label:"View Results",  color:"#059669", sub:"Score · accuracy · time analysis" },
+  { id:6, icon:"💡", label:"Solutions",     color:"#d97706", sub:"Step-by-step + YouTube video" },
+  { id:7, icon:"🏆", label:"Dashboard",     color:"#dc2626", sub:"Cloud progress + leaderboard" },
+];
+
 // ─── HERO ANIMATION ────────────────────────────────────────────────────────────
-function HeroAnimation({isMobile}){
+const HeroAnimation = memo(function HeroAnimation({isMobile}){
   const [step,setStep]    = useState(0);
   const [visible,setVisible] = useState(false);
   const [typed,setTyped]  = useState(0);
-  const [autoPlay,setAutoPlay] = useState(true);
   const autoRef = useRef(null);
-
-  const STEPS = [
-    { id:0, icon:"🔐", label:"Login",        color:"#FF6A00", sub:"Google or email — instant access" },
-    { id:1, icon:"🎯", label:"Choose Exam",   color:"#1d4ed8", sub:"SSC · Banking · Railways" },
-    { id:2, icon:"📚", label:"Pick Topic",    color:"#16a34a", sub:"6 topics · 3 difficulty levels" },
-    { id:3, icon:"⚙️", label:"Select Mode",   color:"#7c3aed", sub:"Timed 30-min or Practice" },
-    { id:4, icon:"✏️", label:"Take the Exam", color:"#FF6A00", sub:"30 questions · live timer" },
-    { id:5, icon:"📊", label:"View Results",  color:"#059669", sub:"Score · accuracy · time analysis" },
-    { id:6, icon:"💡", label:"Solutions",     color:"#d97706", sub:"Step-by-step + YouTube video" },
-    { id:7, icon:"🏆", label:"Dashboard",     color:"#dc2626", sub:"Cloud progress + leaderboard" },
-  ];
+  const containerRef = useRef(null);
+  const isVisibleRef = useRef(true); // tracks IntersectionObserver visibility
 
   const startAuto=useCallback(()=>{
     clearInterval(autoRef.current);
-    autoRef.current=setInterval(()=>setStep(s=>(s+1)%STEPS.length),2800);
+    autoRef.current=setInterval(()=>{
+      if(isVisibleRef.current) setStep(s=>(s+1)%HERO_STEPS.length);
+    },2800);
   },[]);
 
   useEffect(()=>{
     setTimeout(()=>setVisible(true),80);
     startAuto();
-    return()=>clearInterval(autoRef.current);
+    // Pause animation intervals when hero is scrolled offscreen
+    const observer=new IntersectionObserver(([entry])=>{
+      isVisibleRef.current=entry.isIntersecting;
+    },{threshold:0.1});
+    if(containerRef.current) observer.observe(containerRef.current);
+    return()=>{clearInterval(autoRef.current);observer.disconnect();};
   },[]);
 
   useEffect(()=>{
     setTyped(0);
-    const iv=setInterval(()=>setTyped(t=>t<STEPS[step].label.length?t+1:t),55);
+    const iv=setInterval(()=>setTyped(t=>t<HERO_STEPS[step].label.length?t+1:t),55);
     return()=>clearInterval(iv);
   },[step]);
 
-  const goTo=i=>{
+  const goTo=useCallback(i=>{
     setStep(i);
     clearInterval(autoRef.current);
-    autoRef.current=setInterval(()=>setStep(s=>(s+1)%STEPS.length),2800);
-  };
+    autoRef.current=setInterval(()=>{
+      if(isVisibleRef.current) setStep(s=>(s+1)%HERO_STEPS.length);
+    },2800);
+  },[]);
 
-  const cur = STEPS[step];
+  const cur = HERO_STEPS[step];
 
   return(
-    <div style={{width:"100%",maxWidth:560,opacity:visible?1:0,transition:"opacity .7s ease",animation:visible?"raFadeUp .7s ease both":"none"}}>
+    <div ref={containerRef} style={{width:"100%",maxWidth:560,opacity:visible?1:0,transition:"opacity .7s ease",animation:visible?"raFadeUp .7s ease both":"none"}}>
 
       {/* ═══ MAIN HERO CARD ═══ */}
       <div className="ra-step-card" style={{background:"#0c0c0c",borderRadius:24,overflow:"hidden",border:`1px solid ${cur.color}30`,marginBottom:16,position:"relative",minHeight:420,transition:"border-color .4s ease"}}>
@@ -528,12 +552,12 @@ function HeroAnimation({isMobile}){
 
         {/* Progress bar */}
         <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"#111",zIndex:2}}>
-          <div style={{height:"100%",background:`linear-gradient(90deg,${cur.color},${cur.color}bb)`,transition:"width .6s cubic-bezier(.4,0,.2,1)",width:`${((step+1)/STEPS.length)*100}%`}}/>
+          <div style={{height:"100%",background:`linear-gradient(90deg,${cur.color},${cur.color}bb)`,transition:"width .6s cubic-bezier(.4,0,.2,1)",width:`${((step+1)/HERO_STEPS.length)*100}%`}}/>
         </div>
 
         {/* Step dots */}
         <div style={{position:"absolute",top:12,left:0,right:0,display:"flex",justifyContent:"center",gap:6,zIndex:2}}>
-          {STEPS.map((_,i)=>(
+          {HERO_STEPS.map((_,i)=>(
             <div key={i} onClick={()=>goTo(i)} style={{width:i===step?20:6,height:6,borderRadius:3,background:i===step?cur.color:i<step?cur.color+"60":"#222",transition:"all .3s ease",cursor:"pointer"}}/>
           ))}
         </div>
@@ -549,7 +573,7 @@ function HeroAnimation({isMobile}){
             </div>
             <div style={{flex:1}}>
               <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.15em",color:cur.color,marginBottom:6,transition:"color .4s"}}>
-                STEP {step+1} OF {STEPS.length}
+                STEP {step+1} OF {HERO_STEPS.length}
               </div>
               {/* Typewriter title */}
               <div style={{fontSize:28,fontWeight:900,color:"#fff",lineHeight:1.1,display:"flex",alignItems:"center",gap:4}}>
@@ -767,7 +791,7 @@ function HeroAnimation({isMobile}){
 
       {/* ═══ STEP CHIPS ═══ */}
       <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:isMobile?"center":"flex-start"}}>
-        {STEPS.map((s,i)=>(
+        {HERO_STEPS.map((s,i)=>(
           <div key={i} className="ra-chip" onClick={()=>goTo(i)} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:20,border:`1px solid ${step===i?s.color+"60":"#1e1e1e"}`,background:step===i?s.color+"18":"#0a0a0a",boxShadow:step===i?`0 0 12px ${s.color}30`:"none"}}>
             <span style={{fontSize:13}}>{s.icon}</span>
             <span style={{fontSize:11,fontWeight:step===i?700:400,color:step===i?s.color:"#444"}}>{s.label}</span>
@@ -776,10 +800,10 @@ function HeroAnimation({isMobile}){
       </div>
     </div>
   );
-}
+});
 
 // ─── NOTICE STRIP ────────────────────────────────────────────────────────────
-function NoticeStrip({notices,setShowNoticeModal}){
+const NoticeStrip = memo(function NoticeStrip({notices,setShowNoticeModal}){
   const [idx,setIdx]=useState(0);
   useEffect(()=>{
     if(notices.length<=1) return;
@@ -804,10 +828,10 @@ function NoticeStrip({notices,setShowNoticeModal}){
       )}
     </div>
   );
-}
+});
 
 // ─── BANNER SLIDER ───────────────────────────────────────────────────────────
-function BannerSlider({banners}){
+const BannerSlider = memo(function BannerSlider({banners}){
   const [idx,setIdx]=useState(0);
   const timerRef=useRef(null);
 
@@ -831,7 +855,7 @@ function BannerSlider({banners}){
         transition:"all .4s ease"
       }}>
         {b.imageUrl?(
-          <img src={b.imageUrl} alt={b.title} style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,opacity:.5}}/>
+          <img src={b.imageUrl} alt={b.title} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,opacity:.5}}/>
         ):null}
         <div style={{position:"relative",padding:window.innerWidth<=768?"20px 20px":"28px 36px",zIndex:1}}>
           {b.badge&&<div style={{display:"inline-block",background:"rgba(255,255,255,.2)",color:"#fff",padding:"4px 14px",borderRadius:20,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:10}}>{b.badge}</div>}
@@ -863,7 +887,7 @@ function BannerSlider({banners}){
       )}
     </div>
   );
-}
+});
 
 function HomePage({setPage,user,setExamType,banners=[],examTypes,notices=[],setShowNoticeModal}){
   const [sel,setSel]=useState(null);
@@ -958,7 +982,7 @@ function HomePage({setPage,user,setExamType,banners=[],examTypes,notices=[],setS
 }
 
 // ─── EXAM MODE MODAL ──────────────────────────────────────────────────────────
-function ExamModeModal({test,onConfirm,onCancel}){
+const ExamModeModal = memo(function ExamModeModal({test,onConfirm,onCancel}){
   const [timed,setTimed]=useState(null);
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
   return(
@@ -990,7 +1014,7 @@ function ExamModeModal({test,onConfirm,onCancel}){
       </div>
     </div>
   );
-}
+});
 
 // ─── TESTS PAGE ───────────────────────────────────────────────────────────────
 function TestsPage({user,onStartTest,examType,setExamType,examTypes}){
@@ -1213,9 +1237,9 @@ function TestPage({test,user,onFinish}){
     setQTimes(up);qTimesRef.current=up;qStartRef.current=Date.now();
   },[current]);
 
-  const goTo=idx=>{saveQTime();setStatus(p=>({...p,[current]:p[current]||"visited"}));setCurrent(idx);};
-  const saveAndNext=()=>{saveQTime();setStatus(p=>({...p,[current]:answers[current]?"answered":(p[current]||"visited")}));if(current<questions.length-1)setCurrent(c=>c+1);};
-  const markReview=()=>{saveQTime();setStatus(p=>({...p,[current]:"review"}));if(current<questions.length-1)setCurrent(c=>c+1);};
+  const goTo=useCallback(idx=>{saveQTime();setStatus(p=>({...p,[current]:p[current]||"visited"}));setCurrent(idx);},[saveQTime,current]);
+  const saveAndNext=useCallback(()=>{saveQTime();setStatus(p=>({...p,[current]:answers[current]?"answered":(p[current]||"visited")}));if(current<questions.length-1)setCurrent(c=>c+1);},[saveQTime,current,answers,questions.length]);
+  const markReview=useCallback(()=>{saveQTime();setStatus(p=>({...p,[current]:"review"}));if(current<questions.length-1)setCurrent(c=>c+1);},[saveQTime,current,questions.length]);
 
   const handleSubmit=(auto=false)=>{
     clearInterval(timerRef.current);clearInterval(qTimerRef.current);
@@ -1244,8 +1268,8 @@ function TestPage({test,user,onFinish}){
   };
 
   const q=questions[current];
-  const pc=i=>{const s=status[i];return s==="answered"?"#22c55e":s==="review"?"#FF6A00":s==="visited"?"#ef4444":"#e5e7eb";};
-  const tc=timeLeft<300?"#ef4444":timeLeft<600?"#f59e0b":"#22c55e";
+  const pc=useMemo(()=>(i)=>{const s=status[i];return s==="answered"?"#22c55e":s==="review"?"#FF6A00":s==="visited"?"#ef4444":"#e5e7eb";},[status]);
+  const tc=useMemo(()=>timeLeft<300?"#ef4444":timeLeft<600?"#f59e0b":"#22c55e",[timeLeft]);
 
   if(saving) return(
     <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20}}>
@@ -1413,7 +1437,7 @@ function TestPage({test,user,onFinish}){
   );
 }
 
-function ResultPage({result,onViewSolutions,onBack}){
+const ResultPage = memo(function ResultPage({result,onViewSolutions,onBack}){
   const {score,total,accuracy,timeSpent,test,auto}=result;
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
   const grade=accuracy>=80?{g:"Excellent! 🏆",c:"#22c55e"}:accuracy>=60?{g:"Good Job! 🎯",c:"#f59e0b"}:{g:"Keep Going! 📚",c:"#ef4444"};
@@ -1477,19 +1501,19 @@ function ResultPage({result,onViewSolutions,onBack}){
       </div>
     </div>
   );
-}
+});
 
 // ─── SOLUTIONS PAGE ───────────────────────────────────────────────────────────
-function SolutionsPage({result,onBack}){
+const SolutionsPage = memo(function SolutionsPage({result,onBack}){
   const {questions,answers}=result;
   const et=EXAM_TYPES.find(e=>e.id===result.test.examType)||EXAM_TYPES[0];
   const [filter,setFilter]=useState("all");
-  const filtered=questions.filter((q,i)=>{
+  const filtered=useMemo(()=>questions.filter((q,i)=>{
     if(filter==="correct") return answers[i]===q.correct_answer;
     if(filter==="wrong")   return answers[i]&&answers[i]!==q.correct_answer;
     if(filter==="skipped") return !answers[i];
     return true;
-  });
+  }),[questions,answers,filter]);
   return(
     <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:800,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:22}}>
@@ -1531,7 +1555,7 @@ function SolutionsPage({result,onBack}){
       </div>
     </div>
   );
-}
+});
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function DashboardPage({user,setPage}){
@@ -1552,9 +1576,14 @@ function DashboardPage({user,setPage}){
     return unsub;
   },[user]);
 
-  const total=attempts.length;
-  const avgAcc=total?Math.round(attempts.reduce((a,r)=>a+(r.accuracy||0),0)/total):0;
-  const avgTime=total?Math.round(attempts.reduce((a,r)=>a+(r.timeSpent||0),0)/total):0;
+  const {total,avgAcc,avgTime}=useMemo(()=>{
+    const total=attempts.length;
+    return{
+      total,
+      avgAcc:total?Math.round(attempts.reduce((a,r)=>a+(r.accuracy||0),0)/total):0,
+      avgTime:total?Math.round(attempts.reduce((a,r)=>a+(r.timeSpent||0),0)/total):0,
+    };
+  },[attempts]);
   const isPaid=settings.contentMode==="paid";
 
   return(
@@ -1732,7 +1761,7 @@ function DashboardPage({user,setPage}){
 }
 
 // ─── LEADERBOARD ─────────────────────────────────────────────────────────────
-function LeaderboardPage(){
+const LeaderboardPage = memo(function LeaderboardPage(){
   const [allAttempts,setAllAttempts]=useState([]);
   const [loading,setLoading]=useState(true);
   const [examFilter,setExamFilter]=useState("all");
@@ -1759,13 +1788,11 @@ function LeaderboardPage(){
     return unsub;
   },[]);
 
-  // Build leaderboard: best attempt per student per exam
-  const buildLeaderboard=(attempts,examF,diffF)=>{
-    let filtered=attempts;
-    if(examF!=="all") filtered=filtered.filter(a=>a.examType===examF);
-    if(diffF!=="all") filtered=filtered.filter(a=>a.difficulty===diffF);
-
-    // Best attempt per user (highest accuracy, then score, then fastest time)
+  // Build leaderboard: best attempt per student per exam — memoized, only recalculates when data/filters change
+  const leaders=useMemo(()=>{
+    let filtered=allAttempts;
+    if(examFilter!=="all") filtered=filtered.filter(a=>a.examType===examFilter);
+    if(diffFilter!=="all") filtered=filtered.filter(a=>a.difficulty===diffFilter);
     const best={};
     filtered.forEach(a=>{
       const key=a.userId;
@@ -1777,13 +1804,10 @@ function LeaderboardPage(){
         ||((a.accuracy||0)===(prev.accuracy||0)&&(a.score||0)===(prev.score||0)&&(a.timeSpent||9999)<(prev.timeSpent||9999))
       ){best[key]=a;}
     });
-
     return Object.values(best)
       .sort((a,b)=>(b.accuracy||0)-(a.accuracy||0)||(b.score||0)-(a.score||0)||(a.timeSpent||9999)-(b.timeSpent||9999))
       .slice(0,20);
-  };
-
-  const leaders=buildLeaderboard(allAttempts,examFilter,diffFilter);
+  },[allAttempts,examFilter,diffFilter]);
   const isMobile=window.innerWidth<=768;
 
   return(
@@ -1887,7 +1911,7 @@ function LeaderboardPage(){
       </div>
     </div>
   );
-}
+});
 
 // ─── PROFILE PAGE ────────────────────────────────────────────────────────────
 function ProfilePage({user,setUser,setPage}){
@@ -1986,16 +2010,16 @@ function AdminPage(){
     return unsub;
   },[]);
 
-  const toggleMode=async()=>{
+  const toggleMode=useCallback(async()=>{
     const nm={...settings,contentMode:settings.contentMode==="free"?"paid":"free"};
     setSettingsState(nm);await setSettings(nm);
-  };
+  },[settings]);
 
-  const toggleAccess=async(uid,current)=>{
+  const toggleAccess=useCallback(async(uid,current)=>{
     const newVal=!current;
     setAccess(p=>({...p,[uid]:newVal}));
     await updateDoc(doc(db,"users",uid),{accessEnabled:newVal});
-  };
+  },[]);
 
   // Questions
   const [examType,setExamType]=useState("ssc");
@@ -2025,8 +2049,15 @@ function AdminPage(){
   const [se,setSe]=useState({});
   const [sOk,setSok]=useState(false);
   const [search,setSearch]=useState("");
+  const [searchDebounced,setSearchDebounced]=useState("");
   const [cred,setCred]=useState(null);
   const [spw,setSpw]=useState(false);const [scw,setScw]=useState(false);
+
+  // Debounce student search
+  useEffect(()=>{
+    const t=setTimeout(()=>setSearchDebounced(search),300);
+    return()=>clearTimeout(t);
+  },[search]);
 
   const createStu=async()=>{
     const e={};
@@ -2261,16 +2292,23 @@ function AdminPage(){
   const [qTopicFilter,setQTopicFilter]=useState("");
   const [qDiffFilter,setQDiffFilter]=useState("");
 
-  const filteredQs=allQuestions.filter(q=>{
+  // Debounce qSearch so filtering doesn't fire on every keystroke (300ms delay)
+  const [qSearchDebounced,setQSearchDebounced]=useState("");
+  useEffect(()=>{
+    const t=setTimeout(()=>setQSearchDebounced(qSearch),300);
+    return()=>clearTimeout(t);
+  },[qSearch]);
+
+  const filteredQs=useMemo(()=>allQuestions.filter(q=>{
     const matchExam=!qExamFilter||q.examType===qExamFilter;
     const matchTopic=!qTopicFilter||q.topicId===qTopicFilter||q.topicName===qTopicFilter;
     const matchDiff=!qDiffFilter||q.difficulty===qDiffFilter;
-    const matchSearch=!qSearch||
-      q.question_text?.toLowerCase().includes(qSearch.toLowerCase())||
-      q.topicName?.toLowerCase().includes(qSearch.toLowerCase())||
-      q.testTitle?.toLowerCase().includes(qSearch.toLowerCase());
+    const matchSearch=!qSearchDebounced||
+      q.question_text?.toLowerCase().includes(qSearchDebounced.toLowerCase())||
+      q.topicName?.toLowerCase().includes(qSearchDebounced.toLowerCase())||
+      q.testTitle?.toLowerCase().includes(qSearchDebounced.toLowerCase());
     return matchExam&&matchTopic&&matchDiff&&matchSearch;
-  });
+  }),[allQuestions,qExamFilter,qTopicFilter,qDiffFilter,qSearchDebounced]);
 
   // Notices
   const [dbNotices,setDbNotices]=useState([]);
@@ -2414,8 +2452,11 @@ function AdminPage(){
     }finally{setUpLoading(false);}
   };
 
-  const filtStu=students.filter(s=>s.name?.toLowerCase().includes(search.toLowerCase())||s.email?.toLowerCase().includes(search.toLowerCase()));
-  const TABS=[{id:"students",l:"👥 Students"},{id:"exams",l:"🎯 Exam Types"},{id:"banners",l:"🖼️ Banners"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}];
+  const filtStu=useMemo(()=>students.filter(s=>
+    s.name?.toLowerCase().includes(searchDebounced.toLowerCase())||
+    s.email?.toLowerCase().includes(searchDebounced.toLowerCase())
+  ),[students,searchDebounced]);
+  const TABS=useMemo(()=>[{id:"students",l:"👥 Students"},{id:"exams",l:"🎯 Exam Types"},{id:"banners",l:"🖼️ Banners"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}],[]);
 
   return(
     <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 14px 32px":"80px 28px 40px",maxWidth:1000,margin:"0 auto"}}>
@@ -2571,7 +2612,7 @@ function AdminPage(){
                 {adminBanners.map((b,i)=>(
                   <div key={b.id} style={{borderRadius:12,overflow:"hidden",border:"2px solid #f0f0f0"}}>
                     <div style={{background:b.bgColor||"#FF6A00",padding:"12px 16px",position:"relative",overflow:"hidden",minHeight:60}}>
-                      {b.imageUrl&&<img src={b.imageUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.35}}/>}
+                      {b.imageUrl&&<img src={b.imageUrl} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.35}}/>}
                       <div style={{position:"relative"}}>
                         {b.badge&&<div style={{fontSize:9,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:3}}>{b.badge}</div>}
                         <div style={{fontWeight:800,color:"#fff",fontSize:13}}>{b.title}</div>
@@ -3316,9 +3357,7 @@ function AdminPage(){
 }
 
 // ─── CSS ANIMATION ────────────────────────────────────────────────────────────
-const spinStyle = document.createElement("style");
-spinStyle.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
-document.head.appendChild(spinStyle);
+// @keyframes spin is defined in ra-hero-css above
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App(){
@@ -3373,21 +3412,21 @@ export default function App(){
     }
   },[justLoggedIn, fbUser, notices]);
 
-  const handleLogin = () => {
+  const handleLogin = useCallback(() => {
     // Redirect handled by justLoggedIn effect above
-  };
+  }, []);
 
-  const handleStartTest = test => {
+  const handleStartTest = useCallback(test => {
     if(!fbUser){ setPage("auth"); return; }
     setActiveTest(test);
     setTestResult(null);
     setPage("test");
-  };
+  }, [fbUser]);
 
-  const handleFinish = result => {
+  const handleFinish = useCallback(result => {
     setTestResult(result);
     setPage("result");
-  };
+  }, []);
 
   // ── Loading screen ──
   if(fbUser === undefined){
