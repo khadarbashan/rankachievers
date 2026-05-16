@@ -181,184 +181,8 @@ function useAuth(){
           const firstRole=fbUser.email===ADMIN_EMAIL?"admin":"student";
           profile={uid:fbUser.uid,name:fbUser.displayName||fbUser.email.split("@")[0],email:fbUser.email,role:firstRole,photoURL:fbUser.photoURL||null,googleLogin:true,createdAt:serverTimestamp(),accessEnabled:firstRole==="admin"};
           await setDoc(doc(db,"users",fbUser.uid),profile);
-          setUser({...profile});eEffect, useRef, useCallback } from "react";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
-// Replace these values with your Firebase project config
-// Get from: https://console.firebase.google.com → Your Project → Settings → Web App
-
-const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
-};
-
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
-const gProvider = new GoogleAuthProvider();
-
-// ─── ADMIN EMAIL ──────────────────────────────────────────────────────────────
-// Admin email — used only for role detection, NOT for login
-// Admin account must be created manually in Firebase Console
-const ADMIN_EMAIL = "nkhadar@gmail.com";
-
-// ─── EXAM TYPES ───────────────────────────────────────────────────────────────
-// ── Default exam types (fallback if Firestore not loaded yet) ──
-const DEFAULT_EXAM_TYPES = [
-  { id:"ssc",      label:"SSC",      fullName:"Staff Selection Commission", icon:"🏛️", color:"#FF6A00", bg:"#fff5ee", desc:"CGL · CHSL · MTS · CPO · GD Constable",
-    topics:[{id:"ssc_arith",name:"Arithmetic",icon:"➕"},{id:"ssc_alg",name:"Algebra",icon:"🔣"},{id:"ssc_num",name:"Number System",icon:"🔢"},{id:"ssc_simp",name:"Simplification",icon:"✖️"},{id:"ssc_di",name:"Data Interpretation",icon:"📊"},{id:"ssc_geo",name:"Geometry",icon:"📐"}]},
-  { id:"banking",  label:"Banking",  fullName:"Banking & Insurance",        icon:"🏦", color:"#1d4ed8", bg:"#eff6ff", desc:"IBPS PO · SBI PO · RBI · NABARD · LIC",
-    topics:[{id:"bnk_qa",name:"Quantitative Aptitude",icon:"🔢"},{id:"bnk_da",name:"Data Analysis",icon:"📊"},{id:"bnk_re",name:"Reasoning",icon:"🧠"},{id:"bnk_en",name:"English",icon:"📝"},{id:"bnk_ga",name:"General Awareness",icon:"🌍"},{id:"bnk_cp",name:"Computer Knowledge",icon:"💻"}]},
-  { id:"railways", label:"Railways", fullName:"Indian Railways",            icon:"🚂", color:"#16a34a", bg:"#f0fdf4", desc:"RRB NTPC · Group D · ALP · JE",
-    topics:[{id:"rly_ma",name:"Mathematics",icon:"📐"},{id:"rly_gi",name:"General Intelligence",icon:"🧩"},{id:"rly_sc",name:"General Science",icon:"🔬"},{id:"rly_ga",name:"General Awareness",icon:"🌍"},{id:"rly_re",name:"Reasoning",icon:"🧠"},{id:"rly_te",name:"Technical Ability",icon:"⚙️"}]}
-];
-
-// Global mutable exam types — updated from Firestore
-let EXAM_TYPES = [...DEFAULT_EXAM_TYPES];
-
-// Hook to load exam types from Firestore and sync globally
-function useExamTypes(){
-  const [examTypes,setExamTypes]=useState(DEFAULT_EXAM_TYPES);
-  useEffect(()=>{
-    const snap=onSnapshot(doc(db,"settings","examTypes"),d=>{
-      if(d.exists()&&d.data().types?.length>0){
-        const loaded=d.data().types;
-        EXAM_TYPES=loaded;
-        setExamTypes(loaded);
-      }
-    });
-    return snap;
-  },[]);
-  return examTypes;
-}
-
-// Save exam types to Firestore
-async function saveExamTypes(types){
-  await setDoc(doc(db,"settings","examTypes"),{types});
-  EXAM_TYPES=types;
-}
-
-const DIFFS  = ["easy","medium","hard"];
-const DCOL   = {easy:"#22c55e",medium:"#f59e0b",hard:"#ef4444"};
-const DBG    = {easy:"#f0fdf4",medium:"#fffbeb",hard:"#fef2f2"};
-const fmtT   = s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-
-// ─── RESPONSIVE HOOK ─────────────────────────────────────────────────────────
-function useMobile(){
-  const [mobile,setMobile]=useState(window.innerWidth<=768);
-  useEffect(()=>{
-    const handler=()=>setMobile(window.innerWidth<=768);
-    window.addEventListener("resize",handler);
-    return()=>window.removeEventListener("resize",handler);
-  },[]);
-  return mobile;
-}
-
-// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
-class ErrorBoundary extends React.Component{
-  constructor(props){super(props);this.state={hasError:false,error:null};}
-  static getDerivedStateFromError(error){return{hasError:true,error};}
-  componentDidCatch(error,info){console.error("App error:",error,info);}
-  render(){
-    if(this.state.hasError){
-      return(
-        <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20,padding:32,textAlign:"center"}}>
-          <div style={{fontSize:48}}>⚠️</div>
-          <div style={{color:"#fff",fontWeight:700,fontSize:18}}>Something went wrong</div>
-          <div style={{color:"#888",fontSize:13,maxWidth:400}}>{this.state.error?.message||"An unexpected error occurred."}</div>
-          <button onClick={()=>window.location.reload()} style={{padding:"10px 28px",borderRadius:10,border:"none",background:"#FF6A00",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",marginTop:8}}>Reload App</button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-// ─── UI PRIMITIVES ────────────────────────────────────────────────────────────
-const IS = {width:"100%",padding:"12px 16px",borderRadius:10,border:"2px solid #f0f0f0",fontSize:14,marginBottom:6,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff"};
-const LS = {display:"block",fontSize:12,fontWeight:700,color:"#444",marginBottom:5};
-const ES = {color:"#dc2626",fontSize:12,marginBottom:10,marginTop:-2,paddingLeft:4};
-
-function Err({m}){return m?<div style={ES}>⚠ {m}</div>:null;}
-
-function PwdInput({value,onChange,placeholder}){
-  const [show,setShow]=useState(false);
-  return(
-    <div style={{position:"relative",marginBottom:6}}>
-      <input type={show?"text":"password"} value={value} onChange={onChange} placeholder={placeholder||"Password"} style={{...IS,marginBottom:0,paddingRight:44}}/>
-      <button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#888"}}>{show?"🙈":"👁️"}</button>
-    </div>
-  );
-}
-
-function Logo({white=false}){
-  return(
-    <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <div style={{width:40,height:40,background:"linear-gradient(135deg,#FF6A00,#ff9a00)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#fff",fontSize:18,boxShadow:"0 2px 12px #FF6A0060"}}>RA</div>
-      <div>
-        <div style={{fontWeight:800,fontSize:15,color:white?"#fff":"#000",lineHeight:1.1}}>Rank Achievers</div>
-        <div style={{fontSize:10,color:"#FF6A00",fontWeight:700,letterSpacing:1}}>ACADEMY · ANANTAPUR</div>
-      </div>
-    </div>
-  );
-}
-
-function Spinner({size=24,color="#FF6A00"}){
-  return(
-    <div style={{width:size,height:size,border:`3px solid ${color}30`,borderTop:`3px solid ${color}`,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
-  );
-}
-
-// ─── FIREBASE HOOKS ───────────────────────────────────────────────────────────
-
-function useAuth(){
-  const [user,setUser]=useState(undefined); // undefined=loading, null=logged out
-  const [justLoggedIn,setJustLoggedIn]=useState(false);
-  const prevUid=useRef(null);
-
-  useEffect(()=>{
-    const unsub=onAuthStateChanged(auth, async fbUser=>{
-      if(!fbUser){
-        prevUid.current=null;
-        setUser(null);
-        return;
-      }
-      // detect new login (uid changed from null/different)
-      // Fire justLoggedIn whenever uid changes from null/different
-      const isNewLogin = prevUid.current !== fbUser.uid;
-      prevUid.current = fbUser.uid;
-      // Log for debugging
-      console.log("[Auth] User loaded:", fbUser.email, "isNewLogin:", isNewLogin);
-
-      try {
-        const snap=await getDoc(doc(db,"users",fbUser.uid));
-        let profile;
-        if(snap.exists()){
-          profile={uid:fbUser.uid,...snap.data()};
-          // Fix: if admin email has wrong role, correct it in Firestore
-          if(fbUser.email===ADMIN_EMAIL && profile.role!=="admin"){
-            await updateDoc(doc(db,"users",fbUser.uid),{role:"admin",accessEnabled:true});
-            profile.role="admin";
-            profile.accessEnabled=true;
-          }
-          // Sync latest Google photo
-          if(fbUser.photoURL && profile.photoURL !== fbUser.photoURL){
-            await updateDoc(doc(db,"users",fbUser.uid),{photoURL:fbUser.photoURL});
-            profile.photoURL=fbUser.photoURL;
-          }
-        } else {
-          // Role always "student" from frontend — admin set manually in Firestore
-          profile={uid:fbUser.uid,name:fbUser.displayName||fbUser.email.split("@")[0],email:fbUser.email,role:"student",photoURL:fbUser.photoURL||null,googleLogin:true,createdAt:serverTimestamp(),accessEnabled:false};
-          await setDoc(doc(db,"users",fbUser.uid),profile);
+          setUser({...profile});
         }
-        setUser(profile);
         if(isNewLogin) setJustLoggedIn(true);
       } catch(e){
         console.error("Auth profile error:",e);
@@ -427,8 +251,8 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
           {user && EXAM_TYPES.map(e=>(
             <button key={e.id} onClick={()=>{setExamType(e.id);setPage("tests");}} style={{padding:"5px 10px",borderRadius:20,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,fontSize:11,cursor:"pointer",display:isMobile?"none":"flex"}}>{e.icon} {e.label}</button>
           ))}
+          {!isMobile&&<ThemeToggle/>}
           {!isMobile&&["home","leaderboard"].map(p=>(
-            <ThemeToggle/>
             <button key={p} onClick={()=>setPage(p)} style={{padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",background:page===p?"#FF6A00":"transparent",color:page===p?"#fff":"#000",fontWeight:700,fontSize:13}}>{p==="leaderboard"?"🏆":p.charAt(0).toUpperCase()+p.slice(1)}</button>
           ))}
           {user?(
@@ -1639,7 +1463,7 @@ function ResultPage({result,onViewSolutions,onBack,user}){
         <div style={{marginTop:8,background:"rgba(34,197,94,0.08)",borderRadius:8,padding:"5px 14px",display:"inline-block"}}>
           <span style={{fontSize:11,color:"#22c55e",fontWeight:700}}>☁️ Saved to cloud</span>
         </div>
-      </div>      </div>
+      </div>
       <div style={{background:"#fff",borderRadius:14,padding:22,marginBottom:20,border:"2px solid #f0f0f0"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontWeight:700}}>Performance</span><span style={{color:et.color,fontWeight:800}}>{accuracy}%</span></div>
         <div style={{background:"#f0f0f0",borderRadius:8,height:12,overflow:"hidden"}}><div style={{height:"100%",borderRadius:8,width:`${accuracy}%`,background:`linear-gradient(90deg,${et.color},${et.color}cc)`,transition:"width 1s ease"}}/></div>
