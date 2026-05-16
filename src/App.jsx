@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -14,6 +14,189 @@ const firebaseConfig = {
   storageBucket: "rank-achievers.firebasestorage.app",
   messagingSenderId: "945705830932",
   appId: "1:945705830932:web:6f373103a09fbd2512b501"
+};
+
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const gProvider = new GoogleAuthProvider();
+
+// ─── ADMIN EMAIL ──────────────────────────────────────────────────────────────
+// Admin email — used only for role detection, NOT for login
+// Admin account must be created manually in Firebase Console
+const ADMIN_EMAIL = "nkhadar@gmail.com";
+
+// ─── EXAM TYPES ───────────────────────────────────────────────────────────────
+// ── Default exam types (fallback if Firestore not loaded yet) ──
+const DEFAULT_EXAM_TYPES = [
+  { id:"ssc",      label:"SSC",      fullName:"Staff Selection Commission", icon:"🏛️", color:"#FF6A00", bg:"#fff5ee", desc:"CGL · CHSL · MTS · CPO · GD Constable",
+    topics:[{id:"ssc_arith",name:"Arithmetic",icon:"➕"},{id:"ssc_alg",name:"Algebra",icon:"🔣"},{id:"ssc_num",name:"Number System",icon:"🔢"},{id:"ssc_simp",name:"Simplification",icon:"✖️"},{id:"ssc_di",name:"Data Interpretation",icon:"📊"},{id:"ssc_geo",name:"Geometry",icon:"📐"}]},
+  { id:"banking",  label:"Banking",  fullName:"Banking & Insurance",        icon:"🏦", color:"#1d4ed8", bg:"#eff6ff", desc:"IBPS PO · SBI PO · RBI · NABARD · LIC",
+    topics:[{id:"bnk_qa",name:"Quantitative Aptitude",icon:"🔢"},{id:"bnk_da",name:"Data Analysis",icon:"📊"},{id:"bnk_re",name:"Reasoning",icon:"🧠"},{id:"bnk_en",name:"English",icon:"📝"},{id:"bnk_ga",name:"General Awareness",icon:"🌍"},{id:"bnk_cp",name:"Computer Knowledge",icon:"💻"}]},
+  { id:"railways", label:"Railways", fullName:"Indian Railways",            icon:"🚂", color:"#16a34a", bg:"#f0fdf4", desc:"RRB NTPC · Group D · ALP · JE",
+    topics:[{id:"rly_ma",name:"Mathematics",icon:"📐"},{id:"rly_gi",name:"General Intelligence",icon:"🧩"},{id:"rly_sc",name:"General Science",icon:"🔬"},{id:"rly_ga",name:"General Awareness",icon:"🌍"},{id:"rly_re",name:"Reasoning",icon:"🧠"},{id:"rly_te",name:"Technical Ability",icon:"⚙️"}]}
+];
+
+// Global mutable exam types — updated from Firestore
+let EXAM_TYPES = [...DEFAULT_EXAM_TYPES];
+
+// Hook to load exam types from Firestore and sync globally
+function useExamTypes(){
+  const [examTypes,setExamTypes]=useState(DEFAULT_EXAM_TYPES);
+  useEffect(()=>{
+    const snap=onSnapshot(doc(db,"settings","examTypes"),d=>{
+      if(d.exists()&&d.data().types?.length>0){
+        const loaded=d.data().types;
+        EXAM_TYPES=loaded;
+        setExamTypes(loaded);
+      }
+    });
+    return snap;
+  },[]);
+  return examTypes;
+}
+
+// Save exam types to Firestore
+async function saveExamTypes(types){
+  await setDoc(doc(db,"settings","examTypes"),{types});
+  EXAM_TYPES=types;
+}
+
+const DIFFS  = ["easy","medium","hard"];
+const DCOL   = {easy:"#22c55e",medium:"#f59e0b",hard:"#ef4444"};
+const DBG    = {easy:"#f0fdf4",medium:"#fffbeb",hard:"#fef2f2"};
+const fmtT   = s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+
+// ─── RESPONSIVE HOOK ─────────────────────────────────────────────────────────
+function useMobile(){
+  const [mobile,setMobile]=useState(window.innerWidth<=768);
+  useEffect(()=>{
+    const handler=()=>setMobile(window.innerWidth<=768);
+    window.addEventListener("resize",handler);
+    return()=>window.removeEventListener("resize",handler);
+  },[]);
+  return mobile;
+}
+
+// ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={hasError:false,error:null};}
+  static getDerivedStateFromError(error){return{hasError:true,error};}
+  componentDidCatch(error,info){console.error("App error:",error,info);}
+  render(){
+    if(this.state.hasError){
+      return(
+        <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20,padding:32,textAlign:"center"}}>
+          <div style={{fontSize:48}}>⚠️</div>
+          <div style={{color:"#fff",fontWeight:700,fontSize:18}}>Something went wrong</div>
+          <div style={{color:"#888",fontSize:13,maxWidth:400}}>{this.state.error?.message||"An unexpected error occurred."}</div>
+          <button onClick={()=>window.location.reload()} style={{padding:"10px 28px",borderRadius:10,border:"none",background:"#FF6A00",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",marginTop:8}}>Reload App</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── UI PRIMITIVES ────────────────────────────────────────────────────────────
+const IS = {width:"100%",padding:"12px 16px",borderRadius:10,border:"2px solid #f0f0f0",fontSize:14,marginBottom:6,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff"};
+const LS = {display:"block",fontSize:12,fontWeight:700,color:"#444",marginBottom:5};
+const ES = {color:"#dc2626",fontSize:12,marginBottom:10,marginTop:-2,paddingLeft:4};
+
+function Err({m}){return m?<div style={ES}>⚠ {m}</div>:null;}
+
+function PwdInput({value,onChange,placeholder}){
+  const [show,setShow]=useState(false);
+  return(
+    <div style={{position:"relative",marginBottom:6}}>
+      <input type={show?"text":"password"} value={value} onChange={onChange} placeholder={placeholder||"Password"} style={{...IS,marginBottom:0,paddingRight:44}}/>
+      <button type="button" onClick={()=>setShow(s=>!s)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#888"}}>{show?"🙈":"👁️"}</button>
+    </div>
+  );
+}
+
+function Logo({white=false}){
+  return(
+    <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <div style={{width:40,height:40,background:"linear-gradient(135deg,#FF6A00,#ff9a00)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#fff",fontSize:18,boxShadow:"0 2px 12px #FF6A0060"}}>RA</div>
+      <div>
+        <div style={{fontWeight:800,fontSize:15,color:white?"#fff":"#000",lineHeight:1.1}}>Rank Achievers</div>
+        <div style={{fontSize:10,color:"#FF6A00",fontWeight:700,letterSpacing:1}}>ACADEMY · ANANTAPUR</div>
+      </div>
+    </div>
+  );
+}
+
+function Spinner({size=24,color="#FF6A00"}){
+  return(
+    <div style={{width:size,height:size,border:`3px solid ${color}30`,borderTop:`3px solid ${color}`,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+  );
+}
+
+// ─── FIREBASE HOOKS ───────────────────────────────────────────────────────────
+
+function useAuth(){
+  const [user,setUser]=useState(undefined); // undefined=loading, null=logged out
+  const [justLoggedIn,setJustLoggedIn]=useState(false);
+  const prevUid=useRef(null);
+
+  useEffect(()=>{
+    const unsub=onAuthStateChanged(auth, async fbUser=>{
+      if(!fbUser){
+        prevUid.current=null;
+        setUser(null);
+        return;
+      }
+      // detect new login (uid changed from null/different)
+      // Fire justLoggedIn whenever uid changes from null/different
+      const isNewLogin = prevUid.current !== fbUser.uid;
+      prevUid.current = fbUser.uid;
+      // Log for debugging
+      console.log("[Auth] User loaded:", fbUser.email, "isNewLogin:", isNewLogin);
+
+      try {
+        const snap=await getDoc(doc(db,"users",fbUser.uid));
+        let profile;
+        if(snap.exists()){
+          profile={uid:fbUser.uid,...snap.data()};
+          // Auto-fix: if admin email has wrong role in Firestore, correct it
+          if(fbUser.email===ADMIN_EMAIL && profile.role!=="admin"){
+            await updateDoc(doc(db,"users",fbUser.uid),{role:"admin",accessEnabled:true});
+            profile.role="admin";profile.accessEnabled=true;
+          }
+          // Fix: if admin email has wrong role, correct it in Firestore
+          if(fbUser.email===ADMIN_EMAIL && profile.role!=="admin"){
+            await updateDoc(doc(db,"users",fbUser.uid),{role:"admin",accessEnabled:true});
+            profile.role="admin";
+            profile.accessEnabled=true;
+          }
+          // Sync latest Google photo
+          if(fbUser.photoURL && profile.photoURL !== fbUser.photoURL){
+            await updateDoc(doc(db,"users",fbUser.uid),{photoURL:fbUser.photoURL});
+            profile.photoURL=fbUser.photoURL;
+          }
+        } else {
+          // Admin email → admin role on first Google login
+          const firstRole=fbUser.email===ADMIN_EMAIL?"admin":"student";
+          profile={uid:fbUser.uid,name:fbUser.displayName||fbUser.email.split("@")[0],email:fbUser.email,role:firstRole,photoURL:fbUser.photoURL||null,googleLogin:true,createdAt:serverTimestamp(),accessEnabled:firstRole==="admin"};
+          await setDoc(doc(db,"users",fbUser.uid),profile);
+          setUser({...profile});eEffect, useRef, useCallback } from "react";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
+// Replace these values with your Firebase project config
+// Get from: https://console.firebase.google.com → Your Project → Settings → Web App
+
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
 
 const app  = initializeApp(firebaseConfig);
@@ -103,17 +286,6 @@ const IS = {width:"100%",padding:"12px 16px",borderRadius:10,border:"2px solid #
 const LS = {display:"block",fontSize:12,fontWeight:700,color:"#444",marginBottom:5};
 const ES = {color:"#dc2626",fontSize:12,marginBottom:10,marginTop:-2,paddingLeft:4};
 
-// ─── HOISTED STYLE CONSTANTS (never recreated on render) ─────────────────────
-const MODAL_BACKDROP = {position:"fixed",inset:0,background:"#00000095",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20};
-const LOADING_FULL = {height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20};
-const CARD = {background:"#fff",borderRadius:14,padding:22,border:"2px solid #f0f0f0"};
-const CARD_LG = {background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"};
-const BTN_PRIMARY = {borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"};
-const BTN_OUTLINE = {borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:800,cursor:"pointer"};
-const BTN_DANGER = {borderRadius:10,border:"none",background:"#dc2626",color:"#fff",fontWeight:800,cursor:"pointer"};
-const accColor = (acc) => acc>=80?"#16a34a":acc>=60?"#854d0e":"#dc2626";
-const accBg = (acc) => acc>=80?"#dcfce7":acc>=60?"#fef9c3":"#fee2e2";
-
 function Err({m}){return m?<div style={ES}>⚠ {m}</div>:null;}
 
 function PwdInput({value,onChange,placeholder}){
@@ -126,7 +298,7 @@ function PwdInput({value,onChange,placeholder}){
   );
 }
 
-const Logo = memo(function Logo({white=false}){
+function Logo({white=false}){
   return(
     <div style={{display:"flex",alignItems:"center",gap:10}}>
       <div style={{width:40,height:40,background:"linear-gradient(135deg,#FF6A00,#ff9a00)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#fff",fontSize:18,boxShadow:"0 2px 12px #FF6A0060"}}>RA</div>
@@ -136,13 +308,13 @@ const Logo = memo(function Logo({white=false}){
       </div>
     </div>
   );
-});
+}
 
-const Spinner = memo(function Spinner({size=24,color="#FF6A00"}){
+function Spinner({size=24,color="#FF6A00"}){
   return(
     <div style={{width:size,height:size,border:`3px solid ${color}30`,borderTop:`3px solid ${color}`,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
   );
-});
+}
 
 // ─── FIREBASE HOOKS ───────────────────────────────────────────────────────────
 
@@ -159,14 +331,23 @@ function useAuth(){
         return;
       }
       // detect new login (uid changed from null/different)
+      // Fire justLoggedIn whenever uid changes from null/different
       const isNewLogin = prevUid.current !== fbUser.uid;
       prevUid.current = fbUser.uid;
+      // Log for debugging
+      console.log("[Auth] User loaded:", fbUser.email, "isNewLogin:", isNewLogin);
 
       try {
         const snap=await getDoc(doc(db,"users",fbUser.uid));
         let profile;
         if(snap.exists()){
           profile={uid:fbUser.uid,...snap.data()};
+          // Fix: if admin email has wrong role, correct it in Firestore
+          if(fbUser.email===ADMIN_EMAIL && profile.role!=="admin"){
+            await updateDoc(doc(db,"users",fbUser.uid),{role:"admin",accessEnabled:true});
+            profile.role="admin";
+            profile.accessEnabled=true;
+          }
           // Sync latest Google photo
           if(fbUser.photoURL && profile.photoURL !== fbUser.photoURL){
             await updateDoc(doc(db,"users",fbUser.uid),{photoURL:fbUser.photoURL});
@@ -233,7 +414,7 @@ async function checkAccess(uid){
 }
 
 // ─── NAVBAR ───────────────────────────────────────────────────────────────────
-const NavBar = memo(function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices}){
+function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices}){
   const [menuOpen,setMenuOpen]=useState(false);
   const isMobile=window.innerWidth<=768;
   return(
@@ -247,6 +428,7 @@ const NavBar = memo(function NavBar({page,setPage,user,examType,setExamType,show
             <button key={e.id} onClick={()=>{setExamType(e.id);setPage("tests");}} style={{padding:"5px 10px",borderRadius:20,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,fontSize:11,cursor:"pointer",display:isMobile?"none":"flex"}}>{e.icon} {e.label}</button>
           ))}
           {!isMobile&&["home","leaderboard"].map(p=>(
+            <ThemeToggle/>
             <button key={p} onClick={()=>setPage(p)} style={{padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",background:page===p?"#FF6A00":"transparent",color:page===p?"#fff":"#000",fontWeight:700,fontSize:13}}>{p==="leaderboard"?"🏆":p.charAt(0).toUpperCase()+p.slice(1)}</button>
           ))}
           {user?(
@@ -303,10 +485,10 @@ const NavBar = memo(function NavBar({page,setPage,user,examType,setExamType,show
       )}
     </>
   );
-});
+}
 
 // ─── NOTICE MODAL (shown after login) ─────────────────────────────────────────
-const NoticeModal = memo(function NoticeModal({notices, onClose}){
+function NoticeModal({notices, onClose}){
   const [idx,setIdx]=useState(0);
   const n=notices[idx];
   if(!n) return null;
@@ -341,10 +523,10 @@ const NoticeModal = memo(function NoticeModal({notices, onClose}){
       </div>
     </div>
   );
-});
+}
 
 // ─── NOTIFICATION BELL PANEL ───────────────────────────────────────────────────
-const NotifPanel = memo(function NotifPanel({notices,onClose}){
+function NotifPanel({notices,onClose}){
   return(
     <div style={{position:"fixed",top:68,right:16,width:340,maxHeight:480,background:"#fff",borderRadius:16,boxShadow:"0 8px 40px #00000025",border:"2px solid #f0f0f0",zIndex:9998,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div style={{padding:"14px 18px",borderBottom:"2px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -366,7 +548,7 @@ const NotifPanel = memo(function NotifPanel({notices,onClose}){
       </div>
     </div>
   );
-});
+}
 
 // ─── AUTH PAGE ────────────────────────────────────────────────────────────────
 function AuthPage({onLogin}){
@@ -468,7 +650,7 @@ _heroStyle.textContent = `
   @keyframes raFadeIn   { from{opacity:0} to{opacity:1} }
   @keyframes raSlideIn  { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
   @keyframes raSlideUp  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes raPulseRing{ 0%,100%{opacity:.6} 50%{opacity:1} }
+  @keyframes raPulseRing{ 0%,100%{box-shadow:0 0 0 0 rgba(255,106,0,.4)} 50%{box-shadow:0 0 0 12px rgba(255,106,0,0)} }
   @keyframes raDrift    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
   @keyframes raOrb      { 0%{transform:translate(0,0) scale(1)} 33%{transform:translate(20px,-15px) scale(1.05)} 66%{transform:translate(-10px,10px) scale(.97)} 100%{transform:translate(0,0) scale(1)} }
   @keyframes raSpin     { to{transform:rotate(360deg)} }
@@ -476,72 +658,59 @@ _heroStyle.textContent = `
   @keyframes raBlink    { 0%,100%{opacity:1} 49%{opacity:1} 50%,99%{opacity:0} }
   @keyframes raTypeIn   { from{max-width:0} to{max-width:300px} }
   @keyframes raScoreIn  { from{stroke-dasharray:0 251} }
-  @keyframes spin       { to{transform:rotate(360deg)} }
-  .ra-step-card { transition: border-color .4s ease !important; will-change:transform; transform:translateZ(0); }
-  .ra-step-card:hover { transform: scale(1.01) translateZ(0) !important; }
-  .ra-chip { transition: transform .2s ease, opacity .2s ease !important; cursor:pointer; will-change:transform; }
-  .ra-chip:hover { transform: translateY(-1px) translateZ(0) !important; }
-  nav { transform:translateZ(0); will-change:transform; }
+  .ra-step-card { transition: all .35s cubic-bezier(.4,0,.2,1) !important; }
+  .ra-step-card:hover { transform: scale(1.01) !important; }
+  .ra-chip { transition: all .2s ease !important; cursor:pointer; }
+  .ra-chip:hover { transform: translateY(-1px) !important; }
 `;
 if(!document.getElementById("ra-hero-css")) document.head.appendChild(_heroStyle);
 
-// HERO_STEPS hoisted outside component — never recreated on render
-const HERO_STEPS = [
-  { id:0, icon:"🔐", label:"Login",        color:"#FF6A00", sub:"Google or email — instant access" },
-  { id:1, icon:"🎯", label:"Choose Exam",   color:"#1d4ed8", sub:"SSC · Banking · Railways" },
-  { id:2, icon:"📚", label:"Pick Topic",    color:"#16a34a", sub:"6 topics · 3 difficulty levels" },
-  { id:3, icon:"⚙️", label:"Select Mode",   color:"#7c3aed", sub:"Timed 30-min or Practice" },
-  { id:4, icon:"✏️", label:"Take the Exam", color:"#FF6A00", sub:"30 questions · live timer" },
-  { id:5, icon:"📊", label:"View Results",  color:"#059669", sub:"Score · accuracy · time analysis" },
-  { id:6, icon:"💡", label:"Solutions",     color:"#d97706", sub:"Step-by-step + YouTube video" },
-  { id:7, icon:"🏆", label:"Dashboard",     color:"#dc2626", sub:"Cloud progress + leaderboard" },
-];
-
 // ─── HERO ANIMATION ────────────────────────────────────────────────────────────
-const HeroAnimation = memo(function HeroAnimation({isMobile}){
+function HeroAnimation({isMobile}){
   const [step,setStep]    = useState(0);
   const [visible,setVisible] = useState(false);
   const [typed,setTyped]  = useState(0);
+  const [autoPlay,setAutoPlay] = useState(true);
   const autoRef = useRef(null);
-  const containerRef = useRef(null);
-  const isVisibleRef = useRef(true); // tracks IntersectionObserver visibility
+
+  const STEPS = [
+    { id:0, icon:"🔐", label:"Login",        color:"#FF6A00", sub:"Google or email — instant access" },
+    { id:1, icon:"🎯", label:"Choose Exam",   color:"#1d4ed8", sub:"SSC · Banking · Railways" },
+    { id:2, icon:"📚", label:"Pick Topic",    color:"#16a34a", sub:"6 topics · 3 difficulty levels" },
+    { id:3, icon:"⚙️", label:"Select Mode",   color:"#7c3aed", sub:"Timed 30-min or Practice" },
+    { id:4, icon:"✏️", label:"Take the Exam", color:"#FF6A00", sub:"30 questions · live timer" },
+    { id:5, icon:"📊", label:"View Results",  color:"#059669", sub:"Score · accuracy · time analysis" },
+    { id:6, icon:"💡", label:"Solutions",     color:"#d97706", sub:"Step-by-step + YouTube video" },
+    { id:7, icon:"🏆", label:"Dashboard",     color:"#dc2626", sub:"Cloud progress + leaderboard" },
+  ];
 
   const startAuto=useCallback(()=>{
     clearInterval(autoRef.current);
-    autoRef.current=setInterval(()=>{
-      if(isVisibleRef.current) setStep(s=>(s+1)%HERO_STEPS.length);
-    },2800);
+    autoRef.current=setInterval(()=>setStep(s=>(s+1)%STEPS.length),2800);
   },[]);
 
   useEffect(()=>{
     setTimeout(()=>setVisible(true),80);
     startAuto();
-    // Pause animation intervals when hero is scrolled offscreen
-    const observer=new IntersectionObserver(([entry])=>{
-      isVisibleRef.current=entry.isIntersecting;
-    },{threshold:0.1});
-    if(containerRef.current) observer.observe(containerRef.current);
-    return()=>{clearInterval(autoRef.current);observer.disconnect();};
+    return()=>clearInterval(autoRef.current);
   },[]);
 
   useEffect(()=>{
     setTyped(0);
-    const iv=setInterval(()=>setTyped(t=>t<HERO_STEPS[step].label.length?t+1:t),55);
+    const iv=setInterval(()=>setTyped(t=>t<STEPS[step].label.length?t+1:t),55);
     return()=>clearInterval(iv);
   },[step]);
 
-  const goTo=useCallback(i=>{
+  const goTo=i=>{
     setStep(i);
     clearInterval(autoRef.current);
-    autoRef.current=setInterval(()=>{
-      if(isVisibleRef.current) setStep(s=>(s+1)%HERO_STEPS.length);
-    },2800);
-  },[]);
+    autoRef.current=setInterval(()=>setStep(s=>(s+1)%STEPS.length),2800);
+  };
 
-  const cur = HERO_STEPS[step];
+  const cur = STEPS[step];
 
   return(
-    <div ref={containerRef} style={{width:"100%",maxWidth:560,opacity:visible?1:0,transition:"opacity .7s ease",animation:visible?"raFadeUp .7s ease both":"none"}}>
+    <div style={{width:"100%",maxWidth:560,opacity:visible?1:0,transition:"opacity .7s ease",animation:visible?"raFadeUp .7s ease both":"none"}}>
 
       {/* ═══ MAIN HERO CARD ═══ */}
       <div className="ra-step-card" style={{background:"#0c0c0c",borderRadius:24,overflow:"hidden",border:`1px solid ${cur.color}30`,marginBottom:16,position:"relative",minHeight:420,transition:"border-color .4s ease"}}>
@@ -552,12 +721,12 @@ const HeroAnimation = memo(function HeroAnimation({isMobile}){
 
         {/* Progress bar */}
         <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"#111",zIndex:2}}>
-          <div style={{height:"100%",background:`linear-gradient(90deg,${cur.color},${cur.color}bb)`,transition:"width .6s cubic-bezier(.4,0,.2,1)",width:`${((step+1)/HERO_STEPS.length)*100}%`}}/>
+          <div style={{height:"100%",background:`linear-gradient(90deg,${cur.color},${cur.color}bb)`,transition:"width .6s cubic-bezier(.4,0,.2,1)",width:`${((step+1)/STEPS.length)*100}%`}}/>
         </div>
 
         {/* Step dots */}
         <div style={{position:"absolute",top:12,left:0,right:0,display:"flex",justifyContent:"center",gap:6,zIndex:2}}>
-          {HERO_STEPS.map((_,i)=>(
+          {STEPS.map((_,i)=>(
             <div key={i} onClick={()=>goTo(i)} style={{width:i===step?20:6,height:6,borderRadius:3,background:i===step?cur.color:i<step?cur.color+"60":"#222",transition:"all .3s ease",cursor:"pointer"}}/>
           ))}
         </div>
@@ -573,7 +742,7 @@ const HeroAnimation = memo(function HeroAnimation({isMobile}){
             </div>
             <div style={{flex:1}}>
               <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.15em",color:cur.color,marginBottom:6,transition:"color .4s"}}>
-                STEP {step+1} OF {HERO_STEPS.length}
+                STEP {step+1} OF {STEPS.length}
               </div>
               {/* Typewriter title */}
               <div style={{fontSize:28,fontWeight:900,color:"#fff",lineHeight:1.1,display:"flex",alignItems:"center",gap:4}}>
@@ -791,7 +960,7 @@ const HeroAnimation = memo(function HeroAnimation({isMobile}){
 
       {/* ═══ STEP CHIPS ═══ */}
       <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:isMobile?"center":"flex-start"}}>
-        {HERO_STEPS.map((s,i)=>(
+        {STEPS.map((s,i)=>(
           <div key={i} className="ra-chip" onClick={()=>goTo(i)} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:20,border:`1px solid ${step===i?s.color+"60":"#1e1e1e"}`,background:step===i?s.color+"18":"#0a0a0a",boxShadow:step===i?`0 0 12px ${s.color}30`:"none"}}>
             <span style={{fontSize:13}}>{s.icon}</span>
             <span style={{fontSize:11,fontWeight:step===i?700:400,color:step===i?s.color:"#444"}}>{s.label}</span>
@@ -800,10 +969,10 @@ const HeroAnimation = memo(function HeroAnimation({isMobile}){
       </div>
     </div>
   );
-});
+}
 
 // ─── NOTICE STRIP ────────────────────────────────────────────────────────────
-const NoticeStrip = memo(function NoticeStrip({notices,setShowNoticeModal}){
+function NoticeStrip({notices,setShowNoticeModal}){
   const [idx,setIdx]=useState(0);
   useEffect(()=>{
     if(notices.length<=1) return;
@@ -828,10 +997,10 @@ const NoticeStrip = memo(function NoticeStrip({notices,setShowNoticeModal}){
       )}
     </div>
   );
-});
+}
 
 // ─── BANNER SLIDER ───────────────────────────────────────────────────────────
-const BannerSlider = memo(function BannerSlider({banners}){
+function BannerSlider({banners}){
   const [idx,setIdx]=useState(0);
   const timerRef=useRef(null);
 
@@ -855,7 +1024,7 @@ const BannerSlider = memo(function BannerSlider({banners}){
         transition:"all .4s ease"
       }}>
         {b.imageUrl?(
-          <img src={b.imageUrl} alt={b.title} loading="lazy" style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,opacity:.5}}/>
+          <img src={b.imageUrl} alt={b.title} style={{width:"100%",height:"100%",objectFit:"cover",position:"absolute",inset:0,opacity:.5}}/>
         ):null}
         <div style={{position:"relative",padding:window.innerWidth<=768?"20px 20px":"28px 36px",zIndex:1}}>
           {b.badge&&<div style={{display:"inline-block",background:"rgba(255,255,255,.2)",color:"#fff",padding:"4px 14px",borderRadius:20,fontSize:11,fontWeight:700,letterSpacing:1,marginBottom:10}}>{b.badge}</div>}
@@ -887,7 +1056,7 @@ const BannerSlider = memo(function BannerSlider({banners}){
       )}
     </div>
   );
-});
+}
 
 function HomePage({setPage,user,setExamType,banners=[],examTypes,notices=[],setShowNoticeModal}){
   const [sel,setSel]=useState(null);
@@ -982,7 +1151,7 @@ function HomePage({setPage,user,setExamType,banners=[],examTypes,notices=[],setS
 }
 
 // ─── EXAM MODE MODAL ──────────────────────────────────────────────────────────
-const ExamModeModal = memo(function ExamModeModal({test,onConfirm,onCancel}){
+function ExamModeModal({test,onConfirm,onCancel}){
   const [timed,setTimed]=useState(null);
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
   return(
@@ -1014,7 +1183,7 @@ const ExamModeModal = memo(function ExamModeModal({test,onConfirm,onCancel}){
       </div>
     </div>
   );
-});
+}
 
 // ─── TESTS PAGE ───────────────────────────────────────────────────────────────
 function TestsPage({user,onStartTest,examType,setExamType,examTypes}){
@@ -1237,9 +1406,9 @@ function TestPage({test,user,onFinish}){
     setQTimes(up);qTimesRef.current=up;qStartRef.current=Date.now();
   },[current]);
 
-  const goTo=useCallback(idx=>{saveQTime();setStatus(p=>({...p,[current]:p[current]||"visited"}));setCurrent(idx);},[saveQTime,current]);
-  const saveAndNext=useCallback(()=>{saveQTime();setStatus(p=>({...p,[current]:answers[current]?"answered":(p[current]||"visited")}));if(current<questions.length-1)setCurrent(c=>c+1);},[saveQTime,current,answers,questions.length]);
-  const markReview=useCallback(()=>{saveQTime();setStatus(p=>({...p,[current]:"review"}));if(current<questions.length-1)setCurrent(c=>c+1);},[saveQTime,current,questions.length]);
+  const goTo=idx=>{saveQTime();setStatus(p=>({...p,[current]:p[current]||"visited"}));setCurrent(idx);};
+  const saveAndNext=()=>{saveQTime();setStatus(p=>({...p,[current]:answers[current]?"answered":(p[current]||"visited")}));if(current<questions.length-1)setCurrent(c=>c+1);};
+  const markReview=()=>{saveQTime();setStatus(p=>({...p,[current]:"review"}));if(current<questions.length-1)setCurrent(c=>c+1);};
 
   const handleSubmit=(auto=false)=>{
     clearInterval(timerRef.current);clearInterval(qTimerRef.current);
@@ -1268,8 +1437,8 @@ function TestPage({test,user,onFinish}){
   };
 
   const q=questions[current];
-  const pc=useMemo(()=>(i)=>{const s=status[i];return s==="answered"?"#22c55e":s==="review"?"#FF6A00":s==="visited"?"#ef4444":"#e5e7eb";},[status]);
-  const tc=useMemo(()=>timeLeft<300?"#ef4444":timeLeft<600?"#f59e0b":"#22c55e",[timeLeft]);
+  const pc=i=>{const s=status[i];return s==="answered"?"#22c55e":s==="review"?"#FF6A00":s==="visited"?"#ef4444":"#e5e7eb";};
+  const tc=timeLeft<300?"#ef4444":timeLeft<600?"#f59e0b":"#22c55e";
 
   if(saving) return(
     <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20}}>
@@ -1437,32 +1606,40 @@ function TestPage({test,user,onFinish}){
   );
 }
 
-const ResultPage = memo(function ResultPage({result,onViewSolutions,onBack}){
+function ResultPage({result,onViewSolutions,onBack,user}){
   const {score,total,accuracy,timeSpent,test,auto}=result;
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
   const grade=accuracy>=80?{g:"Excellent! 🏆",c:"#22c55e"}:accuracy>=60?{g:"Good Job! 🎯",c:"#f59e0b"}:{g:"Keep Going! 📚",c:"#ef4444"};
+  const [showConfetti,setShowConfetti]=useState(accuracy>=80);
+  const isMobile=window.innerWidth<=768;
   const timeSorted=result.questions.map((q,i)=>({qIndex:i,qNum:i+1,text:q.question_text,timeTaken:result.qTimes[i]||0,correct:result.answers[i]===q.correct_answer,answered:!!result.answers[i]})).filter(q=>q.timeTaken>0).sort((a,b)=>b.timeTaken-a.timeTaken).slice(0,10);
   const maxTime=timeSorted[0]?.timeTaken||1;
   return(
     <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:680,margin:"0 auto"}}>
-      {auto&&<div style={{background:"#fff3cd",border:"2px solid #ffc107",borderRadius:10,padding:"10px 18px",marginBottom:20,textAlign:"center"}}>⏰ Time up! Auto-submitted.</div>}
-      <div style={{textAlign:"center",marginBottom:28}}>
-        <div style={{fontSize:56,marginBottom:10}}>{accuracy>=80?"🏆":accuracy>=60?"🎯":"📚"}</div>
-        <h1 style={{fontSize:28,fontWeight:900,color:grade.c,marginBottom:4}}>{grade.g}</h1>
-        <p style={{color:"#666"}}>{et.icon} {test.title} · {result.mode==="practice"?"🧘 Practice Mode":"⏱️ Timed Mode"}</p>
-        <div style={{marginTop:8,background:"#f0fdf4",borderRadius:10,padding:"6px 16px",display:"inline-block",border:"1px solid #86efac"}}>
-          <span style={{fontSize:12,color:"#16a34a",fontWeight:700}}>☁️ Results saved to your cloud account</span>
-        </div>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"repeat(2,1fr)":"repeat(2,1fr)",gap:10,marginBottom:20}}>
-        {[{l:"Score",v:`${score}/${total}`,i:"📝"},{l:"Accuracy",v:`${accuracy}%`,i:"🎯"},{l:"Time Spent",v:fmtT(timeSpent),i:"⏱️"},{l:"Difficulty",v:(test.difficulty||"Mixed").toUpperCase(),i:"💪"}].map(item=>(
-          <div key={item.l} style={{background:"#fff",border:"2px solid #f0f0f0",borderRadius:14,padding:"20px 16px",textAlign:"center"}}>
-            <div style={{fontSize:26,marginBottom:6}}>{item.i}</div>
-            <div style={{fontSize:22,fontWeight:900,color:et.color}}>{item.v}</div>
-            <div style={{fontSize:12,color:"#888",marginTop:3}}>{item.l}</div>
+      <Confetti active={showConfetti} onDone={()=>setShowConfetti(false)}/>
+      {auto&&<div style={{background:"#1a1200",border:"1px solid #f59e0b40",borderRadius:10,padding:"10px 18px",marginBottom:16,textAlign:"center",color:"#f59e0b",fontWeight:600}}>⏰ Time up! Auto-submitted.</div>}
+      {/* Animated score hero */}
+      <div style={{background:"linear-gradient(135deg,#0d0d0d,#1a0800)",borderRadius:20,padding:"24px 20px",marginBottom:16,border:`1px solid ${et.color}30`}}>
+        <div style={{display:"flex",alignItems:"center",gap:20,flexWrap:"wrap"}}>
+          <ScoreRing score={score} total={total} size={window.innerWidth<=768?100:120}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:window.innerWidth<=768?20:26,fontWeight:900,color:grade.c,marginBottom:4}}>{grade.g}</div>
+            <div style={{color:"#666",fontSize:12,marginBottom:12}}>{et.icon} {test.title} · {result.mode==="practice"?"🧘 Practice":"⏱️ Timed"}</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[{l:"Time",v:fmtT(timeSpent),c:"#f59e0b"},{l:"Level",v:(test.difficulty||"mixed").toUpperCase(),c:DCOL[test.difficulty]||"#888"}].map(s=>(
+                <div key={s.l} style={{background:"rgba(255,255,255,0.05)",borderRadius:10,padding:"7px 12px",border:"1px solid rgba(255,255,255,0.08)"}}>
+                  <div style={{fontWeight:800,fontSize:14,color:s.c}}>{s.v}</div>
+                  <div style={{fontSize:10,color:"#555",marginTop:1}}>{s.l}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+        {accuracy>=80&&<div style={{marginTop:10,fontSize:12,color:"#22c55e",fontWeight:600}}>🎉 Outstanding! Confetti earned!</div>}
+        <div style={{marginTop:8,background:"rgba(34,197,94,0.08)",borderRadius:8,padding:"5px 14px",display:"inline-block"}}>
+          <span style={{fontSize:11,color:"#22c55e",fontWeight:700}}>☁️ Saved to cloud</span>
+        </div>
+      </div>      </div>
       <div style={{background:"#fff",borderRadius:14,padding:22,marginBottom:20,border:"2px solid #f0f0f0"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontWeight:700}}>Performance</span><span style={{color:et.color,fontWeight:800}}>{accuracy}%</span></div>
         <div style={{background:"#f0f0f0",borderRadius:8,height:12,overflow:"hidden"}}><div style={{height:"100%",borderRadius:8,width:`${accuracy}%`,background:`linear-gradient(90deg,${et.color},${et.color}cc)`,transition:"width 1s ease"}}/></div>
@@ -1501,19 +1678,19 @@ const ResultPage = memo(function ResultPage({result,onViewSolutions,onBack}){
       </div>
     </div>
   );
-});
+}
 
 // ─── SOLUTIONS PAGE ───────────────────────────────────────────────────────────
-const SolutionsPage = memo(function SolutionsPage({result,onBack}){
+function SolutionsPage({result,onBack}){
   const {questions,answers}=result;
   const et=EXAM_TYPES.find(e=>e.id===result.test.examType)||EXAM_TYPES[0];
   const [filter,setFilter]=useState("all");
-  const filtered=useMemo(()=>questions.filter((q,i)=>{
+  const filtered=questions.filter((q,i)=>{
     if(filter==="correct") return answers[i]===q.correct_answer;
     if(filter==="wrong")   return answers[i]&&answers[i]!==q.correct_answer;
     if(filter==="skipped") return !answers[i];
     return true;
-  }),[questions,answers,filter]);
+  });
   return(
     <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 16px 32px":"80px 40px 40px",maxWidth:800,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:22}}>
@@ -1555,7 +1732,7 @@ const SolutionsPage = memo(function SolutionsPage({result,onBack}){
       </div>
     </div>
   );
-});
+}
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function DashboardPage({user,setPage}){
@@ -1576,14 +1753,9 @@ function DashboardPage({user,setPage}){
     return unsub;
   },[user]);
 
-  const {total,avgAcc,avgTime}=useMemo(()=>{
-    const total=attempts.length;
-    return{
-      total,
-      avgAcc:total?Math.round(attempts.reduce((a,r)=>a+(r.accuracy||0),0)/total):0,
-      avgTime:total?Math.round(attempts.reduce((a,r)=>a+(r.timeSpent||0),0)/total):0,
-    };
-  },[attempts]);
+  const total=attempts.length;
+  const avgAcc=total?Math.round(attempts.reduce((a,r)=>a+(r.accuracy||0),0)/total):0;
+  const avgTime=total?Math.round(attempts.reduce((a,r)=>a+(r.timeSpent||0),0)/total):0;
   const isPaid=settings.contentMode==="paid";
 
   return(
@@ -1610,7 +1782,10 @@ function DashboardPage({user,setPage}){
         </div>
       </div>
 
-      {isPaid&&!userAccess&&(
+      
+      {/* Streak */}
+      <StreakWidget userId={user?.uid}/>
+{isPaid&&!userAccess&&(
         <div style={{background:"#fff3cd",border:"2px solid #ffc107",borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",gap:12,alignItems:"center"}}>
           <span style={{fontSize:26}}>🔒</span>
           <div><div style={{fontWeight:800,marginBottom:2}}>Access not enabled</div><div style={{fontSize:13,color:"#666"}}>Contact Rank Achievers admin to unlock all content.</div></div>
@@ -1761,7 +1936,7 @@ function DashboardPage({user,setPage}){
 }
 
 // ─── LEADERBOARD ─────────────────────────────────────────────────────────────
-const LeaderboardPage = memo(function LeaderboardPage(){
+function LeaderboardPage(){
   const [allAttempts,setAllAttempts]=useState([]);
   const [loading,setLoading]=useState(true);
   const [examFilter,setExamFilter]=useState("all");
@@ -1788,11 +1963,13 @@ const LeaderboardPage = memo(function LeaderboardPage(){
     return unsub;
   },[]);
 
-  // Build leaderboard: best attempt per student per exam — memoized, only recalculates when data/filters change
-  const leaders=useMemo(()=>{
-    let filtered=allAttempts;
-    if(examFilter!=="all") filtered=filtered.filter(a=>a.examType===examFilter);
-    if(diffFilter!=="all") filtered=filtered.filter(a=>a.difficulty===diffFilter);
+  // Build leaderboard: best attempt per student per exam
+  const buildLeaderboard=(attempts,examF,diffF)=>{
+    let filtered=attempts;
+    if(examF!=="all") filtered=filtered.filter(a=>a.examType===examF);
+    if(diffF!=="all") filtered=filtered.filter(a=>a.difficulty===diffF);
+
+    // Best attempt per user (highest accuracy, then score, then fastest time)
     const best={};
     filtered.forEach(a=>{
       const key=a.userId;
@@ -1804,10 +1981,13 @@ const LeaderboardPage = memo(function LeaderboardPage(){
         ||((a.accuracy||0)===(prev.accuracy||0)&&(a.score||0)===(prev.score||0)&&(a.timeSpent||9999)<(prev.timeSpent||9999))
       ){best[key]=a;}
     });
+
     return Object.values(best)
       .sort((a,b)=>(b.accuracy||0)-(a.accuracy||0)||(b.score||0)-(a.score||0)||(a.timeSpent||9999)-(b.timeSpent||9999))
       .slice(0,20);
-  },[allAttempts,examFilter,diffFilter]);
+  };
+
+  const leaders=buildLeaderboard(allAttempts,examFilter,diffFilter);
   const isMobile=window.innerWidth<=768;
 
   return(
@@ -1911,7 +2091,7 @@ const LeaderboardPage = memo(function LeaderboardPage(){
       </div>
     </div>
   );
-});
+}
 
 // ─── PROFILE PAGE ────────────────────────────────────────────────────────────
 function ProfilePage({user,setUser,setPage}){
@@ -2010,16 +2190,16 @@ function AdminPage(){
     return unsub;
   },[]);
 
-  const toggleMode=useCallback(async()=>{
+  const toggleMode=async()=>{
     const nm={...settings,contentMode:settings.contentMode==="free"?"paid":"free"};
     setSettingsState(nm);await setSettings(nm);
-  },[settings]);
+  };
 
-  const toggleAccess=useCallback(async(uid,current)=>{
+  const toggleAccess=async(uid,current)=>{
     const newVal=!current;
     setAccess(p=>({...p,[uid]:newVal}));
     await updateDoc(doc(db,"users",uid),{accessEnabled:newVal});
-  },[]);
+  };
 
   // Questions
   const [examType,setExamType]=useState("ssc");
@@ -2049,15 +2229,8 @@ function AdminPage(){
   const [se,setSe]=useState({});
   const [sOk,setSok]=useState(false);
   const [search,setSearch]=useState("");
-  const [searchDebounced,setSearchDebounced]=useState("");
   const [cred,setCred]=useState(null);
   const [spw,setSpw]=useState(false);const [scw,setScw]=useState(false);
-
-  // Debounce student search
-  useEffect(()=>{
-    const t=setTimeout(()=>setSearchDebounced(search),300);
-    return()=>clearTimeout(t);
-  },[search]);
 
   const createStu=async()=>{
     const e={};
@@ -2292,23 +2465,16 @@ function AdminPage(){
   const [qTopicFilter,setQTopicFilter]=useState("");
   const [qDiffFilter,setQDiffFilter]=useState("");
 
-  // Debounce qSearch so filtering doesn't fire on every keystroke (300ms delay)
-  const [qSearchDebounced,setQSearchDebounced]=useState("");
-  useEffect(()=>{
-    const t=setTimeout(()=>setQSearchDebounced(qSearch),300);
-    return()=>clearTimeout(t);
-  },[qSearch]);
-
-  const filteredQs=useMemo(()=>allQuestions.filter(q=>{
+  const filteredQs=allQuestions.filter(q=>{
     const matchExam=!qExamFilter||q.examType===qExamFilter;
     const matchTopic=!qTopicFilter||q.topicId===qTopicFilter||q.topicName===qTopicFilter;
     const matchDiff=!qDiffFilter||q.difficulty===qDiffFilter;
-    const matchSearch=!qSearchDebounced||
-      q.question_text?.toLowerCase().includes(qSearchDebounced.toLowerCase())||
-      q.topicName?.toLowerCase().includes(qSearchDebounced.toLowerCase())||
-      q.testTitle?.toLowerCase().includes(qSearchDebounced.toLowerCase());
+    const matchSearch=!qSearch||
+      q.question_text?.toLowerCase().includes(qSearch.toLowerCase())||
+      q.topicName?.toLowerCase().includes(qSearch.toLowerCase())||
+      q.testTitle?.toLowerCase().includes(qSearch.toLowerCase());
     return matchExam&&matchTopic&&matchDiff&&matchSearch;
-  }),[allQuestions,qExamFilter,qTopicFilter,qDiffFilter,qSearchDebounced]);
+  });
 
   // Notices
   const [dbNotices,setDbNotices]=useState([]);
@@ -2452,11 +2618,8 @@ function AdminPage(){
     }finally{setUpLoading(false);}
   };
 
-  const filtStu=useMemo(()=>students.filter(s=>
-    s.name?.toLowerCase().includes(searchDebounced.toLowerCase())||
-    s.email?.toLowerCase().includes(searchDebounced.toLowerCase())
-  ),[students,searchDebounced]);
-  const TABS=useMemo(()=>[{id:"students",l:"👥 Students"},{id:"exams",l:"🎯 Exam Types"},{id:"banners",l:"🖼️ Banners"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}],[]);
+  const filtStu=students.filter(s=>s.name?.toLowerCase().includes(search.toLowerCase())||s.email?.toLowerCase().includes(search.toLowerCase()));
+  const TABS=[{id:"students",l:"👥 Students"},{id:"exams",l:"🎯 Exam Types"},{id:"banners",l:"🖼️ Banners"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"settings",l:"⚙️ Settings"}];
 
   return(
     <div style={{paddingTop:80,padding:window.innerWidth<=768?"70px 14px 32px":"80px 28px 40px",maxWidth:1000,margin:"0 auto"}}>
@@ -2612,7 +2775,7 @@ function AdminPage(){
                 {adminBanners.map((b,i)=>(
                   <div key={b.id} style={{borderRadius:12,overflow:"hidden",border:"2px solid #f0f0f0"}}>
                     <div style={{background:b.bgColor||"#FF6A00",padding:"12px 16px",position:"relative",overflow:"hidden",minHeight:60}}>
-                      {b.imageUrl&&<img src={b.imageUrl} alt="" loading="lazy" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.35}}/>}
+                      {b.imageUrl&&<img src={b.imageUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.35}}/>}
                       <div style={{position:"relative"}}>
                         {b.badge&&<div style={{fontSize:9,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:3}}>{b.badge}</div>}
                         <div style={{fontWeight:800,color:"#fff",fontSize:13}}>{b.title}</div>
@@ -3357,7 +3520,9 @@ function AdminPage(){
 }
 
 // ─── CSS ANIMATION ────────────────────────────────────────────────────────────
-// @keyframes spin is defined in ra-hero-css above
+const spinStyle = document.createElement("style");
+spinStyle.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
+document.head.appendChild(spinStyle);
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App(){
@@ -3398,7 +3563,7 @@ export default function App(){
     return unsub;
   },[]);
 
-  // Redirect after login + show notice modal
+  // Redirect after login
   useEffect(()=>{
     if(justLoggedIn && fbUser){
       clearJustLoggedIn();
@@ -3406,27 +3571,26 @@ export default function App(){
         setPage("admin");
       } else {
         setPage("home");
-        // Show notice modal to student if there are notices
-        if(notices.length>0) setShowNoticeModal(true);
+        if(notices.length>0) setTimeout(()=>setShowNoticeModal(true),500);
       }
     }
-  },[justLoggedIn, fbUser, notices]);
+  },[justLoggedIn, fbUser]);
 
-  const handleLogin = useCallback(() => {
+  const handleLogin = () => {
     // Redirect handled by justLoggedIn effect above
-  }, []);
+  };
 
-  const handleStartTest = useCallback(test => {
+  const handleStartTest = test => {
     if(!fbUser){ setPage("auth"); return; }
     setActiveTest(test);
     setTestResult(null);
     setPage("test");
-  }, [fbUser]);
+  };
 
-  const handleFinish = useCallback(result => {
+  const handleFinish = result => {
     setTestResult(result);
     setPage("result");
-  }, []);
+  };
 
   // ── Loading screen ──
   if(fbUser === undefined){
@@ -3461,16 +3625,244 @@ export default function App(){
 
       {showNoticeModal && notices.length>0 && <NoticeModal notices={notices} onClose={()=>setShowNoticeModal(false)}/>}
       {showNotifPanel && <NotifPanel notices={notices} onClose={()=>setShowNotifPanel(false)}/>}
+      <PageTransition pageKey={page}>
       {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType} banners={banners} examTypes={examTypes} notices={notices} setShowNoticeModal={setShowNoticeModal}/>}
       {page==="auth"      && !fbUser      && <AuthPage    onLogin={handleLogin}/>}
       {page==="auth"      && fbUser       && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
       {page==="tests"     && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType} examTypes={examTypes}/>}
-      {page==="result"    && testResult   && <ResultPage    result={testResult} onViewSolutions={()=>setPage("solutions")} onBack={()=>setPage("tests")}/>}
+      {page==="result"    && testResult   && <ResultPage    result={testResult} onViewSolutions={()=>setPage("solutions")} onBack={()=>setPage("tests")} user={fbUser}/>}
       {page==="solutions" && testResult   && <SolutionsPage result={testResult} onBack={()=>setPage("result")}/>}
       {page==="dashboard" && fbUser       && <DashboardPage user={fbUser} setPage={setPage}/>}
       {page==="leaderboard"               && <LeaderboardPage/>}
       {page==="profile"   && fbUser       && <ProfilePage   user={fbUser} setUser={()=>{}} setPage={setPage}/>}
       {page==="admin"     && fbUser?.role==="admin" && <AdminPage/>}
+      </PageTransition>
     </div>
   );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// ENHANCEMENT PACK — Glassmorphism · Parallax · Charts · Theme · Confetti
+// Streak · Animated Results · Page Transitions
+// ════════════════════════════════════════════════════════════════════════════
+
+// ─── THEME CONTEXT ────────────────────────────────────────────────────────────
+const ThemeContext = React.createContext({theme:"dark",toggle:()=>{}});
+
+function ThemeProvider({children}){
+  const [theme,setTheme]=useState(()=>localStorage.getItem("ra_theme")||"dark");
+  const toggle=()=>setTheme(t=>{const n=t==="dark"?"light":"dark";localStorage.setItem("ra_theme",n);return n;});
+  const vars=theme==="dark"?{
+    "--bg":"#000","--bg2":"#0d0d0d","--bg3":"#161616","--bg4":"#1e1e1e",
+    "--text":"#fff","--text2":"#aaa","--text3":"#555",
+    "--border":"rgba(255,255,255,0.08)","--border2":"rgba(255,255,255,0.14)",
+    "--card":"rgba(255,255,255,0.06)","--glass":"rgba(255,255,255,0.05)"
+  }:{
+    "--bg":"#f8f8f8","--bg2":"#fff","--bg3":"#f0f0f0","--bg4":"#e8e8e8",
+    "--text":"#000","--text2":"#444","--text3":"#888",
+    "--border":"rgba(0,0,0,0.08)","--border2":"rgba(0,0,0,0.14)",
+    "--card":"rgba(255,255,255,0.9)","--glass":"rgba(255,255,255,0.8)"
+  };
+  return(
+    <ThemeContext.Provider value={{theme,toggle}}>
+      <div style={{...vars,minHeight:"100vh",background:"var(--bg)",color:"var(--text)",transition:"background .3s,color .3s"}}>
+        {children}
+      </div>
+    </ThemeContext.Provider>
+  );
+}
+
+// ─── PARALLAX HOOK ─────────────────────────────────────────────────────────────
+function useParallax(){
+  const [pos,setPos]=useState({x:0.5,y:0.5});
+  useEffect(()=>{
+    const move=e=>setPos({x:e.clientX/window.innerWidth,y:e.clientY/window.innerHeight});
+    window.addEventListener("mousemove",move);
+    return()=>window.removeEventListener("mousemove",move);
+  },[]);
+  return pos;
+}
+
+// ─── PAGE TRANSITION ───────────────────────────────────────────────────────────
+function PageTransition({children,pageKey}){
+  const [show,setShow]=useState(false);
+  const [content,setContent]=useState(children);
+  const prevKey=useRef(pageKey);
+
+  useEffect(()=>{
+    if(pageKey!==prevKey.current){
+      setShow(false);
+      const t=setTimeout(()=>{setContent(children);setShow(true);prevKey.current=pageKey;},180);
+      return()=>clearTimeout(t);
+    } else {
+      setShow(true);
+    }
+  },[pageKey,children]);
+
+  return(
+    <div style={{opacity:show?1:0,transform:show?"translateY(0)":"translateY(14px)",transition:"opacity .25s ease,transform .25s ease"}}>
+      {content}
+    </div>
+  );
+}
+
+// ─── CONFETTI ─────────────────────────────────────────────────────────────────
+function Confetti({active,onDone}){
+  const [particles,setParticles]=useState([]);
+  useEffect(()=>{
+    if(!active) return;
+    const cols=["#FF6A00","#ff9a00","#22c55e","#1d4ed8","#f59e0b","#ec4899","#8b5cf6","#fff"];
+    const ps=Array.from({length:80},(_,i)=>({
+      id:i,x:Math.random()*100,y:-10,
+      vx:(Math.random()-0.5)*3,vy:Math.random()*4+2,
+      color:cols[Math.floor(Math.random()*cols.length)],
+      size:Math.random()*8+4,
+      rotation:Math.random()*360,
+      shape:Math.random()>0.5?"rect":"circle"
+    }));
+    setParticles(ps);
+    const iv=setInterval(()=>setParticles(p=>p.map(c=>({...c,x:c.x+c.vx,y:c.y+c.vy,vy:c.vy+0.15,rotation:c.rotation+5})).filter(c=>c.y<110)),16);
+    const t=setTimeout(()=>{clearInterval(iv);setParticles([]);onDone&&onDone();},3500);
+    return()=>{clearInterval(iv);clearTimeout(t);};
+  },[active]);
+
+  if(!particles.length) return null;
+  return(
+    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:9999,overflow:"hidden"}}>
+      {particles.map(p=>(
+        <div key={p.id} style={{position:"absolute",left:p.x+"%",top:p.y+"%",width:p.size,height:p.shape==="rect"?p.size*0.5:p.size,borderRadius:p.shape==="circle"?"50%":2,background:p.color,transform:`rotate(${p.rotation}deg)`,opacity:p.y>80?1-(p.y-80)/30:1}}/>
+      ))}
+    </div>
+  );
+}
+
+// ─── ANIMATED SCORE RING ───────────────────────────────────────────────────────
+function ScoreRing({score,total,size=120,stroke=10}){
+  const [displayed,setDisplayed]=useState(0);
+  const pct=Math.round(score/total*100);
+  const R=size/2-stroke;
+  const C=2*Math.PI*R;
+  useEffect(()=>{
+    let start=null;
+    const dur=1200;
+    const step=ts=>{
+      if(!start) start=ts;
+      const p=Math.min((ts-start)/dur,1);
+      setDisplayed(Math.round(pct*p));
+      if(p<1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  },[pct]);
+  const color=pct>=80?"#22c55e":pct>=60?"#f59e0b":"#ef4444";
+  return(
+    <div style={{position:"relative",width:size,height:size,flexShrink:0}}>
+      <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
+        <circle cx={size/2} cy={size/2} r={R} fill="none" stroke="#1e1e1e" strokeWidth={stroke}/>
+        <circle cx={size/2} cy={size/2} r={R} fill="none" stroke={color} strokeWidth={stroke}
+          strokeDasharray={`${C*displayed/100} ${C}`} strokeLinecap="round"
+          style={{transition:"stroke-dasharray .05s linear"}}/>
+      </svg>
+      <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+        <div style={{fontSize:size*0.22,fontWeight:900,color}}>{displayed}%</div>
+        <div style={{fontSize:size*0.1,color:"#555"}}>{score}/{total}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── STREAK WIDGET ─────────────────────────────────────────────────────────────
+function StreakWidget({userId}){
+  const [streak,setStreak]=useState({current:0,best:0});
+
+  useEffect(()=>{
+    if(!userId) return;
+    getDoc(doc(db,"users",userId)).then(d=>{
+      if(d.exists()){
+        const data=d.data();
+        const today=new Date().toDateString();
+        const lastActive=data.lastActiveDate;
+        const yesterday=new Date(Date.now()-86400000).toDateString();
+        let current=data.currentStreak||0;
+        if(lastActive===today){
+          // already counted today
+        } else if(lastActive===yesterday){
+          current+=1;
+          updateDoc(doc(db,"users",userId),{currentStreak:current,lastActiveDate:today,bestStreak:Math.max(current,data.bestStreak||0)});
+        } else if(lastActive!==today){
+          current=1;
+          updateDoc(doc(db,"users",userId),{currentStreak:1,lastActiveDate:today});
+        }
+        setStreak({current,best:data.bestStreak||current});
+      }
+    });
+  },[userId]);
+
+  if(!streak.current) return null;
+  const milestones=[{d:7,l:"Bronze",e:"🥉"},{d:30,l:"Silver",e:"🥈"},{d:100,l:"Gold",e:"🥇"}];
+  const badge=milestones.filter(m=>streak.current>=m.d).pop();
+
+  return(
+    <div style={{background:"linear-gradient(135deg,#1a0800,#2d1200)",borderRadius:16,padding:"14px 18px",border:"1px solid #FF6A0030",display:"flex",alignItems:"center",gap:14}}>
+      <div style={{fontSize:32,animation:"firePulse 1.5s ease-in-out infinite"}}>🔥</div>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:900,fontSize:16,color:"#FF6A00"}}>{streak.current} Day Streak!</div>
+        <div style={{fontSize:11,color:"#666",marginTop:2}}>Best: {streak.best} days {badge?badge.e:""}</div>
+        {/* Streak bar */}
+        <div style={{display:"flex",gap:3,marginTop:8}}>
+          {Array.from({length:7},(_,i)=>(
+            <div key={i} style={{flex:1,height:4,borderRadius:2,background:i<(streak.current%7)||streak.current>=7?"#FF6A00":"#222",transition:"background .3s"}}/>
+          ))}
+        </div>
+      </div>
+      {badge&&<div style={{textAlign:"center"}}><div style={{fontSize:24}}>{badge.e}</div><div style={{fontSize:9,color:"#888",marginTop:2}}>{badge.l}</div></div>}
+    </div>
+  );
+}
+
+// ─── GLASS CARD COMPONENT ──────────────────────────────────────────────────────
+function GlassCard({children,style={},glow=false,color="#FF6A00"}){
+  return(
+    <div style={{
+      background:"rgba(255,255,255,0.05)",
+      backdropFilter:"blur(16px)",
+      WebkitBackdropFilter:"blur(16px)",
+      border:"1px solid rgba(255,255,255,0.1)",
+      borderRadius:20,
+      boxShadow:glow?`0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px ${color}20, inset 0 1px 0 rgba(255,255,255,0.1)`:"0 8px 32px rgba(0,0,0,0.25)",
+      ...style
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// ─── THEME TOGGLE BUTTON (add to Navbar) ──────────────────────────────────────
+function ThemeToggle(){
+  const {theme,toggle}=React.useContext(ThemeContext);
+  return(
+    <button onClick={toggle} title="Toggle theme" style={{background:"none",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,padding:"5px 12px",cursor:"pointer",fontSize:14,color:theme==="dark"?"#888":"#555",display:"flex",alignItems:"center",gap:6,transition:"all .2s"}}
+      onMouseOver={e=>e.currentTarget.style.borderColor="#FF6A00"}
+      onMouseOut={e=>e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"}>
+      {theme==="dark"?"☀️ Light":"🌙 Dark"}
+    </button>
+  );
+}
+
+// ─── CSS for Streak + Glass animations ────────────────────────────────────────
+const _enhStyle=document.createElement("style");
+_enhStyle.id="ra-enh-css";
+_enhStyle.textContent=`
+  @keyframes firePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12)} }
+  @keyframes glassShimmer { from{background-position:-200% 0} to{background-position:200% 0} }
+  @keyframes countUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes ringFill { from{stroke-dasharray:0 1000} }
+  .glass-hover:hover {
+    background: rgba(255,255,255,0.09) !important;
+    border-color: rgba(255,106,0,0.3) !important;
+    transform: translateY(-2px);
+    transition: all .25s ease !important;
+  }
+  .page-fade { animation: raFadeUp .3s ease both; }
+`;
+if(!document.getElementById("ra-enh-css")) document.head.appendChild(_enhStyle);
+
