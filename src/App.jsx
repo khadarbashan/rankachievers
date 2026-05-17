@@ -1821,202 +1821,203 @@ function ExamModeModal({test,onConfirm,onCancel}){
   const [timed,setTimed]=useState(null);
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
 
-  // Lock body scroll while modal is open
   useEffect(()=>{
     const prev=document.body.style.overflow;
     document.body.style.overflow="hidden";
-    return()=>{ document.body.style.overflow=prev; };
+    return()=>{document.body.style.overflow=prev;};
   },[]);
 
-  // Handle Escape key
   useEffect(()=>{
-    const h=(e)=>{ if(e.key==="Escape") onCancel(); };
+    const h=e=>{if(e.key==="Escape")onCancel();};
     window.addEventListener("keydown",h);
     return()=>window.removeEventListener("keydown",h);
   },[onCancel]);
 
-  const modal=(
-    <div
-      onClick={(e)=>{ if(e.target===e.currentTarget) onCancel(); }}
-      style={{
-        position:"fixed",
-        top:0,left:0,right:0,bottom:0,
-        background:"rgba(0,0,0,0.88)",
-        zIndex:999999,
-        display:"flex",
-        alignItems:"center",
-        justifyContent:"center",
-        padding:"20px",
-        backdropFilter:"blur(6px)",
-        WebkitBackdropFilter:"blur(6px)",
-      }}
-    >
+  return(
+    <div onClick={e=>{if(e.target===e.currentTarget)onCancel();}} style={{
+      position:"fixed",top:0,left:0,right:0,bottom:0,
+      background:"rgba(0,0,0,0.88)",zIndex:999999,
+      display:"flex",alignItems:"center",justifyContent:"center",
+      padding:"20px",backdropFilter:"blur(6px)",WebkitBackdropFilter:"blur(6px)",
+    }}>
       <div style={{
-        background:"#111",
-        border:"1px solid rgba(255,255,255,0.12)",
-        borderRadius:24,
-        padding:window.innerWidth<=768?"24px 20px":36,
-        maxWidth:460,
-        width:"100%",
-        boxShadow:"0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,106,0,0.15)",
+        background:"#111",border:"1px solid rgba(255,255,255,0.12)",
+        borderRadius:24,padding:window.innerWidth<=768?"24px 20px":"36px",
+        maxWidth:460,width:"100%",
+        boxShadow:"0 32px 80px rgba(0,0,0,0.9)",
         textAlign:"center",
-        animation:"raPop .25s cubic-bezier(.4,0,.2,1) both",
       }}>
         <div style={{fontSize:42,marginBottom:10}}>📋</div>
-        <h2 style={{fontWeight:900,fontSize:20,marginBottom:4,color:"#fff",letterSpacing:"-0.3px"}}>{test.title}</h2>
+        <h2 style={{fontWeight:900,fontSize:20,marginBottom:4,color:"#fff"}}>{test.title}</h2>
         <p style={{color:"rgba(255,255,255,0.4)",fontSize:13,marginBottom:24}}>{et.icon} {et.label} · 30 Questions</p>
-        <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"rgba(255,255,255,0.6)",letterSpacing:"0.05em"}}>CHOOSE EXAM MODE</div>
-        <div style={{display:"flex",gap:12,marginBottom:24,flexDirection:window.innerWidth<=480?"column":"row"}}>
+        <div style={{fontWeight:700,fontSize:12,marginBottom:12,color:"rgba(255,255,255,0.4)",letterSpacing:"0.1em"}}>CHOOSE EXAM MODE</div>
+        <div style={{display:"flex",gap:12,marginBottom:24}}>
           {[
-            {val:true, icon:"⏱️",title:"Timed Mode",   desc:"30-min countdown · Auto-submit on timeout",col:"#FF6A00"},
-            {val:false,icon:"🧘",title:"Practice Mode", desc:"No time limit · Focus on learning",         col:"#22c55e"},
+            {val:true,icon:"⏱️",title:"Timed Mode",desc:"30-min countdown · Auto-submit",col:"#FF6A00"},
+            {val:false,icon:"🧘",title:"Practice Mode",desc:"No time limit · Focus on learning",col:"#22c55e"},
           ].map(opt=>(
-            <div key={String(opt.val)}
-              onClick={()=>setTimed(opt.val)}
-              style={{
-                flex:1,padding:"18px 14px",borderRadius:16,cursor:"pointer",
-                border:`1.5px solid ${timed===opt.val?opt.col:"rgba(255,255,255,0.1)"}`,
-                background:timed===opt.val?`${opt.col}18`:"rgba(255,255,255,0.04)",
-                transition:"all .2s cubic-bezier(.4,0,.2,1)",
-                boxShadow:timed===opt.val?`0 0 0 1px ${opt.col}40, 0 8px 24px ${opt.col}20`:"none",
-              }}
-            >
+            <div key={String(opt.val)} onClick={()=>setTimed(opt.val)} style={{
+              flex:1,padding:"18px 12px",borderRadius:16,cursor:"pointer",
+              border:`1.5px solid ${timed===opt.val?opt.col:"rgba(255,255,255,0.1)"}`,
+              background:timed===opt.val?opt.col+"18":"rgba(255,255,255,0.04)",
+              transition:"all .2s",
+            }}>
               <div style={{fontSize:30,marginBottom:8}}>{opt.icon}</div>
               <div style={{fontWeight:800,fontSize:14,color:timed===opt.val?opt.col:"#fff",marginBottom:6}}>{opt.title}</div>
               <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.5}}>{opt.desc}</div>
-              {timed===opt.val&&(
-                <div style={{marginTop:10,background:opt.col,color:"#fff",borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:700,display:"inline-block",boxShadow:`0 4px 12px ${opt.col}50`}}>Selected ✓</div>
-              )}
+              {timed===opt.val&&<div style={{marginTop:10,background:opt.col,color:"#fff",borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:700,display:"inline-block"}}>Selected ✓</div>}
             </div>
           ))}
         </div>
         <div style={{display:"flex",gap:10}}>
-          <button
-            onClick={onCancel}
-            style={{
-              flex:1,padding:"13px 0",borderRadius:12,
-              border:"1.5px solid rgba(255,255,255,0.12)",
-              background:"rgba(255,255,255,0.06)",
-              color:"rgba(255,255,255,0.7)",
-              fontWeight:700,fontSize:14,cursor:"pointer",
-              transition:"all .2s",
-            }}
-            onMouseOver={e=>{e.currentTarget.style.background="rgba(255,255,255,0.1)";}}
-            onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,0.06)";}}
-          >Cancel</button>
-          <button
-            onClick={()=>timed!==null&&onConfirm(timed)}
-            disabled={timed===null}
-            style={{
-              flex:2,padding:"13px 0",borderRadius:12,border:"none",
-              background:timed===null
-                ?"rgba(255,255,255,0.06)"
-                :timed
-                  ?"linear-gradient(135deg,#FF6A00,#ff9a00)"
-                  :"linear-gradient(135deg,#22c55e,#16a34a)",
-              color:timed===null?"rgba(255,255,255,0.2)":"#fff",
-              fontWeight:800,fontSize:14,
-              cursor:timed===null?"not-allowed":"pointer",
-              transition:"all .2s",
-              boxShadow:timed===null?"none":timed?"0 4px 20px rgba(255,106,0,0.4)":"0 4px 20px rgba(34,197,94,0.4)",
-            }}
-          >
-            {timed===null?"Select a mode →":timed?"Start Timed Exam →":"Start Practice →"}
+          <button onClick={onCancel} style={{
+            flex:1,padding:"13px 0",borderRadius:12,
+            border:"1.5px solid rgba(255,255,255,0.12)",
+            background:"rgba(255,255,255,0.06)",
+            color:"rgba(255,255,255,0.7)",fontWeight:700,fontSize:14,cursor:"pointer",
+          }}>Cancel</button>
+          <button onClick={()=>timed!==null&&onConfirm(timed)} disabled={timed===null} style={{
+            flex:2,padding:"13px 0",borderRadius:12,border:"none",
+            background:timed===null?"rgba(255,255,255,0.06)":timed?"linear-gradient(135deg,#FF6A00,#ff9a00)":"linear-gradient(135deg,#22c55e,#16a34a)",
+            color:timed===null?"rgba(255,255,255,0.2)":"#fff",
+            fontWeight:800,fontSize:14,cursor:timed===null?"not-allowed":"pointer",
+          }}>
+            {timed===null?"Select a mode":timed?"Start Timed Exam →":"Start Practice →"}
           </button>
         </div>
       </div>
     </div>
   );
-
-  // Render via portal into document.body — bypasses ALL stacking contexts
-  return createPortal(modal, document.body);
 }
-
 // ─── TESTS PAGE ───────────────────────────────────────────────────────────────
-function TestsPage({user,onStartTest,examType:examTypeProp,setExamType,examTypes,setPage}){
+function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
+  const [localExam,setLocalExam]=useState(examType||"ssc");
   const [selTopic,setSelTopic]=useState(null);
   const [modeModal,setModeModal]=useState(null);
   const [settings,setSettingsState]=useState({contentMode:"free"});
   const [userAccess,setUserAccess]=useState(true);
-  // Local examType so switching tabs re-renders immediately
-  const [activeExam,setActiveExam]=useState(examTypeProp||"ssc");
+  const isMobile=useMobile();
 
-  useEffect(()=>{
-    if(examTypeProp) setActiveExam(examTypeProp);
-  },[examTypeProp]);
-
-  const switchExam=(id)=>{
-    setActiveExam(id);
-    setExamType(id);
-    setSelTopic(null);
-  };
-
+  useEffect(()=>{ if(examType&&examType!==localExam) setLocalExam(examType); },[examType]);
   useEffect(()=>{
     getSettings().then(s=>setSettingsState(s));
     if(user?.uid) checkAccess(user.uid).then(a=>setUserAccess(a));
   },[user]);
 
   const ETs=examTypes||EXAM_TYPES;
-  const et=ETs.find(e=>e.id===activeExam)||ETs[0];
+  const et=ETs.find(e=>e.id===localExam)||ETs[0];
   const isPaidLocked=settings.contentMode==="paid"&&!userAccess&&user?.role!=="admin";
 
+  const switchExam=(id)=>{ setLocalExam(id); setExamType(id); setSelTopic(null); };
+
   return(
-    <div style={{paddingTop:74,padding:window.innerWidth<=768?"74px 16px 100px":"74px 40px 40px",maxWidth:1100,margin:"0 auto",minHeight:"100vh",background:"#050505"}} className={useMobile()?"ra-mobile-pb":""}>
-      {/* Exam tabs */}
-      <div style={{display:"flex",gap:window.innerWidth<=768?8:12,marginBottom:window.innerWidth<=768?16:28,flexWrap:"wrap"}}>
-        {ETs.filter(e=>e.visible!==false).map(e=>(
-          <button key={e.id} onClick={()=>switchExam(e.id)} style={{padding:"12px 24px",borderRadius:14,border:"2px solid",borderColor:activeExam===e.id?e.color:"rgba(255,255,255,0.12)",background:activeExam===e.id?e.color:"rgba(255,255,255,0.04)",color:activeExam===e.id?"#fff":"rgba(255,255,255,0.6)",fontWeight:800,fontSize:14,cursor:"pointer",boxShadow:activeExam===e.id?`0 4px 20px ${e.color}50`:"none"}}>
-            {e.icon} {e.label}<span style={{display:"block",fontSize:10,opacity:.8,marginTop:2}}>{e.fullName}</span>
-          </button>
-        ))}
-      </div>
-      {isPaidLocked&&(
-        <div style={{background:"linear-gradient(135deg,#1a1a1a,#2d1500)",borderRadius:16,padding:"22px 28px",marginBottom:28,border:"2px solid #FF6A00",display:"flex",alignItems:"center",gap:18}}>
-          <span style={{fontSize:36}}>🔒</span>
-          <div style={{flex:1}}><div style={{color:"#FF6A00",fontWeight:900,fontSize:17,marginBottom:4}}>Premium Content Locked</div><div style={{color:"#aaa",fontSize:13}}>Contact Rank Achievers admin to enable your access.</div></div>
+    <div style={{minHeight:"100vh",background:"#060608",paddingTop:64,padding:isMobile?"68px 14px 100px":"74px 36px 60px"}}>
+      <div style={{maxWidth:1100,margin:"0 auto"}}>
+
+        <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
+          {ETs.filter(e=>e.visible!==false).map(e=>(
+            <button key={e.id} onClick={()=>switchExam(e.id)} style={{
+              padding:isMobile?"9px 14px":"10px 20px",borderRadius:12,fontWeight:700,
+              fontSize:isMobile?12:13,cursor:"pointer",transition:"all .2s",
+              border:`1.5px solid ${localExam===e.id?e.color:"rgba(255,255,255,0.1)"}`,
+              background:localExam===e.id?e.color+"22":"rgba(255,255,255,0.04)",
+              color:localExam===e.id?e.color:"rgba(255,255,255,0.5)",
+              boxShadow:localExam===e.id?`0 4px 16px ${e.color}30`:"none",
+            }}>
+              {e.icon} {e.label}
+              <span style={{display:"block",fontSize:9,opacity:.7,marginTop:1}}>{e.fullName}</span>
+            </button>
+          ))}
         </div>
-      )}
-      <h2 style={{fontWeight:900,fontSize:22,marginBottom:6}}><span style={{color:et.color}}>{et.icon} {et.label}</span> Practice Tests</h2>
-      <p style={{color:"#666",marginBottom:24}}>{et.fullName} — {et.topics.length} topics · 3 levels each · Scores saved to cloud ☁️</p>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:28}}>
-        <button onClick={()=>setSelTopic(null)} style={{padding:"7px 18px",borderRadius:20,border:"2px solid",borderColor:!selTopic?et.color:"#e0e0e0",background:!selTopic?et.color:"#fff",color:!selTopic?"#fff":"#666",fontWeight:700,fontSize:12,cursor:"pointer"}}>All Topics</button>
-        {et.topics.map(t=><button key={t.id} onClick={()=>setSelTopic(t.id)} style={{padding:"7px 18px",borderRadius:20,border:"2px solid",borderColor:selTopic===t.id?et.color:"#e0e0e0",background:selTopic===t.id?et.color:"#fff",color:selTopic===t.id?"#fff":"#666",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.icon} {t.name}</button>)}
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(270px,1fr))",gap:18}}>
-        {et.topics.filter(t=>!selTopic||t.id===selTopic).flatMap(topic=>
-          DIFFS.map((diff,di)=>{
-            const testObj={id:`${topic.id}_${diff}`,topic_id:topic.id,topicName:topic.name,difficulty:diff,title:`${topic.name} – Test ${di+1}`,duration:1800,examType:et.id};
-            return(
-              <div key={testObj.id} className="ra-test-card" style={{border:"1.5px solid",borderColor:isPaidLocked?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.08)",borderRadius:20,padding:22,background:"rgba(255,255,255,0.03)",opacity:isPaidLocked?.5:1,boxShadow:"0 4px 20px rgba(0,0,0,0.3)"}}
-                onMouseOver={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor=et.color+"60";e.currentTarget.style.background="rgba(255,255,255,0.06)";}}}
-                onMouseOut={e=>{e.currentTarget.style.borderColor=isPaidLocked?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.08)";e.currentTarget.style.background="rgba(255,255,255,0.03)";}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",marginBottom:12}}>
-                  <span style={{fontSize:26}}>{topic.icon}</span>
-                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                    {isPaidLocked&&<span>🔒</span>}
-                    <span style={{padding:"4px 10px",borderRadius:20,fontSize:11,fontWeight:700,background:DBG[diff],color:DCOL[diff]}}>{diff.toUpperCase()}</span>
-                  </div>
-                </div>
-                <div style={{fontSize:11,color:et.color,fontWeight:700,marginBottom:3}}>{et.label}</div>
-                <h3 style={{fontWeight:800,fontSize:14,marginBottom:8}}>{topic.name} — Test {di+1}</h3>
-                <div style={{display:"flex",gap:12,marginBottom:16}}>
-                  <span style={{fontSize:12,color:"#666"}}>📝 30 Qs</span>
-                  <span style={{fontSize:12,color:"#666"}}>⏱️ 30 Min</span>
-                  <span style={{fontSize:12,color:"#888"}}>☁️ Cloud saved</span>
-                </div>
-                <button onClick={()=>{if(isPaidLocked){alert("Content locked. Contact admin.");return;}setModeModal(testObj);}} style={{width:"100%",padding:"10px 0",borderRadius:10,border:"none",background:isPaidLocked?"#e0e0e0":`linear-gradient(90deg,${et.color},${et.color}cc)`,color:isPaidLocked?"#999":"#fff",fontWeight:800,fontSize:13,cursor:isPaidLocked?"not-allowed":"pointer"}}>
-                  {isPaidLocked?"🔒 Locked":"Start Test →"}
-                </button>
-              </div>
-            );
-          })
+
+        {isPaidLocked&&(
+          <div style={{background:"rgba(255,106,0,0.08)",borderRadius:14,padding:"18px 22px",marginBottom:20,border:"1px solid rgba(255,106,0,0.25)",display:"flex",alignItems:"center",gap:14}}>
+            <span style={{fontSize:28}}>🔒</span>
+            <div>
+              <div style={{color:"#FF6A00",fontWeight:800,fontSize:15,marginBottom:2}}>Premium Content Locked</div>
+              <div style={{color:"rgba(255,255,255,0.4)",fontSize:12}}>Contact admin to enable access.</div>
+            </div>
+          </div>
         )}
+
+        <div style={{marginBottom:16}}>
+          <h2 style={{fontSize:isMobile?20:24,fontWeight:900,color:"#fff",margin:"0 0 4px",letterSpacing:"-0.5px"}}>
+            <span style={{color:et.color}}>{et.icon} {et.label}</span> Practice Tests
+          </h2>
+          <p style={{color:"rgba(255,255,255,0.35)",fontSize:12,margin:0}}>
+            {et.fullName} · {et.topics?.length||0} topics · 3 levels · ☁️ Cloud saved
+          </p>
+        </div>
+
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
+          <button onClick={()=>setSelTopic(null)} style={{
+            padding:"6px 14px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .2s",
+            border:`1.5px solid ${!selTopic?et.color:"rgba(255,255,255,0.1)"}`,
+            background:!selTopic?et.color+"20":"rgba(255,255,255,0.04)",
+            color:!selTopic?et.color:"rgba(255,255,255,0.4)",
+          }}>All Topics</button>
+          {(et.topics||[]).map(t=>(
+            <button key={t.id} onClick={()=>setSelTopic(t.id)} style={{
+              padding:"6px 14px",borderRadius:20,fontSize:11,fontWeight:700,cursor:"pointer",transition:"all .2s",
+              border:`1.5px solid ${selTopic===t.id?et.color:"rgba(255,255,255,0.1)"}`,
+              background:selTopic===t.id?et.color+"20":"rgba(255,255,255,0.04)",
+              color:selTopic===t.id?et.color:"rgba(255,255,255,0.4)",
+            }}>{t.icon} {t.name}</button>
+          ))}
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${isMobile?"100%":"250px"},1fr))`,gap:12}}>
+          {(et.topics||[]).filter(t=>!selTopic||t.id===selTopic).flatMap(topic=>
+            DIFFS.map((diff,di)=>{
+              const testObj={id:`${topic.id}_${diff}`,topic_id:topic.id,topicName:topic.name,difficulty:diff,title:`${topic.name} – Test ${di+1}`,duration:1800,examType:et.id};
+              return(
+                <div key={testObj.id} style={{
+                  borderRadius:16,padding:18,cursor:"pointer",
+                  background:"rgba(255,255,255,0.03)",
+                  border:`1.5px solid ${isPaidLocked?"rgba(255,255,255,0.05)":"rgba(255,255,255,0.08)"}`,
+                  opacity:isPaidLocked?0.5:1,transition:"all .25s ease",
+                }}
+                onMouseOver={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor=et.color+"60";e.currentTarget.style.background="rgba(255,255,255,0.06)";e.currentTarget.style.transform="translateY(-2px)";}}}
+                onMouseOut={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.08)";e.currentTarget.style.background="rgba(255,255,255,0.03)";e.currentTarget.style.transform="none";}}>
+
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    <div style={{width:44,height:44,borderRadius:12,flexShrink:0,background:et.color+"18",border:`1px solid ${et.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{topic.icon||et.icon}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:10,color:et.color,fontWeight:700,letterSpacing:"0.05em",marginBottom:2}}>{et.label} · Test {di+1}</div>
+                      <div style={{fontWeight:800,fontSize:15,color:"#fff",letterSpacing:"-0.2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{topic.name}</div>
+                    </div>
+                    <div style={{flexShrink:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                      {isPaidLocked&&<span style={{fontSize:12}}>🔒</span>}
+                      <span style={{padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,background:DBG[diff],color:DCOL[diff]}}>{diff.toUpperCase()}</span>
+                    </div>
+                  </div>
+
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",marginBottom:10}}>{diff.charAt(0).toUpperCase()+diff.slice(1)} Level</div>
+
+                  <div style={{display:"flex",gap:10,marginBottom:14}}>
+                    <span style={{fontSize:10,color:"rgba(255,255,255,0.3)"}}>📝 30 Qs</span>
+                    <span style={{fontSize:10,color:"rgba(255,255,255,0.3)"}}>⏱️ 30 Min</span>
+                    <span style={{fontSize:10,color:"rgba(255,255,255,0.3)"}}>☁️ Cloud</span>
+                  </div>
+
+                  <button onClick={()=>{if(isPaidLocked){alert("Content locked.");return;}setModeModal(testObj);}} style={{
+                    width:"100%",padding:"10px 0",borderRadius:10,border:"none",
+                    background:isPaidLocked?"rgba(255,255,255,0.06)":`linear-gradient(135deg,${et.color},${et.color}cc)`,
+                    color:isPaidLocked?"rgba(255,255,255,0.2)":"#fff",
+                    fontWeight:800,fontSize:13,cursor:isPaidLocked?"not-allowed":"pointer",
+                    boxShadow:isPaidLocked?"none":`0 4px 14px ${et.color}35`,transition:"all .2s",
+                  }}>{isPaidLocked?"🔒 Locked":"Start Test →"}</button>
+                </div>
+              );
+            })
+          )}
+        </div>
+
       </div>
       {modeModal&&<ExamModeModal test={modeModal} onConfirm={isTimed=>{onStartTest({...modeModal,timed:isTimed});setModeModal(null);}} onCancel={()=>setModeModal(null)}/>}
     </div>
   );
 }
-
 // ─── TEST PAGE ────────────────────────────────────────────────────────────────
 // ─── GLOBAL QUESTION GENERATOR ───────────────────────────────────────────────
 // Used by TestPage (live) AND by admin seeder (to push to Firestore)
@@ -3682,7 +3683,7 @@ function AdminPage(){
       {tab==="questions"&&(
         <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
           <div style={{display:"flex",gap:10,marginBottom:18}}>
-            {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{flex:1,padding:"11px 0",borderRadius:11,border:"2px solid",borderColor:activeExam===e.id?e.color:"rgba(255,255,255,0.12)",background:activeExam===e.id?e.color:"rgba(255,255,255,0.04)",color:activeExam===e.id?"#fff":"rgba(255,255,255,0.6)",fontWeight:800,fontSize:14,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
+            {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{flex:1,padding:"11px 0",borderRadius:11,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:800,fontSize:14,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
             {et.topics.map(t=><button key={t.id} onClick={()=>setTopicId(t.id)} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:(topicId||et.topics[0].id)===t.id?et.color:"#e0e0e0",background:(topicId||et.topics[0].id)===t.id?et.color:"#fff",color:(topicId||et.topics[0].id)===t.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.icon} {t.name}</button>)}
@@ -4111,7 +4112,7 @@ function AdminPage(){
               </div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {liveExamTypes.filter(e=>e.visible!==false).map(e=>(
-                  <button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{padding:"10px 20px",borderRadius:10,border:"2px solid",borderColor:activeExam===e.id?e.color:"rgba(255,255,255,0.12)",background:activeExam===e.id?e.color:"rgba(255,255,255,0.04)",color:activeExam===e.id?"#fff":"rgba(255,255,255,0.6)",fontWeight:700,cursor:"pointer",fontSize:13,transition:"all .2s"}}>
+                  <button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{padding:"10px 20px",borderRadius:10,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,cursor:"pointer",fontSize:13,transition:"all .2s"}}>
                     {e.icon} {e.label}
                   </button>
                 ))}
@@ -4284,6 +4285,13 @@ if(!document.getElementById("ra-spin-css")){
   spinStyle.id = "ra-spin-css";
   spinStyle.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
   document.head.appendChild(spinStyle);
+
+
+
+
+
+
+
 }
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
