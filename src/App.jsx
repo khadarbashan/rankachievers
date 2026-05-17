@@ -1818,9 +1818,17 @@ function HomePage({setPage,user,setExamType,banners=[],examTypes,notices=[],setS
 function ExamModeModal({test,onConfirm,onCancel}){
   const [timed,setTimed]=useState(null);
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
+
+  // Lock body scroll & scroll to top when modal opens
+  useEffect(()=>{
+    const prev=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    window.scrollTo({top:0,behavior:"instant"});
+    return()=>{document.body.style.overflow=prev;};
+  },[]);
   return(
-    <div style={{position:"fixed",inset:0,background:"#00000095",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:"#fff",borderRadius:24,padding:36,maxWidth:460,width:"100%",boxShadow:"0 20px 60px #00000050",textAlign:"center"}}>
+    <div style={{position:"fixed",inset:0,background:"#00000095",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:20,overflowY:"auto"}}>
+      <div style={{background:"#fff",borderRadius:24,padding:36,maxWidth:460,width:"100%",boxShadow:"0 20px 60px #00000050",textAlign:"center",margin:"auto"}}>
         <div style={{fontSize:48,marginBottom:12}}>📋</div>
         <h2 style={{fontWeight:900,fontSize:22,marginBottom:4}}>{test.title}</h2>
         <p style={{color:"#666",fontSize:14,marginBottom:28}}>{et.icon} {et.label} · 30 Questions</p>
