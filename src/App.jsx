@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "firebase/auth";
 import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, getDocs, onSnapshot, serverTimestamp, increment } from "firebase/firestore";
@@ -1820,41 +1821,115 @@ function ExamModeModal({test,onConfirm,onCancel}){
   const [timed,setTimed]=useState(null);
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
 
+  // Lock body scroll while modal is open
   useEffect(()=>{
-    // Lock scroll behind modal
     const prev=document.body.style.overflow;
     document.body.style.overflow="hidden";
-    return()=>{document.body.style.overflow=prev;};
+    return()=>{ document.body.style.overflow=prev; };
   },[]);
-  return(
-    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.85)",zIndex:99999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
-      <div style={{background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:24,padding:36,maxWidth:460,width:"100%",boxShadow:"0 32px 80px rgba(0,0,0,0.8)",textAlign:"center",position:"relative",maxHeight:"90vh",overflowY:"auto"}}>
-        <div style={{fontSize:48,marginBottom:12}}>📋</div>
-        <h2 style={{fontWeight:900,fontSize:22,marginBottom:4,color:"#fff"}}>{test.title}</h2>
-        <p style={{color:"rgba(255,255,255,0.5)",fontSize:14,marginBottom:28}}>{et.icon} {et.label} · 30 Questions</p>
-        <div style={{fontWeight:800,fontSize:16,marginBottom:14,color:"#333"}}>Choose Exam Mode</div>
-        <div style={{display:"flex",gap:14,marginBottom:28}}>
+
+  // Handle Escape key
+  useEffect(()=>{
+    const h=(e)=>{ if(e.key==="Escape") onCancel(); };
+    window.addEventListener("keydown",h);
+    return()=>window.removeEventListener("keydown",h);
+  },[onCancel]);
+
+  const modal=(
+    <div
+      onClick={(e)=>{ if(e.target===e.currentTarget) onCancel(); }}
+      style={{
+        position:"fixed",
+        top:0,left:0,right:0,bottom:0,
+        background:"rgba(0,0,0,0.88)",
+        zIndex:999999,
+        display:"flex",
+        alignItems:"center",
+        justifyContent:"center",
+        padding:"20px",
+        backdropFilter:"blur(6px)",
+        WebkitBackdropFilter:"blur(6px)",
+      }}
+    >
+      <div style={{
+        background:"#111",
+        border:"1px solid rgba(255,255,255,0.12)",
+        borderRadius:24,
+        padding:window.innerWidth<=768?"24px 20px":36,
+        maxWidth:460,
+        width:"100%",
+        boxShadow:"0 32px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,106,0,0.15)",
+        textAlign:"center",
+        animation:"raPop .25s cubic-bezier(.4,0,.2,1) both",
+      }}>
+        <div style={{fontSize:42,marginBottom:10}}>📋</div>
+        <h2 style={{fontWeight:900,fontSize:20,marginBottom:4,color:"#fff",letterSpacing:"-0.3px"}}>{test.title}</h2>
+        <p style={{color:"rgba(255,255,255,0.4)",fontSize:13,marginBottom:24}}>{et.icon} {et.label} · 30 Questions</p>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"rgba(255,255,255,0.6)",letterSpacing:"0.05em"}}>CHOOSE EXAM MODE</div>
+        <div style={{display:"flex",gap:12,marginBottom:24,flexDirection:window.innerWidth<=480?"column":"row"}}>
           {[
-            {val:true,icon:"⏱️",title:"Timed Mode",desc:"30-min countdown · Auto-submit on timeout",col:"#FF6A00"},
-            {val:false,icon:"🧘",title:"Practice Mode",desc:"No time limit · Focus on learning",col:"#22c55e"}
+            {val:true, icon:"⏱️",title:"Timed Mode",   desc:"30-min countdown · Auto-submit on timeout",col:"#FF6A00"},
+            {val:false,icon:"🧘",title:"Practice Mode", desc:"No time limit · Focus on learning",         col:"#22c55e"},
           ].map(opt=>(
-            <div key={String(opt.val)} onClick={()=>setTimed(opt.val)} style={{flex:1,padding:20,borderRadius:16,border:"1.5px solid",borderColor:timed===opt.val?opt.col:"rgba(255,255,255,0.1)",background:timed===opt.val?`${opt.col}20`:"rgba(255,255,255,0.04)",cursor:"pointer",transition:"all .2s"}}>
-              <div style={{fontSize:32,marginBottom:8}}>{opt.icon}</div>
-              <div style={{fontWeight:800,fontSize:15,color:timed===opt.val?opt.col:"#fff",marginBottom:4}}>{opt.title}</div>
-              <div style={{fontSize:12,color:"#888"}}>{opt.desc}</div>
-              {timed===opt.val&&<div style={{marginTop:8,background:opt.col,color:"#fff",borderRadius:20,padding:"3px 12px",fontSize:11,fontWeight:700,display:"inline-block"}}>Selected ✓</div>}
+            <div key={String(opt.val)}
+              onClick={()=>setTimed(opt.val)}
+              style={{
+                flex:1,padding:"18px 14px",borderRadius:16,cursor:"pointer",
+                border:`1.5px solid ${timed===opt.val?opt.col:"rgba(255,255,255,0.1)"}`,
+                background:timed===opt.val?`${opt.col}18`:"rgba(255,255,255,0.04)",
+                transition:"all .2s cubic-bezier(.4,0,.2,1)",
+                boxShadow:timed===opt.val?`0 0 0 1px ${opt.col}40, 0 8px 24px ${opt.col}20`:"none",
+              }}
+            >
+              <div style={{fontSize:30,marginBottom:8}}>{opt.icon}</div>
+              <div style={{fontWeight:800,fontSize:14,color:timed===opt.val?opt.col:"#fff",marginBottom:6}}>{opt.title}</div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",lineHeight:1.5}}>{opt.desc}</div>
+              {timed===opt.val&&(
+                <div style={{marginTop:10,background:opt.col,color:"#fff",borderRadius:20,padding:"4px 14px",fontSize:10,fontWeight:700,display:"inline-block",boxShadow:`0 4px 12px ${opt.col}50`}}>Selected ✓</div>
+              )}
             </div>
           ))}
         </div>
-        <div style={{display:"flex",gap:12}}>
-          <button onClick={onCancel} style={{flex:1,padding:"12px 0",borderRadius:12,border:"1.5px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.7)",fontWeight:800,fontSize:15,cursor:"pointer"}}>Cancel</button>
-          <button onClick={()=>timed!==null&&onConfirm(timed)} disabled={timed===null} style={{flex:2,padding:"12px 0",borderRadius:12,border:"none",background:timed===null?"#e0e0e0":timed?"linear-gradient(90deg,#FF6A00,#ff9a00)":"linear-gradient(90deg,#22c55e,#16a34a)",color:timed===null?"#999":"#fff",fontWeight:800,fontSize:15,cursor:timed===null?"not-allowed":"pointer"}}>
-            {timed===null?"Select a mode":timed?"Start Timed Exam →":"Start Practice →"}
+        <div style={{display:"flex",gap:10}}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex:1,padding:"13px 0",borderRadius:12,
+              border:"1.5px solid rgba(255,255,255,0.12)",
+              background:"rgba(255,255,255,0.06)",
+              color:"rgba(255,255,255,0.7)",
+              fontWeight:700,fontSize:14,cursor:"pointer",
+              transition:"all .2s",
+            }}
+            onMouseOver={e=>{e.currentTarget.style.background="rgba(255,255,255,0.1)";}}
+            onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,0.06)";}}
+          >Cancel</button>
+          <button
+            onClick={()=>timed!==null&&onConfirm(timed)}
+            disabled={timed===null}
+            style={{
+              flex:2,padding:"13px 0",borderRadius:12,border:"none",
+              background:timed===null
+                ?"rgba(255,255,255,0.06)"
+                :timed
+                  ?"linear-gradient(135deg,#FF6A00,#ff9a00)"
+                  :"linear-gradient(135deg,#22c55e,#16a34a)",
+              color:timed===null?"rgba(255,255,255,0.2)":"#fff",
+              fontWeight:800,fontSize:14,
+              cursor:timed===null?"not-allowed":"pointer",
+              transition:"all .2s",
+              boxShadow:timed===null?"none":timed?"0 4px 20px rgba(255,106,0,0.4)":"0 4px 20px rgba(34,197,94,0.4)",
+            }}
+          >
+            {timed===null?"Select a mode →":timed?"Start Timed Exam →":"Start Practice →"}
           </button>
         </div>
       </div>
     </div>
   );
+
+  // Render via portal into document.body — bypasses ALL stacking contexts
+  return createPortal(modal, document.body);
 }
 
 // ─── TESTS PAGE ───────────────────────────────────────────────────────────────
