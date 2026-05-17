@@ -4245,8 +4245,16 @@ export default function App(){
       if(fbUser.role==="admin"){
         setPage("admin");
       } else {
-        setPage("home");
-        if(notices.length>0) setTimeout(()=>setShowNoticeModal(true),500);
+        // Check if user was trying to access a specific exam before login
+        const pendingExam = sessionStorage.getItem("ra_pending_exam");
+        if(pendingExam){
+          sessionStorage.removeItem("ra_pending_exam");
+          setExamType(pendingExam);
+          setPage("tests");
+        } else {
+          setPage("home");
+          if(notices.length>0) setTimeout(()=>setShowNoticeModal(true),500);
+        }
       }
     }
   },[justLoggedIn, fbUser]);
@@ -4305,8 +4313,7 @@ export default function App(){
       {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType} banners={banners} examTypes={examTypes} notices={notices} setShowNoticeModal={setShowNoticeModal}/>}
       {page==="auth"      && !fbUser      && <AuthPage    onLogin={handleLogin}/>}
       {page==="auth"      && fbUser       && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
-      {page==="tests"     && fbUser      && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType} examTypes={examTypes}/>}
-      {page==="tests"     && !fbUser     && <AuthPage    onLogin={handleLogin}/>}
+      {page==="tests"     && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType} examTypes={examTypes} setPage={setPage}/>}
       {page==="result"    && testResult   && <ResultPage    result={testResult} onViewSolutions={()=>setPage("solutions")} onBack={()=>setPage("tests")} user={fbUser}/>}
       {page==="solutions" && testResult   && <SolutionsPage result={testResult} onBack={()=>setPage("result")}/>}
       {page==="dashboard" && fbUser       && <DashboardPage user={fbUser} setPage={setPage}/>}
