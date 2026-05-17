@@ -93,7 +93,7 @@ export class ErrorBoundary extends React.Component{
         <div style={{height:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#000",gap:20,padding:32,textAlign:"center"}}>
           <div style={{fontSize:48}}>⚠️</div>
           <div style={{color:"#fff",fontWeight:700,fontSize:18}}>Something went wrong</div>
-          <div style={{color:"#888",fontSize:13,maxWidth:400}}>{this.state.error?.message||"An unexpected error occurred."}</div>
+          <div style={{color:"rgba(255,255,255,0.4)",fontSize:13,maxWidth:400}}>{this.state.error?.message||"An unexpected error occurred."}</div>
           <button onClick={()=>window.location.reload()} style={{padding:"10px 28px",borderRadius:10,border:"none",background:"#FF6A00",color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",marginTop:8}}>Reload App</button>
         </div>
       );
@@ -241,6 +241,7 @@ async function checkAccess(uid){
   if(!snap.exists()) return false;
   const d=snap.data();
   if(d.role==="admin") return true;
+  if(d.role==="student") return true; // all students get access by default
   const st=await getSettings();
   if(st.contentMode==="free") return true;
   return !!d.accessEnabled;
@@ -1819,35 +1820,34 @@ function ExamModeModal({test,onConfirm,onCancel}){
   const [timed,setTimed]=useState(null);
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
 
-  // Lock body scroll & scroll to top when modal opens
   useEffect(()=>{
+    // Lock scroll behind modal
     const prev=document.body.style.overflow;
     document.body.style.overflow="hidden";
-    window.scrollTo({top:0,behavior:"instant"});
     return()=>{document.body.style.overflow=prev;};
   },[]);
   return(
-    <div style={{position:"fixed",inset:0,background:"#00000095",zIndex:9000,display:"flex",alignItems:"center",justifyContent:"center",padding:20,overflowY:"auto"}}>
-      <div style={{background:"#fff",borderRadius:24,padding:36,maxWidth:460,width:"100%",boxShadow:"0 20px 60px #00000050",textAlign:"center",margin:"auto"}}>
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.85)",zIndex:99999,display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+      <div style={{background:"#111",border:"1px solid rgba(255,255,255,0.1)",borderRadius:24,padding:36,maxWidth:460,width:"100%",boxShadow:"0 32px 80px rgba(0,0,0,0.8)",textAlign:"center",position:"relative",maxHeight:"90vh",overflowY:"auto"}}>
         <div style={{fontSize:48,marginBottom:12}}>📋</div>
-        <h2 style={{fontWeight:900,fontSize:22,marginBottom:4}}>{test.title}</h2>
-        <p style={{color:"#666",fontSize:14,marginBottom:28}}>{et.icon} {et.label} · 30 Questions</p>
+        <h2 style={{fontWeight:900,fontSize:22,marginBottom:4,color:"#fff"}}>{test.title}</h2>
+        <p style={{color:"rgba(255,255,255,0.5)",fontSize:14,marginBottom:28}}>{et.icon} {et.label} · 30 Questions</p>
         <div style={{fontWeight:800,fontSize:16,marginBottom:14,color:"#333"}}>Choose Exam Mode</div>
         <div style={{display:"flex",gap:14,marginBottom:28}}>
           {[
             {val:true,icon:"⏱️",title:"Timed Mode",desc:"30-min countdown · Auto-submit on timeout",col:"#FF6A00"},
             {val:false,icon:"🧘",title:"Practice Mode",desc:"No time limit · Focus on learning",col:"#22c55e"}
           ].map(opt=>(
-            <div key={String(opt.val)} onClick={()=>setTimed(opt.val)} style={{flex:1,padding:20,borderRadius:16,border:"2px solid",borderColor:timed===opt.val?opt.col:"#e0e0e0",background:timed===opt.val?`${opt.col}15`:"#fafafa",cursor:"pointer",transition:"all .2s"}}>
+            <div key={String(opt.val)} onClick={()=>setTimed(opt.val)} style={{flex:1,padding:20,borderRadius:16,border:"1.5px solid",borderColor:timed===opt.val?opt.col:"rgba(255,255,255,0.1)",background:timed===opt.val?`${opt.col}20`:"rgba(255,255,255,0.04)",cursor:"pointer",transition:"all .2s"}}>
               <div style={{fontSize:32,marginBottom:8}}>{opt.icon}</div>
-              <div style={{fontWeight:800,fontSize:15,color:timed===opt.val?opt.col:"#333",marginBottom:4}}>{opt.title}</div>
+              <div style={{fontWeight:800,fontSize:15,color:timed===opt.val?opt.col:"#fff",marginBottom:4}}>{opt.title}</div>
               <div style={{fontSize:12,color:"#888"}}>{opt.desc}</div>
               {timed===opt.val&&<div style={{marginTop:8,background:opt.col,color:"#fff",borderRadius:20,padding:"3px 12px",fontSize:11,fontWeight:700,display:"inline-block"}}>Selected ✓</div>}
             </div>
           ))}
         </div>
         <div style={{display:"flex",gap:12}}>
-          <button onClick={onCancel} style={{flex:1,padding:"12px 0",borderRadius:12,border:"2px solid #e0e0e0",background:"#fff",fontWeight:800,fontSize:15,cursor:"pointer"}}>Cancel</button>
+          <button onClick={onCancel} style={{flex:1,padding:"12px 0",borderRadius:12,border:"1.5px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.7)",fontWeight:800,fontSize:15,cursor:"pointer"}}>Cancel</button>
           <button onClick={()=>timed!==null&&onConfirm(timed)} disabled={timed===null} style={{flex:2,padding:"12px 0",borderRadius:12,border:"none",background:timed===null?"#e0e0e0":timed?"linear-gradient(90deg,#FF6A00,#ff9a00)":"linear-gradient(90deg,#22c55e,#16a34a)",color:timed===null?"#999":"#fff",fontWeight:800,fontSize:15,cursor:timed===null?"not-allowed":"pointer"}}>
             {timed===null?"Select a mode":timed?"Start Timed Exam →":"Start Practice →"}
           </button>
