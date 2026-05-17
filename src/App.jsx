@@ -1497,7 +1497,7 @@ function HomePage({setPage,user,setExamType,banners=[],examTypes,notices=[],setS
             {!user?(
               <>
                 <button onClick={()=>setPage("auth")} className="ra-cta-primary">
-                  Start Free Practice — No Sign-up Needed →
+                  Start Free Practice →
                 </button>
                 <div style={{textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.25)",fontWeight:500}}>
                   Google login · Free forever · Cloud synced
