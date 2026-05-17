@@ -1933,11 +1933,23 @@ function ExamModeModal({test,onConfirm,onCancel}){
 }
 
 // ─── TESTS PAGE ───────────────────────────────────────────────────────────────
-function TestsPage({user,onStartTest,examType,setExamType,examTypes}){
+function TestsPage({user,onStartTest,examType:examTypeProp,setExamType,examTypes,setPage}){
   const [selTopic,setSelTopic]=useState(null);
   const [modeModal,setModeModal]=useState(null);
   const [settings,setSettingsState]=useState({contentMode:"free"});
   const [userAccess,setUserAccess]=useState(true);
+  // Local examType so switching tabs re-renders immediately
+  const [activeExam,setActiveExam]=useState(examTypeProp||"ssc");
+
+  useEffect(()=>{
+    if(examTypeProp) setActiveExam(examTypeProp);
+  },[examTypeProp]);
+
+  const switchExam=(id)=>{
+    setActiveExam(id);
+    setExamType(id);
+    setSelTopic(null);
+  };
 
   useEffect(()=>{
     getSettings().then(s=>setSettingsState(s));
@@ -1945,7 +1957,7 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes}){
   },[user]);
 
   const ETs=examTypes||EXAM_TYPES;
-  const et=ETs.find(e=>e.id===examType)||ETs[0];
+  const et=ETs.find(e=>e.id===activeExam)||ETs[0];
   const isPaidLocked=settings.contentMode==="paid"&&!userAccess&&user?.role!=="admin";
 
   return(
@@ -1953,7 +1965,7 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes}){
       {/* Exam tabs */}
       <div style={{display:"flex",gap:window.innerWidth<=768?8:12,marginBottom:window.innerWidth<=768?16:28,flexWrap:"wrap"}}>
         {ETs.filter(e=>e.visible!==false).map(e=>(
-          <button key={e.id} onClick={()=>{setExamType(e.id);setSelTopic(null);}} style={{padding:"12px 24px",borderRadius:14,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:800,fontSize:14,cursor:"pointer",boxShadow:examType===e.id?`0 4px 20px ${e.color}40`:"none"}}>
+          <button key={e.id} onClick={()=>switchExam(e.id)} style={{padding:"12px 24px",borderRadius:14,border:"2px solid",borderColor:activeExam===e.id?e.color:"rgba(255,255,255,0.12)",background:activeExam===e.id?e.color:"rgba(255,255,255,0.04)",color:activeExam===e.id?"#fff":"rgba(255,255,255,0.6)",fontWeight:800,fontSize:14,cursor:"pointer",boxShadow:activeExam===e.id?`0 4px 20px ${e.color}50`:"none"}}>
             {e.icon} {e.label}<span style={{display:"block",fontSize:10,opacity:.8,marginTop:2}}>{e.fullName}</span>
           </button>
         ))}
@@ -3670,7 +3682,7 @@ function AdminPage(){
       {tab==="questions"&&(
         <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
           <div style={{display:"flex",gap:10,marginBottom:18}}>
-            {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{flex:1,padding:"11px 0",borderRadius:11,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:800,fontSize:14,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
+            {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{flex:1,padding:"11px 0",borderRadius:11,border:"2px solid",borderColor:activeExam===e.id?e.color:"rgba(255,255,255,0.12)",background:activeExam===e.id?e.color:"rgba(255,255,255,0.04)",color:activeExam===e.id?"#fff":"rgba(255,255,255,0.6)",fontWeight:800,fontSize:14,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
             {et.topics.map(t=><button key={t.id} onClick={()=>setTopicId(t.id)} style={{padding:"6px 14px",borderRadius:20,border:"2px solid",borderColor:(topicId||et.topics[0].id)===t.id?et.color:"#e0e0e0",background:(topicId||et.topics[0].id)===t.id?et.color:"#fff",color:(topicId||et.topics[0].id)===t.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.icon} {t.name}</button>)}
@@ -4099,7 +4111,7 @@ function AdminPage(){
               </div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 {liveExamTypes.filter(e=>e.visible!==false).map(e=>(
-                  <button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{padding:"10px 20px",borderRadius:10,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:700,cursor:"pointer",fontSize:13,transition:"all .2s"}}>
+                  <button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{padding:"10px 20px",borderRadius:10,border:"2px solid",borderColor:activeExam===e.id?e.color:"rgba(255,255,255,0.12)",background:activeExam===e.id?e.color:"rgba(255,255,255,0.04)",color:activeExam===e.id?"#fff":"rgba(255,255,255,0.6)",fontWeight:700,cursor:"pointer",fontSize:13,transition:"all .2s"}}>
                     {e.icon} {e.label}
                   </button>
                 ))}
