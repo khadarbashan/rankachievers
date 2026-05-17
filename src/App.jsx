@@ -3024,9 +3024,13 @@ function AdminPage(){
   const [etForm,setEtForm]=useState({});
   const [etSaving,setEtSaving]=useState(false);
   const [etMsg,setEtMsg]=useState("");
-  const [addingTopic,setAddingTopic]=useState(null); // examType id
+  const [addingTopic,setAddingTopic]=useState(null);
   const [newTopicName,setNewTopicName]=useState("");
   const [newTopicIcon,setNewTopicIcon]=useState("📌");
+  // New exam type form
+  const [showAddExam,setShowAddExam]=useState(false);
+  const [newET,setNewET]=useState({label:"",fullName:"",desc:"",icon:"📚",color:"#6366f1",bg:"#eef2ff"});
+  const [newETSaving,setNewETSaving]=useState(false);
 
   useEffect(()=>{
     const unsub=onSnapshot(doc(db,"settings","examTypes"),d=>{
@@ -3064,6 +3068,40 @@ function AdminPage(){
   const deleteTopic=async(etId,topicId)=>{
     const updated=liveExamTypes.map(e=>e.id===etId?{...e,topics:e.topics.filter(t=>t.id!==topicId)}:e);
     await saveExamTypes(updated);
+  };
+
+  const addNewExamType=async()=>{
+    if(!newET.label.trim()||!newET.fullName.trim()){setEtMsg("❌ Label and Full Name required");return;}
+    setNewETSaving(true);
+    try{
+      const id=newET.label.toLowerCase().replace(/[^a-z0-9]/g,"_")+"_"+Date.now();
+      const examType={
+        id,
+        label:newET.label.trim(),
+        fullName:newET.fullName.trim(),
+        desc:newET.desc.trim(),
+        icon:newET.icon||"📚",
+        color:newET.color||"#6366f1",
+        bg:newET.bg||"#eef2ff",
+        visible:true,
+        topics:[],
+      };
+      const updated=[...liveExamTypes,examType];
+      await saveExamTypes(updated);
+      setEtMsg("✅ New exam type added!");
+      setTimeout(()=>setEtMsg(""),3000);
+      setNewET({label:"",fullName:"",desc:"",icon:"📚",color:"#6366f1",bg:"#eef2ff"});
+      setShowAddExam(false);
+    }catch(e){setEtMsg("❌ "+e.message);}
+    finally{setNewETSaving(false);}
+  };
+
+  const deleteExamType=async(id)=>{
+    if(!window.confirm("Delete this exam type? All its topics will be removed.")) return;
+    const updated=liveExamTypes.filter(e=>e.id!==id);
+    await saveExamTypes(updated);
+    setEtMsg("✅ Exam type deleted");
+    setTimeout(()=>setEtMsg(""),2500);
   };
 
   // ── Banners state ──
@@ -3397,6 +3435,104 @@ function AdminPage(){
       {tab==="exams"&&(
         <div>
           {etMsg&&<div style={{padding:"10px 16px",borderRadius:10,marginBottom:16,fontSize:13,fontWeight:700,background:etMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:etMsg.startsWith("✅")?"#166534":"#dc2626"}}>{etMsg}</div>}
+
+          {/* ── ADD NEW EXAM TYPE BUTTON ── */}
+          <div style={{marginBottom:20}}>
+            {!showAddExam?(
+              <button onClick={()=>setShowAddExam(true)} style={{
+                padding:"12px 24px",borderRadius:12,border:"2px dashed rgba(255,255,255,0.2)",
+                background:"rgba(255,255,255,0.04)",color:"rgba(255,255,255,0.7)",
+                fontWeight:700,fontSize:14,cursor:"pointer",transition:"all .2s",
+                display:"flex",alignItems:"center",gap:8,
+              }}
+              onMouseOver={e=>{e.currentTarget.style.borderColor="#FF6A00";e.currentTarget.style.color="#FF6A00";e.currentTarget.style.background="rgba(255,106,0,0.08)";}}
+              onMouseOut={e=>{e.currentTarget.style.borderColor="rgba(255,255,255,0.2)";e.currentTarget.style.color="rgba(255,255,255,0.7)";e.currentTarget.style.background="rgba(255,255,255,0.04)";}}>
+                ➕ Add New Exam Type
+              </button>
+            ):(
+              <div style={{
+                background:"rgba(255,255,255,0.04)",
+                border:"1.5px solid rgba(255,106,0,0.3)",
+                borderRadius:18,padding:24,marginBottom:8,
+              }}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+                  <div style={{fontWeight:900,fontSize:16,color:"#fff"}}>➕ Add New Exam Type</div>
+                  <button onClick={()=>{setShowAddExam(false);setNewET({label:"",fullName:"",desc:"",icon:"📚",color:"#6366f1",bg:"#eef2ff"});}} style={{background:"none",border:"none",cursor:"pointer",fontSize:20,color:"rgba(255,255,255,0.4)"}}>✕</button>
+                </div>
+
+                {/* Preview */}
+                {newET.label&&(
+                  <div style={{
+                    background:`linear-gradient(135deg,${newET.color}20,${newET.color}08)`,
+                    border:`1.5px solid ${newET.color}40`,
+                    borderRadius:14,padding:"14px 18px",marginBottom:18,
+                    display:"flex",alignItems:"center",gap:14,
+                  }}>
+                    <div style={{width:48,height:48,borderRadius:14,background:newET.color+"25",border:`1px solid ${newET.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{newET.icon}</div>
+                    <div>
+                      <div style={{fontWeight:800,fontSize:16,color:newET.color}}>{newET.label}</div>
+                      <div style={{fontSize:12,color:"rgba(255,255,255,0.5)"}}>{newET.fullName}</div>
+                      <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",marginTop:2}}>{newET.desc}</div>
+                    </div>
+                    <div style={{marginLeft:"auto",fontSize:10,color:"rgba(255,255,255,0.3)"}}>Preview</div>
+                  </div>
+                )}
+
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+                  <div>
+                    <label style={{display:"block",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:5}}>Short Label * <span style={{color:"rgba(255,255,255,0.3)"}}>(e.g. UPSC)</span></label>
+                    <input value={newET.label} onChange={e=>setNewET(f=>({...f,label:e.target.value}))} style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:14,outline:"none",boxSizing:"border-box"}} placeholder="SSC / UPSC / CAT..."/>
+                  </div>
+                  <div>
+                    <label style={{display:"block",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:5}}>Icon (emoji) *</label>
+                    <input value={newET.icon} onChange={e=>setNewET(f=>({...f,icon:e.target.value}))} style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:22,outline:"none",boxSizing:"border-box",textAlign:"center"}} maxLength={4}/>
+                  </div>
+                </div>
+
+                <div style={{marginBottom:12}}>
+                  <label style={{display:"block",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:5}}>Full Name * <span style={{color:"rgba(255,255,255,0.3)"}}>(e.g. Union Public Service Commission)</span></label>
+                  <input value={newET.fullName} onChange={e=>setNewET(f=>({...f,fullName:e.target.value}))} style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:14,outline:"none",boxSizing:"border-box"}} placeholder="Full exam name..."/>
+                </div>
+
+                <div style={{marginBottom:12}}>
+                  <label style={{display:"block",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:5}}>Description <span style={{color:"rgba(255,255,255,0.3)"}}>(sub-exams covered)</span></label>
+                  <input value={newET.desc} onChange={e=>setNewET(f=>({...f,desc:e.target.value}))} style={{width:"100%",padding:"10px 14px",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:14,outline:"none",boxSizing:"border-box"}} placeholder="Prelims · Mains · Interview..."/>
+                </div>
+
+                <div style={{marginBottom:18}}>
+                  <label style={{display:"block",fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:8}}>Theme Color</label>
+                  <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                    <input type="color" value={newET.color} onChange={e=>setNewET(f=>({...f,color:e.target.value}))} style={{width:44,height:38,borderRadius:8,border:"1.5px solid rgba(255,255,255,0.1)",cursor:"pointer",background:"none"}}/>
+                    <input value={newET.color} onChange={e=>setNewET(f=>({...f,color:e.target.value}))} style={{flex:1,padding:"10px 14px",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:13,outline:"none",minWidth:80}} placeholder="#6366f1"/>
+                    {["#FF6A00","#1d4ed8","#16a34a","#7c3aed","#ec4899","#f59e0b","#06b6d4","#dc2626"].map(col=>(
+                      <div key={col} onClick={()=>setNewET(f=>({...f,color:col}))} style={{width:28,height:28,borderRadius:"50%",background:col,cursor:"pointer",border:newET.color===col?"3px solid #fff":"2px solid rgba(255,255,255,0.2)",flexShrink:0,transition:"transform .15s",transform:newET.color===col?"scale(1.2)":"scale(1)"}}/>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={addNewExamType} disabled={newETSaving||!newET.label||!newET.fullName} style={{
+                    flex:2,padding:"13px 0",borderRadius:12,border:"none",
+                    background:(!newET.label||!newET.fullName)?"rgba(255,255,255,0.08)":"linear-gradient(135deg,#FF6A00,#ff9a00)",
+                    color:(!newET.label||!newET.fullName)?"rgba(255,255,255,0.3)":"#fff",
+                    fontWeight:800,fontSize:14,cursor:(!newET.label||!newET.fullName)?"not-allowed":"pointer",
+                    display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                    boxShadow:(!newET.label||!newET.fullName)?"none":"0 4px 20px rgba(255,106,0,0.4)",
+                    transition:"all .2s",
+                  }}>
+                    {newETSaving?<><span style={{width:16,height:16,border:"2px solid #fff3",borderTop:"2px solid #fff",borderRadius:"50%",animation:"spin .7s linear infinite",display:"inline-block"}}/>Saving...</>:"✅ Create Exam Type"}
+                  </button>
+                  <button onClick={()=>{setShowAddExam(false);setNewET({label:"",fullName:"",desc:"",icon:"📚",color:"#6366f1",bg:"#eef2ff"});}} style={{
+                    flex:1,padding:"13px 0",borderRadius:12,
+                    border:"1.5px solid rgba(255,255,255,0.12)",
+                    background:"rgba(255,255,255,0.06)",
+                    color:"rgba(255,255,255,0.6)",fontWeight:700,fontSize:14,cursor:"pointer",
+                  }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
             {liveExamTypes.map(et=>(
               <div key={et.id} style={{background:"#fff",borderRadius:18,padding:22,border:"2px solid",borderColor:editingET===et.id?et.color:"#f0f0f0"}}>
@@ -3435,7 +3571,12 @@ function AdminPage(){
                 ):(
                   <>
                     <p style={{fontSize:12,color:"#666",marginBottom:12}}>{et.desc}</p>
-                    <button onClick={()=>{setEditingET(et.id);setEtForm({label:et.label,fullName:et.fullName,desc:et.desc,icon:et.icon,color:et.color});}} style={{width:"100%",padding:"8px 0",borderRadius:10,border:`2px solid ${et.color}`,background:et.bg||"#fff5ee",color:et.color,fontWeight:700,cursor:"pointer",marginBottom:12,fontSize:13}}>✏️ Edit Exam Details</button>
+                    <div style={{display:"flex",gap:8,marginBottom:12}}>
+                      <button onClick={()=>{setEditingET(et.id);setEtForm({label:et.label,fullName:et.fullName,desc:et.desc,icon:et.icon,color:et.color});}} style={{flex:1,padding:"8px 0",borderRadius:10,border:`1.5px solid ${et.color}`,background:et.color+"15",color:et.color,fontWeight:700,cursor:"pointer",fontSize:13}}>✏️ Edit</button>
+                      {!["ssc","banking","railways"].includes(et.id)&&(
+                        <button onClick={()=>deleteExamType(et.id)} style={{padding:"8px 14px",borderRadius:10,border:"1.5px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.1)",color:"#ef4444",fontWeight:700,cursor:"pointer",fontSize:13}}>🗑️</button>
+                      )}
+                    </div>
                     <div style={{fontSize:12,fontWeight:700,color:"#555",marginBottom:8}}>Topics ({et.topics?.length||0})</div>
                     <div style={{maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
                       {(et.topics||[]).map(t=>(
