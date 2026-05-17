@@ -83,7 +83,7 @@ function useMobile(){
 }
 
 // ─── ERROR BOUNDARY ───────────────────────────────────────────────────────────
-class ErrorBoundary extends React.Component{
+export class ErrorBoundary extends React.Component{
   constructor(props){super(props);this.state={hasError:false,error:null};}
   static getDerivedStateFromError(error){return{hasError:true,error};}
   componentDidCatch(error,info){console.error("App error:",error,info);}
@@ -1606,7 +1606,7 @@ function DashboardPage({user,setPage}){
 
       
       {/* Streak */}
-      <StreakWidget userId={user?.uid}/>
+      <StreakWidget userId={user?.uid} style={{marginBottom:16}}/>
 {isPaid&&!userAccess&&(
         <div style={{background:"#fff3cd",border:"2px solid #ffc107",borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",gap:12,alignItems:"center"}}>
           <span style={{fontSize:26}}>🔒</span>
@@ -2823,7 +2823,7 @@ function AdminPage(){
                     </div>
                     <p style={{fontSize:13,color:"#666",lineHeight:1.5,margin:"0 0 6px"}}>{n.body}</p>
                     {n.link&&<a href={n.link} target="_blank" rel="noreferrer" style={{fontSize:12,color:"#FF6A00",fontWeight:700}}>🔗 {n.link.substring(0,40)}...</a>}
-                    <div style={{fontSize:11,color:"#ccc",marginTop:6}}>{n.createdAt?.seconds?new Date(n.createdAt.seconds*1000).toLocaleDateString("en-IN","dd/MM/yyyy"):"Just now"}</div>
+                    <div style={{fontSize:11,color:"#ccc",marginTop:6}}>{n.createdAt?.seconds?new Date(n.createdAt.seconds*1000).toLocaleDateString("en-IN",{day:"2-digit",month:"2-digit",year:"numeric"}):"Just now"}</div>
                   </div>
                 ))}
               </div>
@@ -3438,6 +3438,7 @@ export default function App(){
   }
 
   return(
+    <ThemeProvider>
     <div style={{fontFamily:"'Segoe UI',system-ui,sans-serif",minHeight:"100vh",background:"#fff"}}>
       <NavBar
         page={page} setPage={setPage}
@@ -3463,6 +3464,7 @@ export default function App(){
       {page==="admin"     && fbUser?.role==="admin" && <AdminPage/>}
       </PageTransition>
     </div>
+    </ThemeProvider>
   );
 }
 
