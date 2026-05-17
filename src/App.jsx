@@ -68,6 +68,9 @@ const DCOL   = {easy:"#22c55e",medium:"#f59e0b",hard:"#ef4444"};
 const DBG    = {easy:"#f0fdf4",medium:"#fffbeb",hard:"#fef2f2"};
 const fmtT   = s=>`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 
+// ─── THEME CONTEXT (declared early so all components can reference it) ─────────
+const ThemeContext = React.createContext({theme:"dark",toggle:()=>{}});
+
 // ─── RESPONSIVE HOOK ─────────────────────────────────────────────────────────
 function useMobile(){
   const [mobile,setMobile]=useState(window.innerWidth<=768);
@@ -165,12 +168,6 @@ function useAuth(){
             await updateDoc(doc(db,"users",fbUser.uid),{role:"admin",accessEnabled:true});
             profile.role="admin";profile.accessEnabled=true;
           }
-          // Fix: if admin email has wrong role, correct it in Firestore
-          if(fbUser.email===ADMIN_EMAIL && profile.role!=="admin"){
-            await updateDoc(doc(db,"users",fbUser.uid),{role:"admin",accessEnabled:true});
-            profile.role="admin";
-            profile.accessEnabled=true;
-          }
           // Sync latest Google photo
           if(fbUser.photoURL && profile.photoURL !== fbUser.photoURL){
             await updateDoc(doc(db,"users",fbUser.uid),{photoURL:fbUser.photoURL});
@@ -181,8 +178,9 @@ function useAuth(){
           const firstRole=fbUser.email===ADMIN_EMAIL?"admin":"student";
           profile={uid:fbUser.uid,name:fbUser.displayName||fbUser.email.split("@")[0],email:fbUser.email,role:firstRole,photoURL:fbUser.photoURL||null,googleLogin:true,createdAt:serverTimestamp(),accessEnabled:firstRole==="admin"};
           await setDoc(doc(db,"users",fbUser.uid),profile);
-          setUser({...profile});
         }
+        // BUG FIX: setUser must be called for BOTH new and existing users
+        setUser({...profile});
         if(isNewLogin) setJustLoggedIn(true);
       } catch(e){
         console.error("Auth profile error:",e);
@@ -191,7 +189,7 @@ function useAuth(){
     });
     return unsub;
   },[]);
-  return {user, justLoggedIn, clearJustLoggedIn:()=>setJustLoggedIn(false)};
+  return {user, setUser, justLoggedIn, clearJustLoggedIn:()=>setJustLoggedIn(false)};
 }
 
 async function loginGoogle(){
@@ -240,7 +238,7 @@ async function checkAccess(uid){
 // ─── NAVBAR ───────────────────────────────────────────────────────────────────
 function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices}){
   const [menuOpen,setMenuOpen]=useState(false);
-  const isMobile=window.innerWidth<=768;
+  const isMobile=useMobile();
   return(
     <>
       <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:"#fff",borderBottom:"2px solid #FF6A00",padding:"0 16px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 2px 16px #FF6A0015"}}>
@@ -3344,13 +3342,16 @@ function AdminPage(){
 }
 
 // ─── CSS ANIMATION ────────────────────────────────────────────────────────────
-const spinStyle = document.createElement("style");
-spinStyle.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
-document.head.appendChild(spinStyle);
+if(!document.getElementById("ra-spin-css")){
+  const spinStyle = document.createElement("style");
+  spinStyle.id = "ra-spin-css";
+  spinStyle.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
+  document.head.appendChild(spinStyle);
+}
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App(){
-  const {user:fbUser, justLoggedIn, clearJustLoggedIn} = useAuth();
+  const {user:fbUser, setUser:setFbUser, justLoggedIn, clearJustLoggedIn} = useAuth();
   const examTypes = useExamTypes(); // live from Firestore
   const [page,setPage]   = useState("home");
   const [examType,setExamType] = useState("ssc");
@@ -3458,7 +3459,7 @@ export default function App(){
       {page==="solutions" && testResult   && <SolutionsPage result={testResult} onBack={()=>setPage("result")}/>}
       {page==="dashboard" && fbUser       && <DashboardPage user={fbUser} setPage={setPage}/>}
       {page==="leaderboard"               && <LeaderboardPage/>}
-      {page==="profile"   && fbUser       && <ProfilePage   user={fbUser} setUser={()=>{}} setPage={setPage}/>}
+      {page==="profile"   && fbUser       && <ProfilePage   user={fbUser} setUser={setFbUser} setPage={setPage}/>}
       {page==="admin"     && fbUser?.role==="admin" && <AdminPage/>}
       </PageTransition>
     </div>
@@ -3470,9 +3471,7 @@ export default function App(){
 // Streak · Animated Results · Page Transitions
 // ════════════════════════════════════════════════════════════════════════════
 
-// ─── THEME CONTEXT ────────────────────────────────────────────────────────────
-const ThemeContext = React.createContext({theme:"dark",toggle:()=>{}});
-
+// ─── THEME PROVIDER ────────────────────────────────────────────────────────────
 function ThemeProvider({children}){
   const [theme,setTheme]=useState(()=>localStorage.getItem("ra_theme")||"dark");
   const toggle=()=>setTheme(t=>{const n=t==="dark"?"light":"dark";localStorage.setItem("ra_theme",n);return n;});
