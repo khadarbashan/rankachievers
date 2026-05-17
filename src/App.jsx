@@ -1966,7 +1966,7 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
           ))}
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${isMobile?"100%":"250px"},1fr))`,gap:12}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:12}}>
           {(et.topics||[]).filter(t=>!selTopic||t.id===selTopic).flatMap(topic=>
             DIFFS.map((diff,di)=>{
               const testObj={id:`${topic.id}_${diff}`,topic_id:topic.id,topicName:topic.name,difficulty:diff,title:`${topic.name} – Test ${di+1}`,duration:1800,examType:et.id};
