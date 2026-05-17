@@ -303,11 +303,11 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
           <div style={{display:"flex",gap:4,alignItems:"center"}}>
             {[
               {p:"home",l:"Home"},
-              {p:"tests",l:"Tests"},
+              {p:"tests",l:"Tests",requireAuth:true},
               {p:"leaderboard",l:"Leaderboard"},
               ...(user?[{p:"dashboard",l:"Dashboard"}]:[]),
             ].map(item=>(
-              <button key={item.p} onClick={()=>setPage(item.p)} style={{
+              <button key={item.p} onClick={()=>{if(item.requireAuth&&!user){setPage("auth");return;}setPage(item.p);}} style={{
                 padding:"7px 16px",
                 borderRadius:10,
                 border:"none",
@@ -339,7 +339,7 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
           {!isMobile&&user&&(
             <div style={{display:"flex",gap:4,marginRight:4}}>
               {EXAM_TYPES.map(e=>(
-                <button key={e.id} onClick={()=>{setExamType(e.id);setPage("tests");}} style={{
+                <button key={e.id} onClick={()=>{if(!user){setPage("auth");return;}setExamType(e.id);setPage("tests");}} style={{
                   padding:"5px 12px",borderRadius:20,
                   border:`1.5px solid ${examType===e.id?e.color:"rgba(255,255,255,0.12)"}`,
                   background:examType===e.id?e.color+"25":"transparent",
@@ -442,7 +442,7 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
         }}>
           {[
             {p:"home",icon:"🏠",label:"Home"},
-            {p:"tests",icon:"📝",label:"Tests"},
+            {p:"tests",icon:"📝",label:"Tests",requireAuth:true},
             {p:"leaderboard",icon:"🏆",label:"Board"},
             ...(user?[{p:"dashboard",icon:"📊",label:"Progress"}]:[{p:"auth",icon:"🔑",label:"Login"}]),
             ...(user?[{p:"profile",icon:"👤",label:"Profile"}]:[]),
@@ -450,8 +450,8 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
             <button key={item.p}
               className={`ra-bnav-item${page===item.p?" active":""}`}
               onClick={()=>{
-                if(item.p==="profile"||item.p==="dashboard"){
-                  if(!user){setPage("auth");return;}
+                if((item.requireAuth||item.p==="profile"||item.p==="dashboard")&&!user){
+                  setPage("auth");return;
                 }
                 setPage(item.p);
               }}
@@ -4297,7 +4297,8 @@ export default function App(){
       {page==="home"      && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType} banners={banners} examTypes={examTypes} notices={notices} setShowNoticeModal={setShowNoticeModal}/>}
       {page==="auth"      && !fbUser      && <AuthPage    onLogin={handleLogin}/>}
       {page==="auth"      && fbUser       && <HomePage    setPage={setPage} user={fbUser} setExamType={setExamType}/>}
-      {page==="tests"     && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType} examTypes={examTypes}/>}
+      {page==="tests"     && fbUser      && <TestsPage   user={fbUser} onStartTest={handleStartTest} examType={examType} setExamType={setExamType} examTypes={examTypes}/>}
+      {page==="tests"     && !fbUser     && <AuthPage    onLogin={handleLogin}/>}
       {page==="result"    && testResult   && <ResultPage    result={testResult} onViewSolutions={()=>setPage("solutions")} onBack={()=>setPage("tests")} user={fbUser}/>}
       {page==="solutions" && testResult   && <SolutionsPage result={testResult} onBack={()=>setPage("result")}/>}
       {page==="dashboard" && fbUser       && <DashboardPage user={fbUser} setPage={setPage}/>}
