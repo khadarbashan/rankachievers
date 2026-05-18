@@ -3574,6 +3574,30 @@ function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
     }
   };
 
+  const COLORS = [
+    {color:"#ffffff", label:"White"},
+    {color:"#FF6A00", label:"Orange"},
+    {color:"#ff9a00", label:"Amber"},
+    {color:"#22c55e", label:"Green"},
+    {color:"#3b82f6", label:"Blue"},
+    {color:"#a855f7", label:"Purple"},
+    {color:"#ec4899", label:"Pink"},
+    {color:"#ef4444", label:"Red"},
+    {color:"#f59e0b", label:"Yellow"},
+    {color:"#06b6d4", label:"Cyan"},
+    {color:"#84cc16", label:"Lime"},
+    {color:"#64748b", label:"Gray"},
+  ];
+
+  const HIGHLIGHT_COLORS = [
+    {color:"rgba(255,106,0,0.3)",  label:"Orange"},
+    {color:"rgba(34,197,94,0.3)",  label:"Green"},
+    {color:"rgba(59,130,246,0.3)", label:"Blue"},
+    {color:"rgba(234,179,8,0.35)", label:"Yellow"},
+    {color:"rgba(168,85,247,0.3)", label:"Purple"},
+    {color:"rgba(239,68,68,0.3)",  label:"Red"},
+  ];
+
   const TOOLBAR = [
     { label:"B",      cmd:"bold",          title:"Bold",       style:{fontWeight:"bold"} },
     { label:"I",      cmd:"italic",        title:"Italic",     style:{fontStyle:"italic"} },
@@ -3649,37 +3673,105 @@ function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
 
         {/* Toolbar */}
         <div style={{
-          padding:"10px 16px",
           borderBottom:"1px solid rgba(255,255,255,0.06)",
-          display:"flex",gap:5,flexWrap:"wrap",alignItems:"center",
           background:"rgba(255,255,255,0.02)",
           flexShrink:0,
         }}>
-          {TOOLBAR.map(t=>(
-            <button key={t.label}
-              className="ra-toolbar-btn"
-              title={t.title}
-              style={{...t.style}}
-              onMouseDown={e=>{
-                e.preventDefault();
-                if(t.cmd==="insertHTML") exec(t.cmd, t.val);
-                else exec(t.cmd, t.val||null);
-              }}>
-              {t.label}
-            </button>
-          ))}
-          <div style={{width:1,height:20,background:"rgba(255,255,255,0.1)",margin:"0 4px"}}/>
-          <button className="ra-toolbar-btn" title="Insert Table" onMouseDown={e=>{e.preventDefault();insertTable();}}>
-            📊 Table
-          </button>
-          <button className="ra-toolbar-btn" title="Horizontal Rule" onMouseDown={e=>{e.preventDefault();exec("insertHorizontalRule");}}>
-            ─ Divider
-          </button>
-          <button className="ra-toolbar-btn" title="Clear formatting" onMouseDown={e=>{e.preventDefault();exec("removeFormat");}}>
-            ✕ Clear
-          </button>
-          <div style={{marginLeft:"auto",fontSize:11,color:"rgba(255,255,255,0.25)"}}>
-            Tip: Select text then click formatting buttons
+          {/* Row 1: Format buttons */}
+          <div style={{padding:"8px 14px",display:"flex",gap:4,flexWrap:"wrap",alignItems:"center",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+            {TOOLBAR.map(t=>(
+              <button key={t.label}
+                className="ra-toolbar-btn"
+                title={t.title}
+                style={{...t.style}}
+                onMouseDown={e=>{
+                  e.preventDefault();
+                  if(t.cmd==="insertHTML") exec(t.cmd, t.val);
+                  else exec(t.cmd, t.val||null);
+                }}>
+                {t.label}
+              </button>
+            ))}
+            <div style={{width:1,height:20,background:"rgba(255,255,255,0.1)",margin:"0 3px"}}/>
+            <button className="ra-toolbar-btn" title="Insert Table" onMouseDown={e=>{e.preventDefault();insertTable();}}>📊 Table</button>
+            <button className="ra-toolbar-btn" title="Divider" onMouseDown={e=>{e.preventDefault();exec("insertHorizontalRule");}}>─ Divider</button>
+            <button className="ra-toolbar-btn" title="Clear formatting" onMouseDown={e=>{e.preventDefault();exec("removeFormat");}}>✕ Clear</button>
+          </div>
+
+          {/* Row 2: Text colors + Highlight colors */}
+          <div style={{padding:"8px 14px",display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+            {/* Text color */}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.35)",whiteSpace:"nowrap"}}>A Color:</span>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                {COLORS.map(cl=>(
+                  <div
+                    key={cl.color}
+                    title={`Text: ${cl.label}`}
+                    onMouseDown={e=>{
+                      e.preventDefault();
+                      exec("foreColor", cl.color);
+                    }}
+                    style={{
+                      width:20,height:20,borderRadius:"50%",
+                      background:cl.color,
+                      cursor:"pointer",
+                      border:"1.5px solid rgba(255,255,255,0.15)",
+                      transition:"transform .15s",
+                      flexShrink:0,
+                    }}
+                    onMouseOver={e=>e.currentTarget.style.transform="scale(1.25)"}
+                    onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{width:1,height:20,background:"rgba(255,255,255,0.1)",flexShrink:0}}/>
+
+            {/* Highlight color */}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.35)",whiteSpace:"nowrap"}}>🖍 Highlight:</span>
+              <div style={{display:"flex",gap:4}}>
+                {HIGHLIGHT_COLORS.map(cl=>(
+                  <div
+                    key={cl.color}
+                    title={`Highlight: ${cl.label}`}
+                    onMouseDown={e=>{
+                      e.preventDefault();
+                      exec("hiliteColor", cl.color);
+                    }}
+                    style={{
+                      width:20,height:20,borderRadius:5,
+                      background:cl.color,
+                      cursor:"pointer",
+                      border:"1.5px solid rgba(255,255,255,0.15)",
+                      transition:"transform .15s",
+                      flexShrink:0,
+                    }}
+                    onMouseOver={e=>e.currentTarget.style.transform="scale(1.25)"}
+                    onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}
+                  />
+                ))}
+                {/* Remove highlight */}
+                <div
+                  title="Remove highlight"
+                  onMouseDown={e=>{e.preventDefault();exec("hiliteColor","transparent");}}
+                  style={{
+                    width:20,height:20,borderRadius:5,
+                    background:"transparent",border:"1.5px solid rgba(255,255,255,0.2)",
+                    cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:10,color:"rgba(255,255,255,0.4)",transition:"transform .15s",
+                  }}
+                  onMouseOver={e=>e.currentTarget.style.transform="scale(1.25)"}
+                  onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}
+                >✕</div>
+              </div>
+            </div>
+
+            <div style={{marginLeft:"auto",fontSize:10,color:"rgba(255,255,255,0.2)"}}>
+              Select text first, then apply color
+            </div>
           </div>
         </div>
 
