@@ -2416,6 +2416,7 @@ function ExamModeModal({test,onConfirm,onCancel}){
 }
 // ─── TESTS PAGE ───────────────────────────────────────────────────────────────
 function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
+  const [mode,setMode]=useState("exams");
   const [localExam,setLocalExam]=useState(examType||"ssc");
   const [selTopic,setSelTopic]=useState(null);
   const [modeModal,setModeModal]=useState(null);
@@ -2458,6 +2459,27 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
     <div style={{minHeight:"100vh",background:"#060608",paddingTop:64,padding:isMobile?"68px 14px 100px":"74px 36px 60px"}}>
       <div style={{maxWidth:1100,margin:"0 auto"}}>
 
+        {/* ── Mode Toggle: Exams / Notes ── */}
+        <div style={{display:"flex",gap:10,marginBottom:24,padding:"6px",background:"rgba(255,255,255,0.04)",borderRadius:16,border:"1px solid rgba(255,255,255,0.08)",width:"fit-content"}}>
+          {[
+            {id:"exams", icon:"📝", label:"Practice Tests"},
+            {id:"notes", icon:"📖", label:"Study Notes"},
+          ].map(m=>(
+            <button key={m.id} onClick={()=>setMode(m.id)} style={{
+              padding:"10px 24px",borderRadius:12,border:"none",
+              fontWeight:700,fontSize:14,cursor:"pointer",
+              transition:"all .25s cubic-bezier(.4,0,.2,1)",
+              background:mode===m.id?"linear-gradient(135deg,#FF6A00,#ff9a00)":"transparent",
+              color:mode===m.id?"#fff":"rgba(255,255,255,0.45)",
+              boxShadow:mode===m.id?"0 4px 16px rgba(255,106,0,0.4)":"none",
+              display:"flex",alignItems:"center",gap:8,
+            }}>
+              <span style={{fontSize:16}}>{m.icon}</span> {m.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Exam type selector (shared for both modes) ── */}
         <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
           {ETs.filter(e=>e.visible!==false).map(e=>(
             <button key={e.id} onClick={()=>switchExam(e.id)} style={{
@@ -2473,6 +2495,67 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
             </button>
           ))}
         </div>
+
+        {/* ══════════ NOTES MODE ══════════ */}
+        {mode==="notes"&&(
+          <div>
+            <div style={{marginBottom:16}}>
+              <h2 style={{fontSize:isMobile?20:24,fontWeight:900,color:"#fff",margin:"0 0 4px",letterSpacing:"-0.5px"}}>
+                <span style={{color:et.color}}>{et.icon} {et.label}</span> Study Notes
+              </h2>
+              <p style={{color:"rgba(255,255,255,0.35)",fontSize:12,margin:0}}>
+                {et.fullName} · Click any topic to read notes
+              </p>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:`repeat(auto-fill,minmax(${isMobile?"100%":"220px"},1fr))`,gap:12}}>
+              {(et.topics||[]).map(t=>{
+                const hasNotes = notesExistMap[`${localExam}_${t.id}`];
+                return(
+                  <div key={t.id}
+                    onClick={()=>hasNotes&&setNotesModal(t)}
+                    style={{
+                      borderRadius:16,padding:18,
+                      background:hasNotes?"rgba(255,106,0,0.06)":"rgba(255,255,255,0.03)",
+                      border:`1.5px solid ${hasNotes?"rgba(255,106,0,0.25)":"rgba(255,255,255,0.07)"}`,
+                      cursor:hasNotes?"pointer":"default",
+                      transition:"all .25s ease",
+                      opacity:hasNotes?1:0.5,
+                    }}
+                    onMouseOver={e=>{if(hasNotes){e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=`0 16px 40px rgba(0,0,0,0.4)`;e.currentTarget.style.borderColor=et.color+"60";}}}
+                    onMouseOut={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=hasNotes?"rgba(255,106,0,0.25)":"rgba(255,255,255,0.07)";}}>
+
+                    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                      <div style={{
+                        width:44,height:44,borderRadius:12,flexShrink:0,
+                        background:hasNotes?et.color+"25":et.color+"10",
+                        border:`1px solid ${et.color}${hasNotes?"40":"20"}`,
+                        display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,
+                      }}>{t.icon||et.icon}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:800,fontSize:14,color:"#fff",marginBottom:2}}>{t.name}</div>
+                        <div style={{fontSize:10,color:et.color,fontWeight:600}}>{et.label}</div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      padding:"8px 12px",borderRadius:10,textAlign:"center",
+                      background:hasNotes?"rgba(34,197,94,0.1)":"rgba(255,255,255,0.04)",
+                      border:`1px solid ${hasNotes?"rgba(34,197,94,0.25)":"rgba(255,255,255,0.06)"}`,
+                      fontSize:12,fontWeight:700,
+                      color:hasNotes?"#22c55e":"rgba(255,255,255,0.3)",
+                    }}>
+                      {hasNotes?"📖 Read Notes →":"No notes yet"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ══════════ EXAMS MODE ══════════ */}
+        {mode==="exams"&&(
+        <div>
 
         {isPaidLocked&&(
           <div style={{background:"rgba(255,106,0,0.08)",borderRadius:14,padding:"18px 22px",marginBottom:20,border:"1px solid rgba(255,106,0,0.25)",display:"flex",alignItems:"center",gap:14}}>
@@ -2592,8 +2675,10 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
         </div>
 
       </div>
+      )}
       {modeModal&&<ExamModeModal test={modeModal} onConfirm={isTimed=>{onStartTest({...modeModal,timed:isTimed});setModeModal(null);}} onCancel={()=>setModeModal(null)}/>}
       {notesModal&&<NotesViewerModal examType={localExam} topic={notesModal} onClose={()=>setNotesModal(null)}/>}
+      </div>
     </div>
   );
 }
