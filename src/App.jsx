@@ -2418,11 +2418,13 @@ function ExamModeModal({test,onConfirm,onCancel}){
 }
 // ─── NOTES PAGE ──────────────────────────────────────────────────────────────
 function NotesPage({user, examType, setExamType, examTypes}){
-  const [localExam, setLocalExam]     = useState(examType||"ssc");
-  const [selTopic,  setSelTopic]      = useState(null);   // which topic is open
-  const [notes,     setNotes]         = useState(null);   // loaded notes content
-  const [loading,   setLoading]       = useState(false);
-  const [notesMap,  setNotesMap]      = useState({});     // {key: true} for topics that have notes
+  const [localExam,   setLocalExam]   = useState(examType||"ssc");
+  const [selTopic,    setSelTopic]    = useState(null);
+  const [selSubtopic, setSelSubtopic] = useState(null);
+  const [subtopics,   setSubtopics]  = useState([]);
+  const [notes,       setNotes]      = useState(null);
+  const [loading,     setLoading]    = useState(false);
+  const [notesMap,    setNotesMap]   = useState({});
   const isMobile = useMobile();
   const ETs = examTypes||EXAM_TYPES;
   const et  = ETs.find(e=>e.id===localExam)||ETs[0];
@@ -2449,21 +2451,49 @@ function NotesPage({user, examType, setExamType, examTypes}){
     check();
   },[localExam]);
 
-  // Load notes when topic selected
+  // Load subtopics when topic selected
   useEffect(()=>{
-    if(!selTopic) return;
+    if(!selTopic){ setSubtopics([]); setSelSubtopic(null); setNotes(null); return; }
+    setLoading(true);
+    setSelSubtopic(null);
+    setNotes(null);
+    // Load topic doc — may have subtopics list + direct notes
+    getDoc(doc(db,"notes",`${localExam}_${selTopic.id}`))
+      .then(d=>{
+        if(d.exists()){
+          const data = d.data();
+          if(data.subtopics && data.subtopics.length > 0){
+            setSubtopics(data.subtopics);
+          } else {
+            setSubtopics([]);
+            setNotes(data); // no subtopics — show notes directly
+          }
+        } else {
+          setSubtopics([]);
+          setNotes(null);
+        }
+      })
+      .catch(()=>{ setSubtopics([]); setNotes(null); })
+      .finally(()=>setLoading(false));
+  },[selTopic, localExam]);
+
+  // Load subtopic notes when subtopic selected
+  useEffect(()=>{
+    if(!selSubtopic) return;
     setLoading(true);
     setNotes(null);
-    getDoc(doc(db,"notes",`${localExam}_${selTopic.id}`))
+    getDoc(doc(db,"notes",`${localExam}_${selTopic.id}_${selSubtopic.id}`))
       .then(d=>{ if(d.exists()) setNotes(d.data()); else setNotes(null); })
       .catch(()=>setNotes(null))
       .finally(()=>setLoading(false));
-  },[selTopic, localExam]);
+  },[selSubtopic]);
 
   const switchExam = (id)=>{
     setLocalExam(id);
     setExamType(id);
     setSelTopic(null);
+    setSelSubtopic(null);
+    setSubtopics([]);
     setNotes(null);
   };
 
@@ -2512,7 +2542,7 @@ function NotesPage({user, examType, setExamType, examTypes}){
           ))}
         </div>
 
-        {/* Topic sub-navbar — only when exam selected */}
+        {/* Sub-navbar — breadcrumb when topic/subtopic open */}
         {selTopic&&(
           <div style={{
             display:"flex",gap:6,flexWrap:"wrap",
@@ -2521,20 +2551,35 @@ function NotesPage({user, examType, setExamType, examTypes}){
             borderTop:"1px solid rgba(255,255,255,0.05)",
             alignItems:"center",
           }}>
-            <button onClick={()=>{setSelTopic(null);setNotes(null);}} style={{
+            {/* Back to topics */}
+            <button onClick={()=>{setSelTopic(null);setSelSubtopic(null);setSubtopics([]);setNotes(null);}} style={{
               padding:"5px 12px",borderRadius:20,fontSize:11,fontWeight:600,
               cursor:"pointer",transition:"all .2s",
               border:"1px solid rgba(255,255,255,0.1)",
               background:"rgba(255,255,255,0.06)",
               color:"rgba(255,255,255,0.5)",
-              display:"flex",alignItems:"center",gap:5,
-            }}>← All Topics</button>
+            }}>← Topics</button>
             <span style={{color:"rgba(255,255,255,0.2)",fontSize:12}}>›</span>
-            <span style={{
+            {/* Topic pill */}
+            <button onClick={()=>{setSelSubtopic(null);setNotes(subtopics.length===0?notes:null);}} style={{
               padding:"5px 14px",borderRadius:20,fontSize:11,fontWeight:700,
-              background:et.color+"20",color:et.color,
-              border:`1px solid ${et.color}30`,
-            }}>{selTopic.icon||et.icon} {selTopic.name}</span>
+              background:selSubtopic?et.color+"12":et.color+"22",
+              color:et.color,
+              border:`1px solid ${et.color}${selSubtopic?"20":"40"}`,
+              cursor:subtopics.length>0?"pointer":"default",
+              transition:"all .2s",
+            }}>{selTopic.icon||et.icon} {selTopic.name}</button>
+            {/* Subtopic pill */}
+            {selSubtopic&&(
+              <>
+                <span style={{color:"rgba(255,255,255,0.2)",fontSize:12}}>›</span>
+                <span style={{
+                  padding:"5px 14px",borderRadius:20,fontSize:11,fontWeight:700,
+                  background:"rgba(255,255,255,0.1)",color:"#fff",
+                  border:"1px solid rgba(255,255,255,0.15)",
+                }}>{selSubtopic.title}</span>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -2657,63 +2702,113 @@ function NotesPage({user, examType, setExamType, examTypes}){
           </div>
         )}
 
-        {/* ── Notes content view ── */}
+        {/* ── Topic + Subtopics view ── */}
         {selTopic&&(
           <div style={{animation:"raFadeUp .3s ease both"}}>
 
             {/* Topic header */}
             <div style={{
               display:"flex",alignItems:"center",gap:16,
-              marginBottom:28,
-              padding:"20px 24px",
-              borderRadius:18,
+              marginBottom:24,padding:"18px 22px",borderRadius:18,
               background:`linear-gradient(135deg,${et.color}12,${et.color}05)`,
               border:`1px solid ${et.color}20`,
             }}>
               <div style={{
-                width:56,height:56,borderRadius:16,flexShrink:0,
+                width:52,height:52,borderRadius:15,flexShrink:0,
                 background:`linear-gradient(135deg,${et.color}30,${et.color}15)`,
                 border:`1.5px solid ${et.color}35`,
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:28,
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,
                 boxShadow:`0 8px 24px ${et.color}25`,
               }}>{selTopic.icon||et.icon}</div>
               <div>
-                <div style={{fontWeight:900,fontSize:isMobile?18:22,color:"#fff",letterSpacing:"-0.5px",marginBottom:4}}>
+                <div style={{fontWeight:900,fontSize:isMobile?18:20,color:"#fff",letterSpacing:"-0.4px",marginBottom:3}}>
                   {selTopic.name}
                 </div>
-                <div style={{fontSize:12,color:et.color,fontWeight:600}}>
-                  {et.icon} {et.label} · Study Notes
-                  {notes&&<span style={{color:"rgba(255,255,255,0.3)",marginLeft:10}}>· {notes.wordCount||0} words</span>}
+                <div style={{fontSize:11,color:et.color,fontWeight:600}}>
+                  {et.icon} {et.label}
+                  {selSubtopic&&<span style={{color:"rgba(255,255,255,0.3)",marginLeft:8}}>· {selSubtopic.title}</span>}
+                  {notes&&!selSubtopic&&<span style={{color:"rgba(255,255,255,0.3)",marginLeft:8}}>· {notes.wordCount||0} words</span>}
+                  {notes&&selSubtopic&&<span style={{color:"rgba(255,255,255,0.3)",marginLeft:8}}>· {notes.wordCount||0} words</span>}
                 </div>
               </div>
             </div>
 
-            {/* Notes content */}
-            {loading?(
-              <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:300,gap:14,flexDirection:"column"}}>
-                <div style={{width:36,height:36,border:"3px solid rgba(255,106,0,0.2)",borderTop:"3px solid #FF6A00",borderRadius:"50%",animation:"raSpin .7s linear infinite"}}/>
-                <span style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading notes...</span>
-              </div>
-            ):!notes?(
-              <div style={{textAlign:"center",padding:"60px 20px"}}>
-                <div style={{fontSize:52,marginBottom:16}}>📭</div>
-                <div style={{fontWeight:800,fontSize:18,color:"rgba(255,255,255,0.5)",marginBottom:8}}>No notes yet</div>
-                <div style={{fontSize:13,color:"rgba(255,255,255,0.3)"}}>
-                  Notes for {selTopic.name} haven&apos;t been added yet.
+            {/* ── Subtopics grid (when topic has subtopics and no subtopic selected) ── */}
+            {subtopics.length>0&&!selSubtopic&&(
+              <div>
+                <div style={{marginBottom:16,display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:3,height:16,background:`linear-gradient(180deg,${et.color},transparent)`,borderRadius:2}}/>
+                  <span style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.35)",letterSpacing:"0.15em"}}>
+                    SELECT SUB-TOPIC
+                  </span>
+                  <span style={{fontSize:11,color:"rgba(255,255,255,0.2)"}}>({subtopics.length} sub-topics)</span>
+                </div>
+                <div style={{
+                  display:"grid",
+                  gridTemplateColumns:isMobile?"1fr":"repeat(auto-fill,minmax(200px,1fr))",
+                  gap:10,
+                }}>
+                  {subtopics.map((st,idx)=>(
+                    <div key={st.id}
+                      onClick={()=>setSelSubtopic(st)}
+                      style={{
+                        borderRadius:14,padding:"16px 18px",cursor:"pointer",
+                        background:st.hasNotes?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.02)",
+                        border:`1px solid ${st.hasNotes?et.color+"30":"rgba(255,255,255,0.07)"}`,
+                        transition:"all .25s ease",
+                        animation:`raFadeUp .3s ease ${idx*0.04}s both`,
+                      }}
+                      onMouseOver={e=>{e.currentTarget.style.background=et.color+"10";e.currentTarget.style.borderColor=et.color+"50";e.currentTarget.style.transform="translateY(-2px)";}}
+                      onMouseOut={e=>{e.currentTarget.style.background=st.hasNotes?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.02)";e.currentTarget.style.borderColor=st.hasNotes?et.color+"30":"rgba(255,255,255,0.07)";e.currentTarget.style.transform="none";}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{
+                          width:36,height:36,borderRadius:10,flexShrink:0,
+                          background:et.color+"15",border:`1px solid ${et.color}25`,
+                          display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,
+                        }}>{st.icon||"📄"}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:700,fontSize:13,color:"#fff",marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{st.title}</div>
+                          <div style={{fontSize:10,color:st.hasNotes?"#22c55e":"rgba(255,255,255,0.25)",fontWeight:600}}>
+                            {st.hasNotes?"📖 Notes available":"No notes yet"}
+                          </div>
+                        </div>
+                        <span style={{color:et.color,fontSize:14,flexShrink:0}}>›</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ):(
+            )}
+
+            {/* Loading */}
+            {loading&&(
+              <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:250,gap:14,flexDirection:"column"}}>
+                <div style={{width:36,height:36,border:"3px solid rgba(255,106,0,0.2)",borderTop:"3px solid #FF6A00",borderRadius:"50%",animation:"raSpin .7s linear infinite"}}/>
+                <span style={{color:"rgba(255,255,255,0.4)",fontSize:14}}>Loading...</span>
+              </div>
+            )}
+
+            {/* ── Notes content ── */}
+            {!loading&&notes&&(selSubtopic||subtopics.length===0)&&(
               <div style={{
                 background:"rgba(255,255,255,0.03)",
                 border:"1px solid rgba(255,255,255,0.07)",
                 borderRadius:20,
                 padding:isMobile?"20px":"36px 40px",
+                animation:"raFadeUp .3s ease both",
               }}>
-                <div
-                  className="ra-notes-view"
-                  dangerouslySetInnerHTML={{__html: notes.content}}
-                />
+                <div className="ra-notes-view" dangerouslySetInnerHTML={{__html:notes.content}}/>
+              </div>
+            )}
+
+            {/* No notes */}
+            {!loading&&!notes&&(selSubtopic||subtopics.length===0)&&(
+              <div style={{textAlign:"center",padding:"60px 20px"}}>
+                <div style={{fontSize:52,marginBottom:16}}>📭</div>
+                <div style={{fontWeight:800,fontSize:18,color:"rgba(255,255,255,0.5)",marginBottom:8}}>No notes yet</div>
+                <div style={{fontSize:13,color:"rgba(255,255,255,0.3)"}}>
+                  {selSubtopic?selSubtopic.title:selTopic.name} notes haven&apos;t been added yet.
+                </div>
               </div>
             )}
           </div>
@@ -3826,7 +3921,7 @@ function ProfilePage({user,setUser,setPage}){
 }
 
 // ─── NOTES EDITOR MODAL (Admin) ──────────────────────────────────────────────
-function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
+function NotesEditorModal({examType, topic, existingContent, onSave, onClose, subtopicId=null, subtopicTitle=null}){
   const editorRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
@@ -3869,13 +3964,18 @@ function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
       return;
     }
     setSaving(true);
+    const docId = subtopicId
+      ? `${examType}_${topic.id}_${subtopicId}`
+      : `${examType}_${topic.id}`;
     try {
       await setDoc(
-        doc(db, "notes", `${examType}_${topic.id}`),
+        doc(db, "notes", docId),
         {
           examType,
           topicId: topic.id,
           topicName: topic.name,
+          subtopicId: subtopicId||null,
+          subtopicTitle: subtopicTitle||null,
           content,
           updatedAt: serverTimestamp(),
           wordCount: content.replace(/<[^>]*>/g,"").trim().split(/\s+/).length,
@@ -3961,7 +4061,7 @@ function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
               display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,
             }}>{topic.icon||et.icon}</div>
             <div>
-              <div style={{fontWeight:800,fontSize:15,color:"#fff"}}>{topic.name} Notes</div>
+              <div style={{fontWeight:800,fontSize:15,color:"#fff"}}>{subtopicTitle||topic.name} Notes</div>
               <div style={{fontSize:11,color:et.color,fontWeight:600}}>{et.icon} {et.label} · Rich Text Editor</div>
             </div>
           </div>
@@ -4742,10 +4842,17 @@ function AdminPage(){
 
   const filtStu=students.filter(s=>s.name?.toLowerCase().includes(search.toLowerCase())||s.email?.toLowerCase().includes(search.toLowerCase()));
   // Notes state
-  const [notesExam,setNotesExam]   = useState("ssc");
-  const [notesTopic,setNotesTopic] = useState(null);
-  const [editingNotes,setEditingNotes] = useState(false);
-  const [notesExistMap,setNotesExistMap] = useState({});
+  const [notesExam,setNotesExam]             = useState("ssc");
+  const [notesTopic,setNotesTopic]           = useState(null);
+  const [editingNotes,setEditingNotes]       = useState(false);
+  const [notesExistMap,setNotesExistMap]     = useState({});
+  const [notesSubtopicId,setNotesSubtopicId] = useState(null);
+  const [notesSubtopicTitle,setNotesSubtopicTitle] = useState(null);
+  // Subtopic management
+  const [showSubtopics,setShowSubtopics]     = useState(null); // topic id
+  const [subtopicsList,setSubtopicsList]     = useState({});   // {topicId: [{id,title,icon,hasNotes}]}
+  const [newSubName,setNewSubName]           = useState("");
+  const [newSubIcon,setNewSubIcon]           = useState("📄");
   const notesET = liveExamTypes.find(e=>e.id===notesExam)||liveExamTypes[0];
 
   useEffect(()=>{
@@ -5057,6 +5164,8 @@ function AdminPage(){
               examType={notesExam}
               topic={notesTopic}
               existingContent={null}
+              subtopicId={notesSubtopicId}
+              subtopicTitle={notesSubtopicTitle}
               onSave={()=>{
                 setEditingNotes(false);
                 setNotesExistMap(m=>({...m,[`${notesExam}_${notesTopic.id}`]:true}));
@@ -5130,20 +5239,138 @@ function AdminPage(){
                     )}
                   </div>
 
+                  {/* Notes + Subtopics buttons */}
+                <div style={{display:"flex",gap:6}}>
                   <button
-                    onClick={()=>{setNotesTopic(t);setEditingNotes(true);}}
+                    onClick={()=>{setNotesTopic(t);setNotesSubtopicId(null);setNotesSubtopicTitle(null);setEditingNotes(true);}}
                     style={{
-                      width:"100%",padding:"9px 0",borderRadius:10,border:"none",
-                      background:hasNotes
-                        ?"rgba(255,106,0,0.15)"
-                        :`linear-gradient(135deg,${notesET.color},${notesET.color}cc)`,
+                      flex:1,padding:"9px 0",borderRadius:10,border:"none",
+                      background:hasNotes?"rgba(255,106,0,0.15)":`linear-gradient(135deg,${notesET.color},${notesET.color}cc)`,
                       color:hasNotes?notesET.color:"#fff",
                       fontWeight:700,fontSize:12,cursor:"pointer",
                       border:hasNotes?`1px solid ${notesET.color}40`:"none",
                       transition:"all .2s",
                     }}>
-                    {hasNotes?"✏️ Edit Notes":"➕ Add Notes"}
+                    {hasNotes?"✏️ Edit":"➕ Notes"}
                   </button>
+                  <button
+                    onClick={async()=>{
+                      setShowSubtopics(showSubtopics===t.id?null:t.id);
+                      if(showSubtopics!==t.id){
+                        // Load subtopics for this topic
+                        const d = await getDoc(doc(db,"notes",`${notesExam}_${t.id}`));
+                        if(d.exists()&&d.data().subtopics){
+                          const subs = d.data().subtopics;
+                          // Check which have notes
+                          const withNotes = await Promise.all(subs.map(async s=>{
+                            const nd = await getDoc(doc(db,"notes",`${notesExam}_${t.id}_${s.id}`));
+                            return {...s, hasNotes: nd.exists()};
+                          }));
+                          setSubtopicsList(p=>({...p,[t.id]:withNotes}));
+                        } else {
+                          setSubtopicsList(p=>({...p,[t.id]:[]}));
+                        }
+                      }
+                    }}
+                    style={{
+                      padding:"9px 12px",borderRadius:10,
+                      border:"1px solid rgba(255,255,255,0.1)",
+                      background:"rgba(255,255,255,0.06)",
+                      color:"rgba(255,255,255,0.6)",fontSize:11,
+                      fontWeight:700,cursor:"pointer",transition:"all .2s",
+                      whiteSpace:"nowrap",
+                    }}>
+                    📋 Sub-topics
+                  </button>
+                </div>
+
+                {/* Subtopics panel */}
+                {showSubtopics===t.id&&(
+                  <div style={{
+                    marginTop:10,padding:14,borderRadius:12,
+                    background:"rgba(255,255,255,0.03)",
+                    border:"1px solid rgba(255,255,255,0.08)",
+                  }}>
+                    <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.4)",marginBottom:10,letterSpacing:"0.1em"}}>
+                      SUB-TOPICS · {t.name}
+                    </div>
+
+                    {/* Existing subtopics */}
+                    {(subtopicsList[t.id]||[]).length===0&&(
+                      <div style={{fontSize:11,color:"rgba(255,255,255,0.25)",marginBottom:10}}>No sub-topics yet</div>
+                    )}
+                    {(subtopicsList[t.id]||[]).map(st=>(
+                      <div key={st.id} style={{
+                        display:"flex",alignItems:"center",gap:8,
+                        padding:"8px 10px",borderRadius:9,marginBottom:6,
+                        background:"rgba(255,255,255,0.04)",
+                        border:"1px solid rgba(255,255,255,0.07)",
+                      }}>
+                        <span style={{fontSize:16}}>{st.icon||"📄"}</span>
+                        <span style={{flex:1,fontSize:12,fontWeight:600,color:"#fff"}}>{st.title}</span>
+                        <span style={{fontSize:10,color:st.hasNotes?"#22c55e":"rgba(255,255,255,0.25)",fontWeight:600}}>
+                          {st.hasNotes?"✅ Notes":"No notes"}
+                        </span>
+                        <button onClick={()=>{setNotesTopic(t);setNotesSubtopicId(st.id);setNotesSubtopicTitle(st.title);setEditingNotes(true);}} style={{
+                          padding:"4px 10px",borderRadius:7,border:"none",
+                          background:`${notesET.color}20`,color:notesET.color,
+                          fontWeight:700,fontSize:10,cursor:"pointer",
+                        }}>{st.hasNotes?"✏️":"➕"}</button>
+                        <button onClick={async()=>{
+                          const d = await getDoc(doc(db,"notes",`${notesExam}_${t.id}`));
+                          if(d.exists()){
+                            const subs = (d.data().subtopics||[]).filter(s=>s.id!==st.id);
+                            await setDoc(doc(db,"notes",`${notesExam}_${t.id}`),{...d.data(),subtopics:subs});
+                            setSubtopicsList(p=>({...p,[t.id]:subs}));
+                          }
+                        }} style={{
+                          padding:"4px 8px",borderRadius:7,border:"none",
+                          background:"rgba(239,68,68,0.12)",color:"#ef4444",
+                          fontWeight:700,fontSize:10,cursor:"pointer",
+                        }}>✕</button>
+                      </div>
+                    ))}
+
+                    {/* Add new subtopic */}
+                    <div style={{display:"flex",gap:6,marginTop:8}}>
+                      <input value={newSubIcon} onChange={e=>setNewSubIcon(e.target.value)}
+                        style={{width:42,padding:"7px 6px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:18,textAlign:"center",outline:"none"}}
+                        maxLength={4}/>
+                      <input value={newSubName} onChange={e=>setNewSubName(e.target.value)}
+                        placeholder="Sub-topic name..."
+                        style={{flex:1,padding:"7px 12px",borderRadius:8,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.06)",color:"#fff",fontSize:12,outline:"none"}}
+                        onKeyDown={async e=>{
+                          if(e.key==="Enter"&&newSubName.trim()){
+                            const id = newSubName.trim().toLowerCase().replace(/\s+/g,"_")+"_"+Date.now();
+                            const newSub = {id,title:newSubName.trim(),icon:newSubIcon};
+                            const d = await getDoc(doc(db,"notes",`${notesExam}_${t.id}`));
+                            const existing = d.exists()?d.data():{examType:notesExam,topicId:t.id,topicName:t.name};
+                            const subs = [...(existing.subtopics||[]),newSub];
+                            await setDoc(doc(db,"notes",`${notesExam}_${t.id}`),{...existing,subtopics:subs,updatedAt:serverTimestamp()});
+                            setSubtopicsList(p=>({...p,[t.id]:[...((p[t.id]||[])),{...newSub,hasNotes:false}]}));
+                            setNewSubName(""); setNewSubIcon("📄");
+                          }
+                        }}/>
+                      <button onClick={async()=>{
+                        if(!newSubName.trim()) return;
+                        const id = newSubName.trim().toLowerCase().replace(/\s+/g,"_")+"_"+Date.now();
+                        const newSub = {id,title:newSubName.trim(),icon:newSubIcon};
+                        const d = await getDoc(doc(db,"notes",`${notesExam}_${t.id}`));
+                        const existing = d.exists()?d.data():{examType:notesExam,topicId:t.id,topicName:t.name};
+                        const subs = [...(existing.subtopics||[]),newSub];
+                        await setDoc(doc(db,"notes",`${notesExam}_${t.id}`),{...existing,subtopics:subs,updatedAt:serverTimestamp()});
+                        setSubtopicsList(p=>({...p,[t.id]:[...((p[t.id]||[])),{...newSub,hasNotes:false}]}));
+                        setNewSubName(""); setNewSubIcon("📄");
+                      }} style={{
+                        padding:"7px 14px",borderRadius:8,border:"none",
+                        background:`linear-gradient(135deg,${notesET.color},${notesET.color}cc)`,
+                        color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",
+                        whiteSpace:"nowrap",
+                      }}>+ Add</button>
+                    </div>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,0.2)",marginTop:6}}>Press Enter or click Add · Then click ➕ to write notes for that sub-topic</div>
+                  </div>
+                )}
                 </div>
               );
             })}
