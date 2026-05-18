@@ -5248,7 +5248,7 @@ function AdminPage(){
                       background:hasNotes?"rgba(255,106,0,0.15)":`linear-gradient(135deg,${notesET.color},${notesET.color}cc)`,
                       color:hasNotes?notesET.color:"#fff",
                       fontWeight:700,fontSize:12,cursor:"pointer",
-                      border:hasNotes?`1px solid ${notesET.color}40`:"none",
+                      outline:"none",
                       transition:"all .2s",
                     }}>
                     {hasNotes?"✏️ Edit":"➕ Notes"}
