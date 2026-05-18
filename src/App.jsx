@@ -3696,6 +3696,11 @@ function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
             <button className="ra-toolbar-btn" title="Insert Table" onMouseDown={e=>{e.preventDefault();insertTable();}}>📊 Table</button>
             <button className="ra-toolbar-btn" title="Divider" onMouseDown={e=>{e.preventDefault();exec("insertHorizontalRule");}}>─ Divider</button>
             <button className="ra-toolbar-btn" title="Clear formatting" onMouseDown={e=>{e.preventDefault();exec("removeFormat");}}>✕ Clear</button>
+            <div style={{width:1,height:20,background:"rgba(255,255,255,0.1)",margin:"0 3px"}}/>
+            <button className="ra-toolbar-btn" title="Align Left"    onMouseDown={e=>{e.preventDefault();exec("justifyLeft");}}>⬅ Left</button>
+            <button className="ra-toolbar-btn" title="Align Center"  onMouseDown={e=>{e.preventDefault();exec("justifyCenter");}}>↔ Center</button>
+            <button className="ra-toolbar-btn" title="Align Right"   onMouseDown={e=>{e.preventDefault();exec("justifyRight");}}>➡ Right</button>
+            <button className="ra-toolbar-btn" title="Justify"       onMouseDown={e=>{e.preventDefault();exec("justifyFull");}}>≡ Justify</button>
           </div>
 
           {/* Row 2: Text colors + Highlight colors */}
