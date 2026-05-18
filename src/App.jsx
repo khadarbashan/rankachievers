@@ -1197,7 +1197,7 @@ _heroStyle.textContent = `
      NOTES EDITOR
   ══════════════════════════════════════ */
   .ra-editor {
-    min-height: 320px;
+    min-height: 480px;
     padding: 20px;
     border-radius: 14px;
     border: 1.5px solid rgba(255,255,255,0.1);
@@ -3613,17 +3613,18 @@ function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
   ];
 
   return(
-    <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{
+    <div style={{
       position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",
       backdropFilter:"blur(8px)",zIndex:999999,
       display:"flex",alignItems:"stretch",justifyContent:"center",
-      padding:"20px",
+      padding:"12px",
     }}>
       <div style={{
         background:"rgba(12,12,16,0.98)",
         border:"1px solid rgba(255,255,255,0.1)",
         borderRadius:24,
-        width:"100%",maxWidth:860,
+        width:"100%",maxWidth:900,
+        height:"100%",
         display:"flex",flexDirection:"column",
         overflow:"hidden",
         boxShadow:"0 40px 80px rgba(0,0,0,0.9)",
@@ -3781,7 +3782,7 @@ function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
         </div>
 
         {/* Editor */}
-        <div style={{flex:1,overflow:"auto",padding:"4px"}}>
+        <div style={{flex:1,overflow:"auto",padding:"8px"}}>
           <div
             ref={editorRef}
             contentEditable
@@ -3789,9 +3790,12 @@ function NotesEditorModal({examType, topic, existingContent, onSave, onClose}){
             className="ra-editor"
             style={{
               minHeight:"100%",
+              height:"100%",
               borderRadius:12,
               border:"none",
               background:"transparent",
+              fontSize:15,
+              lineHeight:1.9,
             }}
             data-placeholder="Start writing notes here...&#10;&#10;Tips:&#10;• Use H1, H2, H3 for headings&#10;• Use bullet lists for key points&#10;• Use blockquote for important formulas&#10;• Use Table for comparison charts"
             onInput={()=>{}}
