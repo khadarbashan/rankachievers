@@ -1423,6 +1423,28 @@ _heroStyle.textContent = `
     outline-offset: 2px;
     border-radius: 6px;
   }
+
+  /* ══ ADMIN DARK OVERRIDES ══ */
+  .ra-admin { color: #fff !important; }
+  .ra-admin h1,.ra-admin h2,.ra-admin h3,.ra-admin h4 { color: #fff !important; }
+  .ra-admin p,.ra-admin span,.ra-admin label,.ra-admin div { color: inherit; }
+  .ra-admin input,.ra-admin textarea,.ra-admin select {
+    background: rgba(255,255,255,0.07) !important;
+    border: 1.5px solid rgba(255,255,255,0.12) !important;
+    color: #fff !important;
+    border-radius: 10px !important;
+  }
+  .ra-admin input:focus,.ra-admin textarea:focus,.ra-admin select:focus {
+    border-color: #FF6A00 !important;
+    background: rgba(255,106,0,0.08) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(255,106,0,0.15) !important;
+  }
+  .ra-admin input::placeholder,.ra-admin textarea::placeholder { color: rgba(255,255,255,0.3) !important; }
+  .ra-admin table { color: #fff !important; }
+  .ra-admin table th { background: rgba(255,106,0,0.12) !important; color: #FF6A00 !important; border-color: rgba(255,106,0,0.2) !important; }
+  .ra-admin table td { border-color: rgba(255,255,255,0.06) !important; color: rgba(255,255,255,0.8) !important; }
+  .ra-admin table tr:hover td { background: rgba(255,255,255,0.04) !important; }
 `;
 if(!document.getElementById("ra-hero-css")) document.head.appendChild(_heroStyle);
 
