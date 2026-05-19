@@ -5109,7 +5109,7 @@ function AdminPage(){
           <div style={{marginBottom:24}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
               <div style={{width:3,height:18,background:"linear-gradient(180deg,#FF6A00,transparent)",borderRadius:2}}/>
-              <span style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.4)",letterSpacing:"0.18em"}}>SELECT EXAM</span>
+              <span style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.7)",letterSpacing:"0.18em"}}>SELECT EXAM</span>
             </div>
             <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
               {liveExamTypes.map(e=>(
@@ -5118,7 +5118,7 @@ function AdminPage(){
                   transition:"all .2s",
                   border:`1.5px solid ${notesExam===e.id?e.color:"rgba(255,255,255,0.1)"}`,
                   background:notesExam===e.id?e.color+"22":"rgba(255,255,255,0.04)",
-                  color:notesExam===e.id?e.color:"rgba(255,255,255,0.5)",
+                  color:notesExam===e.id?e.color:"rgba(255,255,255,0.75)",
                   boxShadow:notesExam===e.id?`0 4px 16px ${e.color}30`:"none",
                 }}>
                   {e.icon} {e.label}
@@ -5131,7 +5131,7 @@ function AdminPage(){
           {/* Topics grid */}
           <div style={{marginBottom:16,display:"flex",alignItems:"center",gap:8}}>
             <div style={{width:3,height:18,background:"linear-gradient(180deg,#FF6A00,transparent)",borderRadius:2}}/>
-            <span style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.4)",letterSpacing:"0.18em"}}>SELECT TOPIC TO EDIT NOTES</span>
+            <span style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.7)",letterSpacing:"0.18em"}}>SELECT TOPIC TO EDIT NOTES</span>
           </div>
 
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:12}}>
@@ -5156,8 +5156,8 @@ function AdminPage(){
                       display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,
                     }}>{t.icon||notesET.icon}</div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:800,fontSize:14,color:"#fff",marginBottom:2}}>{t.name}</div>
-                      <div style={{fontSize:10,color:notesET.color,fontWeight:600}}>{notesET.label}</div>
+                      <div style={{fontWeight:800,fontSize:14,color:"#fff",marginBottom:2,letterSpacing:"-0.2px"}}>{t.name}</div>
+                      <div style={{fontSize:10,color:notesET.color,fontWeight:600,opacity:0.9}}>{notesET.label}</div>
                     </div>
                     {hasNotes&&(
                       <div style={{
