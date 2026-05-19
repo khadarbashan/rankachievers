@@ -104,8 +104,8 @@ export class ErrorBoundary extends React.Component{
 }
 
 // ─── UI PRIMITIVES ────────────────────────────────────────────────────────────
-const IS = {width:"100%",padding:"12px 16px",borderRadius:10,border:"2px solid #f0f0f0",fontSize:14,marginBottom:6,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff"};
-const LS = {display:"block",fontSize:12,fontWeight:700,color:"#444",marginBottom:5};
+const IS = {width:"100%",padding:"12px 16px",borderRadius:10,border:"2px solid #f0f0f0",fontSize:14,marginBottom:6,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"rgba(255,255,255,0.03)"};
+const LS = {display:"block",fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.5)",marginBottom:5};
 const ES = {color:"#dc2626",fontSize:12,marginBottom:10,marginTop:-2,paddingLeft:4};
 
 function Err({m}){return m?<div style={ES}>⚠ {m}</div>:null;}
@@ -501,7 +501,7 @@ function NoticeModal({notices, onClose}){
   if(!n) return null;
   return(
     <div style={{position:"fixed",inset:0,background:"#00000095",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:"#fff",borderRadius:24,maxWidth:520,width:"100%",overflow:"hidden",boxShadow:"0 24px 80px #00000060"}}>
+      <div style={{background:"rgba(255,255,255,0.03)",borderRadius:24,maxWidth:520,width:"100%",overflow:"hidden",boxShadow:"0 24px 80px #00000060"}}>
         {/* Header */}
         <div style={{background:"linear-gradient(135deg,#FF6A00,#ff9a00)",padding:"20px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
@@ -514,7 +514,7 @@ function NoticeModal({notices, onClose}){
         <div style={{padding:"28px 28px 20px"}}>
           {n.imageUrl&&<img src={n.imageUrl} alt="notice" style={{width:"100%",borderRadius:12,marginBottom:20,objectFit:"cover",maxHeight:200}}/>}
           <div style={{fontWeight:900,fontSize:20,marginBottom:10,color:"#000"}}>{n.title}</div>
-          <p style={{color:"#555",lineHeight:1.7,fontSize:15,margin:0}}>{n.body}</p>
+          <p style={{color:"rgba(255,255,255,0.6)",lineHeight:1.7,fontSize:15,margin:0}}>{n.body}</p>
           {n.link&&<a href={n.link} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:16,padding:"10px 24px",borderRadius:10,background:"#FF6A00",color:"#fff",fontWeight:800,textDecoration:"none",fontSize:14}}>Learn More →</a>}
         </div>
         {/* Footer */}
@@ -522,7 +522,7 @@ function NoticeModal({notices, onClose}){
           <div style={{fontSize:12,color:"#aaa"}}>{idx+1} of {notices.length}</div>
           <div style={{display:"flex",gap:10}}>
             {notices.length>1&&idx<notices.length-1&&(
-              <button onClick={()=>setIdx(i=>i+1)} style={{padding:"9px 20px",borderRadius:10,border:"2px solid #FF6A00",background:"#fff",color:"#FF6A00",fontWeight:700,cursor:"pointer",fontSize:13}}>Next →</button>
+              <button onClick={()=>setIdx(i=>i+1)} style={{padding:"9px 20px",borderRadius:10,border:"2px solid #FF6A00",background:"rgba(255,255,255,0.03)",color:"#FF6A00",fontWeight:700,cursor:"pointer",fontSize:13}}>Next →</button>
             )}
             <button onClick={()=>{localStorage.setItem("ra_last_notice",Date.now().toString());onClose();}} style={{padding:"9px 20px",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer",fontSize:13}}>Got it ✓</button>
           </div>
@@ -535,7 +535,7 @@ function NoticeModal({notices, onClose}){
 // ─── NOTIFICATION BELL PANEL ───────────────────────────────────────────────────
 function NotifPanel({notices,onClose}){
   return(
-    <div style={{position:"fixed",top:68,right:16,width:340,maxHeight:480,background:"#fff",borderRadius:16,boxShadow:"0 8px 40px #00000025",border:"2px solid #f0f0f0",zIndex:9998,overflow:"hidden",display:"flex",flexDirection:"column"}}>
+    <div style={{position:"fixed",top:68,right:16,width:340,maxHeight:480,background:"rgba(255,255,255,0.03)",borderRadius:16,boxShadow:"0 8px 40px #00000025",border:"2px solid #f0f0f0",zIndex:9998,overflow:"hidden",display:"flex",flexDirection:"column"}}>
       <div style={{padding:"14px 18px",borderBottom:"2px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{fontWeight:900,fontSize:15}}>📢 Announcements</div>
         <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#888"}}>✕</button>
@@ -601,7 +601,7 @@ function AuthPage({onLogin}){
             <div style={{width:64,height:64,borderRadius:18,background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,fontWeight:900,color:"#fff",margin:"0 auto 16px",boxShadow:"0 8px 32px #FF6A0060"}}>RA</div>
             <div style={{fontSize:22,fontWeight:900,color:"#fff",marginBottom:6}}>Rank Achievers</div>
             <div style={{fontSize:12,color:"#FF6A00",fontWeight:700,letterSpacing:"0.15em"}}>ACADEMY · ANANTAPUR</div>
-            <div style={{marginTop:12,fontSize:14,color:"#555"}}>Sign in to start your preparation</div>
+            <div style={{marginTop:12,fontSize:14,color:"rgba(255,255,255,0.6)"}}>Sign in to start your preparation</div>
           </div>
 
           {/* Error */}
@@ -639,14 +639,14 @@ function AuthPage({onLogin}){
                 <span style={{fontSize:18,flexShrink:0}}>{f.i}</span>
                 <div>
                   <div style={{fontSize:12,fontWeight:700,color:"#fff"}}>{f.t}</div>
-                  <div style={{fontSize:11,color:"#555"}}>{f.d}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.6)"}}>{f.d}</div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* Footer */}
-          <div style={{marginTop:24,textAlign:"center",fontSize:11,color:"#333"}}>
+          <div style={{marginTop:24,textAlign:"center",fontSize:11,color:"rgba(255,255,255,0.8)"}}>
             SSC · Banking · Railways Practice Platform
           </div>
         </div>
@@ -1512,7 +1512,7 @@ function HeroAnimation({isMobile}){
                 </span>
                 <span style={{display:"inline-block",width:2,height:28,background:cur.color,borderRadius:2,animation:"raBlink 1s step-end infinite",transition:"background .4s"}}/>
               </div>
-              <div style={{fontSize:13,color:"#555",marginTop:4}}>{cur.sub}</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",marginTop:4}}>{cur.sub}</div>
             </div>
           </div>
 
@@ -1545,7 +1545,7 @@ function HeroAnimation({isMobile}){
                   <div style={{width:40,height:40,borderRadius:11,background:e.c+"20",border:`1px solid ${e.c}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{e.i}</div>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:800,fontSize:15,color:e.sel?e.c:"#555"}}>{e.l}</div>
-                    <div style={{fontSize:11,color:"#444"}}>{e.d}</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>{e.d}</div>
                   </div>
                   {e.sel&&<div style={{background:e.c,borderRadius:20,padding:"3px 12px",fontSize:10,fontWeight:700,color:"#fff"}}>Selected ✓</div>}
                 </div>
@@ -1566,7 +1566,7 @@ function HeroAnimation({isMobile}){
                   <div key={d.d} style={{flex:1,background:`${d.c}10`,borderRadius:12,padding:"14px 10px",textAlign:"center",border:`1px solid ${d.c}30`}}>
                     <div style={{fontSize:16,fontWeight:900,color:d.c}}>{d.n}</div>
                     <div style={{fontSize:10,color:d.c+"aa",fontWeight:700,marginTop:2}}>{d.d}</div>
-                    <div style={{fontSize:9,color:"#444",marginTop:2}}>questions</div>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.5)",marginTop:2}}>questions</div>
                   </div>
                 ))}
               </div>
@@ -1584,9 +1584,9 @@ function HeroAnimation({isMobile}){
               </div>
               <div style={{flex:1,background:"#111",borderRadius:16,padding:"20px 16px",border:"1px solid #1e1e1e",textAlign:"center"}}>
                 <div style={{fontSize:36,marginBottom:8}}>🧘</div>
-                <div style={{fontWeight:800,fontSize:15,color:"#444",marginBottom:4}}>Practice Mode</div>
-                <div style={{fontSize:11,color:"#333",marginBottom:12}}>No time limit<br/>Per-question stopwatch</div>
-                <div style={{background:"#1a1a1a",borderRadius:20,padding:"5px 0",fontSize:11,color:"#444"}}>Select →</div>
+                <div style={{fontWeight:800,fontSize:15,color:"rgba(255,255,255,0.5)",marginBottom:4}}>Practice Mode</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.8)",marginBottom:12}}>No time limit<br/>Per-question stopwatch</div>
+                <div style={{background:"#1a1a1a",borderRadius:20,padding:"5px 0",fontSize:11,color:"rgba(255,255,255,0.5)"}}>Select →</div>
               </div>
             </div>
           )}
@@ -1608,7 +1608,7 @@ function HeroAnimation({isMobile}){
                   {[{o:"A",t:"118"},{o:"B",t:"128",sel:true},{o:"C",t:"138"},{o:"D",t:"148"}].map(opt=>(
                     <div key={opt.o} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:9,marginBottom:6,border:`1px solid ${opt.sel?"#FF6A00":"#1a1a1a"}`,background:opt.sel?"#FF6A0012":"transparent",cursor:"pointer"}}>
                       <div style={{width:16,height:16,borderRadius:"50%",border:`2px solid ${opt.sel?"#FF6A00":"#333"}`,background:opt.sel?"#FF6A00":"transparent",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {opt.sel&&<div style={{width:6,height:6,borderRadius:"50%",background:"#fff"}}/>}
+                        {opt.sel&&<div style={{width:6,height:6,borderRadius:"50%",background:"rgba(255,255,255,0.03)"}}/>}
                       </div>
                       <span style={{fontSize:12,color:opt.sel?"#FF6A00":"#555",fontWeight:opt.sel?700:400}}>{opt.o}. {opt.t} {opt.sel?"✓":""}</span>
                     </div>
@@ -1618,7 +1618,7 @@ function HeroAnimation({isMobile}){
                     {Array.from({length:10},(_,i)=>(
                       <div key={i} style={{width:28,height:28,borderRadius:6,background:i<6?"#22c55e":i===6?"#ef4444":i===7?"#FF6A00":"#1e1e1e",border:i===6?"2px solid #000":"1px solid transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,color:"#fff"}}>{i+1}</div>
                     ))}
-                    <div style={{fontSize:9,color:"#333",alignSelf:"center",marginLeft:4}}>+20 more →</div>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.8)",alignSelf:"center",marginLeft:4}}>+20 more →</div>
                   </div>
                 </div>
               </div>
@@ -1632,13 +1632,13 @@ function HeroAnimation({isMobile}){
                 {[{l:"Score",v:"24/30",c:"#FF6A00"},{l:"Accuracy",v:"80%",c:"#22c55e"},{l:"Time",v:"22:16",c:"#f59e0b"}].map(s=>(
                   <div key={s.l} style={{flex:1,background:"#0d0d0d",borderRadius:12,padding:"14px 10px",textAlign:"center",border:"1px solid #1a1a1a"}}>
                     <div style={{fontSize:22,fontWeight:900,color:s.c}}>{s.v}</div>
-                    <div style={{fontSize:10,color:"#444",marginTop:3}}>{s.l}</div>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",marginTop:3}}>{s.l}</div>
                   </div>
                 ))}
               </div>
               <div style={{background:"#0d0d0d",borderRadius:12,padding:"14px 16px",border:"1px solid #1a1a1a",marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontSize:11,color:"#555"}}>Performance</span>
+                  <span style={{fontSize:11,color:"rgba(255,255,255,0.6)"}}>Performance</span>
                   <span style={{fontSize:11,fontWeight:700,color:"#FF6A00"}}>80%</span>
                 </div>
                 <div style={{background:"#1a1a1a",borderRadius:4,height:8,overflow:"hidden"}}>
@@ -1647,14 +1647,14 @@ function HeroAnimation({isMobile}){
                 <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:10}}>
                   <span style={{color:"#22c55e"}}>✅ 24 correct</span>
                   <span style={{color:"#ef4444"}}>❌ 6 wrong</span>
-                  <span style={{color:"#555"}}>⬜ 0 skipped</span>
+                  <span style={{color:"rgba(255,255,255,0.6)"}}>⬜ 0 skipped</span>
                 </div>
               </div>
               {/* Top slow Qs */}
-              <div style={{fontSize:10,color:"#444",marginBottom:6}}>⏰ Slowest questions:</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",marginBottom:6}}>⏰ Slowest questions:</div>
               {[{q:7,t:"2m 34s",w:90},{q:13,t:"1m 58s",w:71},{q:22,t:"1m 20s",w:51}].map(r=>(
                 <div key={r.q} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                  <span style={{fontSize:10,color:"#555",width:36}}>Q.{r.q}</span>
+                  <span style={{fontSize:10,color:"rgba(255,255,255,0.6)",width:36}}>Q.{r.q}</span>
                   <div style={{flex:1,background:"#0d0d0d",borderRadius:3,height:5,overflow:"hidden"}}>
                     <div style={{height:"100%",width:r.w+"%",background:"#ef4444",borderRadius:3}}/>
                   </div>
@@ -1681,7 +1681,7 @@ function HeroAnimation({isMobile}){
                     </div>
                     <span style={{fontSize:13,color:"#FF6A00",cursor:"pointer"}}>▶ Video</span>
                   </div>
-                  <div style={{fontSize:10,color:"#555",paddingLeft:2}}>💡 {r.exp}</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.6)",paddingLeft:2}}>💡 {r.exp}</div>
                 </div>
               ))}
             </div>
@@ -1724,7 +1724,7 @@ function HeroAnimation({isMobile}){
         {STEPS.map((s,i)=>(
           <div key={i} className="ra-chip" onClick={()=>goTo(i)} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:20,border:`1px solid ${step===i?s.color+"60":"#1e1e1e"}`,background:step===i?s.color+"18":"#0a0a0a",boxShadow:step===i?`0 0 12px ${s.color}30`:"none"}}>
             <span style={{fontSize:13}}>{s.icon}</span>
-            <span style={{fontSize:11,fontWeight:step===i?700:400,color:step===i?s.color:"#444"}}>{s.label}</span>
+            <span style={{fontSize:11,fontWeight:step===i?700:400,color:step===i?s.color:"rgba(255,255,255,0.5)"}}>{s.label}</span>
           </div>
         ))}
       </div>
@@ -1792,7 +1792,7 @@ function BannerSlider({banners}){
           <div style={{fontWeight:900,fontSize:window.innerWidth<=768?"18px":"26px",color:"#fff",lineHeight:1.2,marginBottom:8}}>{b.title}</div>
           <div style={{fontSize:window.innerWidth<=768?12:14,color:"rgba(255,255,255,.85)",lineHeight:1.5,maxWidth:500}}>{b.subtitle}</div>
           {b.btnText&&b.btnLink&&(
-            <a href={b.btnLink} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:14,padding:"9px 22px",background:"#fff",color:b.bgColor||"#FF6A00",borderRadius:10,fontWeight:800,fontSize:13,textDecoration:"none"}}>
+            <a href={b.btnLink} target="_blank" rel="noreferrer" style={{display:"inline-block",marginTop:14,padding:"9px 22px",background:"rgba(255,255,255,0.03)",color:b.bgColor||"#FF6A00",borderRadius:10,fontWeight:800,fontSize:13,textDecoration:"none"}}>
               {b.btnText} →
             </a>
           )}
@@ -3273,7 +3273,7 @@ function TestPage({test,user,onFinish}){
       <div style={{display:"flex",flex:1,overflow:"hidden",flexDirection:window.innerWidth<=768?"column":"row"}}>
         {/* Question panel */}
         <div style={{flex:1,padding:window.innerWidth<=768?"10px 12px":24,overflowY:"auto",minHeight:0}}>
-          <div style={{background:"#fff",borderRadius:16,padding:26,boxShadow:"0 2px 16px #0000000a"}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderRadius:16,padding:26,boxShadow:"0 2px 16px #0000000a"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div style={{display:"flex",gap:10,alignItems:"center"}}>
                 <span style={{background:et.color,color:"#fff",padding:"4px 14px",borderRadius:20,fontSize:13,fontWeight:700}}>Q.{current+1}/{questions.length}</span>
@@ -3290,15 +3290,15 @@ function TestPage({test,user,onFinish}){
               {["a","b","c","d"].map(opt=>(
                 <label key={opt} onClick={()=>setAnswers(p=>({...p,[current]:opt}))} style={{display:"flex",alignItems:"center",gap:14,padding:"13px 18px",borderRadius:12,border:"2px solid",borderColor:answers[current]===opt?et.color:"#e5e7eb",background:answers[current]===opt?"#fff5ee":"#fff",cursor:"pointer",transition:"all .15s"}}>
                   <div style={{width:22,height:22,borderRadius:"50%",border:"2px solid",borderColor:answers[current]===opt?et.color:"#ccc",background:answers[current]===opt?et.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    {answers[current]===opt&&<div style={{width:8,height:8,borderRadius:"50%",background:"#fff"}}/>}
+                    {answers[current]===opt&&<div style={{width:8,height:8,borderRadius:"50%",background:"rgba(255,255,255,0.03)"}}/>}
                   </div>
                   <span style={{fontWeight:answers[current]===opt?700:500}}><b style={{color:et.color}}>{opt.toUpperCase()}.</b> {q[`option_${opt}`]}</span>
                 </label>
               ))}
             </div>
             <div style={{display:"flex",gap:8,marginTop:window.innerWidth<=768?16:24}}>
-              <button onClick={()=>current>0&&goTo(current-1)} disabled={current===0} style={{padding:window.innerWidth<=768?"10px 14px":"10px 20px",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer",fontSize:window.innerWidth<=768?13:13,opacity:current===0?.4:1}}>←</button>
-              <button onClick={markReview} style={{padding:window.innerWidth<=768?"10px 14px":"10px 20px",borderRadius:10,border:`2px solid ${et.color}`,background:"#fff",color:et.color,fontWeight:700,cursor:"pointer",fontSize:13}}>🔖</button>
+              <button onClick={()=>current>0&&goTo(current-1)} disabled={current===0} style={{padding:window.innerWidth<=768?"10px 14px":"10px 20px",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,cursor:"pointer",fontSize:window.innerWidth<=768?13:13,opacity:current===0?.4:1}}>←</button>
+              <button onClick={markReview} style={{padding:window.innerWidth<=768?"10px 14px":"10px 20px",borderRadius:10,border:`2px solid ${et.color}`,background:"rgba(255,255,255,0.03)",color:et.color,fontWeight:700,cursor:"pointer",fontSize:13}}>🔖</button>
               <button onClick={saveAndNext} style={{flex:1,padding:"10px 16px",borderRadius:10,border:"none",background:`linear-gradient(90deg,${et.color},${et.color}cc)`,color:"#fff",fontWeight:800,cursor:"pointer",fontSize:14}}>Save & Next →</button>
             </div>
           </div>
@@ -3306,9 +3306,9 @@ function TestPage({test,user,onFinish}){
 
         {/* Palette */}
         {window.innerWidth<=768?(
-          <div style={{background:"#fff",borderTop:"2px solid #FF6A00",padding:"8px 12px",flexShrink:0}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderTop:"2px solid #FF6A00",padding:"8px 12px",flexShrink:0}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={{fontSize:11,fontWeight:700,color:"#555"}}>Question Palette</div>
+              <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.6)"}}>Question Palette</div>
               <div style={{display:"flex",gap:10,fontSize:11}}>
                 <span style={{color:"#22c55e",fontWeight:700}}>✅{Object.values(status).filter(s=>s==="answered").length}</span>
                 <span style={{color:"#FF6A00",fontWeight:700}}>🔖{Object.values(status).filter(s=>s==="review").length}</span>
@@ -3330,13 +3330,13 @@ function TestPage({test,user,onFinish}){
             </div>
           </div>
         ):(
-          <div style={{width:250,background:"#fff",borderLeft:"2px solid #f0f0f0",padding:18,overflowY:"auto",flexShrink:0}}>
+          <div style={{width:250,background:"rgba(255,255,255,0.03)",borderLeft:"2px solid #f0f0f0",padding:18,overflowY:"auto",flexShrink:0}}>
             <h3 style={{fontWeight:800,fontSize:13,marginBottom:12}}>Question Palette</h3>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
               {[["#22c55e","Answered"],["#ef4444","Not Ans."],["#e5e7eb","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
                 <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10}}>
                   <div style={{width:10,height:10,borderRadius:3,background:c}}/>
-                  <span style={{color:"#555"}}>{l}</span>
+                  <span style={{color:"rgba(255,255,255,0.6)"}}>{l}</span>
                 </div>
               ))}
             </div>
@@ -3362,17 +3362,17 @@ function TestPage({test,user,onFinish}){
 
       {showSubmitModal&&(
         <div style={{position:"fixed",inset:0,background:"#00000090",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}}>
-          <div style={{background:"#fff",borderRadius:20,padding:32,maxWidth:380,width:"90%",textAlign:"center"}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderRadius:20,padding:32,maxWidth:380,width:"90%",textAlign:"center"}}>
             <div style={{fontSize:48,marginBottom:10}}>📋</div>
             <h3 style={{fontWeight:900,fontSize:18,marginBottom:14}}>Submit Test?</h3>
             <div style={{background:"#f8f8f8",borderRadius:10,padding:14,marginBottom:18,textAlign:"left"}}>
               {[["✅ Answered",Object.values(status).filter(s=>s==="answered").length,"#22c55e"],["🔖 For Review",Object.values(status).filter(s=>s==="review").length,"#FF6A00"],["⬜ Skipped",questions.length-Object.keys(status).length,"#ef4444"]].map(([l,v,c])=>(
-                <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:13,color:"#555"}}>{l}</span><span style={{fontWeight:800,color:c}}>{v}</span></div>
+                <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:13,color:"rgba(255,255,255,0.6)"}}>{l}</span><span style={{fontWeight:800,color:c}}>{v}</span></div>
               ))}
             </div>
             <p style={{fontSize:12,color:"#888",marginBottom:18}}>☁️ Results will be saved to cloud</p>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setShowSubmitModal(false)} style={{flex:1,padding:"11px 0",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:800,cursor:"pointer"}}>Continue</button>
+              <button onClick={()=>setShowSubmitModal(false)} style={{flex:1,padding:"11px 0",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:800,cursor:"pointer"}}>Continue</button>
               <button onClick={()=>{setShowSubmitModal(false);handleSubmit();}} style={{flex:1,padding:"11px 0",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"}}>Submit →</button>
             </div>
           </div>
@@ -3380,12 +3380,12 @@ function TestPage({test,user,onFinish}){
       )}
       {showWarning&&(
         <div style={{position:"fixed",inset:0,background:"#00000090",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}}>
-          <div style={{background:"#fff",borderRadius:20,padding:32,maxWidth:360,width:"90%",textAlign:"center"}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderRadius:20,padding:32,maxWidth:360,width:"90%",textAlign:"center"}}>
             <div style={{fontSize:48,marginBottom:10}}>⚠️</div>
             <h3 style={{fontWeight:900,marginBottom:8}}>Don&apos;t Leave!</h3>
             <p style={{color:"#666",marginBottom:20}}>Navigating away will end your test.</p>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setShowWarning(false)} style={{flex:1,padding:12,borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Stay</button>
+              <button onClick={()=>setShowWarning(false)} style={{flex:1,padding:12,borderRadius:10,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,cursor:"pointer"}}>Stay</button>
               <button onClick={()=>handleSubmit()} style={{flex:1,padding:12,borderRadius:10,border:"none",background:"#FF6A00",color:"#fff",fontWeight:800,cursor:"pointer"}}>Submit</button>
             </div>
           </div>
@@ -3418,7 +3418,7 @@ function ResultPage({result,onViewSolutions,onBack,user}){
               {[{l:"Time",v:fmtT(timeSpent),c:"#f59e0b"},{l:"Level",v:(test.difficulty||"mixed").toUpperCase(),c:DCOL[test.difficulty]||"#888"}].map(s=>(
                 <div key={s.l} style={{background:"rgba(255,255,255,0.05)",borderRadius:10,padding:"7px 12px",border:"1px solid rgba(255,255,255,0.08)"}}>
                   <div style={{fontWeight:800,fontSize:14,color:s.c}}>{s.v}</div>
-                  <div style={{fontSize:10,color:"#555",marginTop:1}}>{s.l}</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.6)",marginTop:1}}>{s.l}</div>
                 </div>
               ))}
             </div>
@@ -3429,7 +3429,7 @@ function ResultPage({result,onViewSolutions,onBack,user}){
           <span style={{fontSize:11,color:"#22c55e",fontWeight:700}}>☁️ Saved to cloud</span>
         </div>
       </div>
-      <div style={{background:"#fff",borderRadius:14,padding:22,marginBottom:20,border:"2px solid #f0f0f0"}}>
+      <div style={{background:"rgba(255,255,255,0.03)",borderRadius:14,padding:22,marginBottom:20,border:"2px solid #f0f0f0"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}><span style={{fontWeight:700}}>Performance</span><span style={{color:et.color,fontWeight:800}}>{accuracy}%</span></div>
         <div style={{background:"#f0f0f0",borderRadius:8,height:12,overflow:"hidden"}}><div style={{height:"100%",borderRadius:8,width:`${accuracy}%`,background:`linear-gradient(90deg,${et.color},${et.color}cc)`,transition:"width 1s ease"}}/></div>
         <div style={{display:"flex",justifyContent:"space-between",marginTop:8,fontSize:12,color:"#888"}}>
@@ -3437,7 +3437,7 @@ function ResultPage({result,onViewSolutions,onBack,user}){
         </div>
       </div>
       {timeSorted.length>0&&(
-        <div style={{background:"#fff",borderRadius:14,padding:22,marginBottom:20,border:"2px solid #f0f0f0"}}>
+        <div style={{background:"rgba(255,255,255,0.03)",borderRadius:14,padding:22,marginBottom:20,border:"2px solid #f0f0f0"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
             <span style={{fontSize:26}}>⏰</span>
             <div><h3 style={{fontWeight:900,fontSize:16,margin:0}}>Top 10 Time-Killing Questions</h3><p style={{color:"#888",fontSize:12,margin:"2px 0 0"}}>Questions where you spent the most time</p></div>
@@ -3462,7 +3462,7 @@ function ResultPage({result,onViewSolutions,onBack,user}){
         </div>
       )}
       <div style={{display:"flex",gap:12}}>
-        <button onClick={onBack} style={{flex:1,padding:"12px 0",borderRadius:12,border:"2px solid #e0e0e0",background:"#fff",fontWeight:800,fontSize:14,cursor:"pointer"}}>← Tests</button>
+        <button onClick={onBack} style={{flex:1,padding:"12px 0",borderRadius:12,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:800,fontSize:14,cursor:"pointer"}}>← Tests</button>
         <button onClick={onViewSolutions} style={{flex:2,padding:"12px 0",borderRadius:12,border:"none",background:`linear-gradient(90deg,${et.color},${et.color}cc)`,color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer"}}>📖 View Solutions →</button>
       </div>
     </div>
@@ -3483,7 +3483,7 @@ function SolutionsPage({result,onBack}){
   return(
     <div style={{paddingTop:74,padding:window.innerWidth<=768?"74px 16px 100px":"74px 40px 40px",maxWidth:800,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:22}}>
-        <button onClick={onBack} style={{padding:"8px 14px",borderRadius:8,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>← Back</button>
+        <button onClick={onBack} style={{padding:"8px 14px",borderRadius:8,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,cursor:"pointer"}}>← Back</button>
         <h1 style={{fontSize:24,fontWeight:900,margin:0}}>Answers & <span style={{color:et.color}}>Solutions</span></h1>
       </div>
       <div style={{display:"flex",gap:8,marginBottom:24,flexWrap:"wrap"}}>
@@ -3495,7 +3495,7 @@ function SolutionsPage({result,onBack}){
         {filtered.map(q=>{
           const i=questions.indexOf(q);const ua=answers[i];const correct=ua===q.correct_answer;const skipped=!ua;
           return(
-            <div key={q.id} style={{background:"#fff",borderRadius:14,padding:22,border:"2px solid",borderColor:skipped?"#e5e7eb":correct?"#22c55e40":"#ef444440"}}>
+            <div key={q.id} style={{background:"rgba(255,255,255,0.03)",borderRadius:14,padding:22,border:"2px solid",borderColor:skipped?"#e5e7eb":correct?"#22c55e40":"#ef444440"}}>
               <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
                 <span style={{background:skipped?"#e5e7eb":correct?"#dcfce7":"#fee2e2",color:skipped?"#666":correct?"#16a34a":"#dc2626",padding:"4px 10px",borderRadius:20,fontSize:12,fontWeight:800}}>{skipped?"⬜ Skipped":correct?"✅ Correct":"❌ Wrong"}</span>
                 <span style={{color:"#888",fontSize:12}}>Q.{i+1}</span>
@@ -3510,7 +3510,7 @@ function SolutionsPage({result,onBack}){
               </div>
               <div style={{background:"#fff8f0",borderRadius:10,padding:14,marginBottom:10}}>
                 <div style={{color:"#FF6A00",fontWeight:800,marginBottom:6,fontSize:13}}>💡 Explanation</div>
-                <pre style={{margin:0,whiteSpace:"pre-wrap",fontSize:13,color:"#333",fontFamily:"inherit"}}>{q.explanation}</pre>
+                <pre style={{margin:0,whiteSpace:"pre-wrap",fontSize:13,color:"rgba(255,255,255,0.8)",fontFamily:"inherit"}}>{q.explanation}</pre>
               </div>
               <details><summary style={{color:et.color,fontWeight:700,fontSize:13,cursor:"pointer"}}>▶ Watch Video Solution</summary>
                 <div style={{marginTop:8,borderRadius:8,overflow:"hidden"}}><iframe src={q.youtube_link} width="100%" height="200" title="sol" frameBorder="0" allowFullScreen style={{display:"block"}}/></div>
@@ -3583,7 +3583,7 @@ function DashboardPage({user,setPage}){
 
       <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"repeat(1,1fr)":"repeat(3,1fr)",gap:14,marginBottom:24}}>
         {[{l:"Tests Attempted",v:loading?"...":total,i:"📝"},{l:"Average Accuracy",v:loading?"...":`${avgAcc}%`,i:"🎯"},{l:"Avg Time/Test",v:loading?"...":fmtT(avgTime),i:"⏱️"}].map(s=>(
-          <div key={s.l} style={{background:"#fff",borderRadius:14,padding:"20px 16px",border:"2px solid #f0f0f0",textAlign:"center"}}>
+          <div key={s.l} style={{background:"rgba(255,255,255,0.03)",borderRadius:14,padding:"20px 16px",border:"2px solid #f0f0f0",textAlign:"center"}}>
             <div style={{fontSize:28,marginBottom:6}}>{s.i}</div>
             <div style={{fontSize:24,fontWeight:900,color:"#FF6A00"}}>{s.v}</div>
             <div style={{fontSize:12,color:"#888",marginTop:3}}>{s.l}</div>
@@ -3599,7 +3599,7 @@ function DashboardPage({user,setPage}){
             const eAcc=ea.length?Math.round(ea.reduce((s,a)=>s+(a.accuracy||0),0)/ea.length):0;
             const best=ea.length?Math.max(...ea.map(a=>a.accuracy||0)):0;
             return(
-              <div key={et.id} style={{background:"#fff",borderRadius:14,padding:"16px 18px",border:`2px solid ${et.color}30`}}>
+              <div key={et.id} style={{background:"rgba(255,255,255,0.03)",borderRadius:14,padding:"16px 18px",border:`2px solid ${et.color}30`}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                   <span style={{fontSize:22}}>{et.icon}</span>
                   <div>
@@ -3631,7 +3631,7 @@ function DashboardPage({user,setPage}){
       )}
 
       {/* ── All Attempts Table ── */}
-      <div style={{background:"#fff",borderRadius:14,padding:22,border:"2px solid #f0f0f0"}}>
+      <div style={{background:"rgba(255,255,255,0.03)",borderRadius:14,padding:22,border:"2px solid #f0f0f0"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
           <h3 style={{fontWeight:900,margin:0}}>All Attempts History</h3>
           <span style={{fontSize:12,color:"#22c55e",fontWeight:600}}>☁️ Live from cloud</span>
@@ -3657,7 +3657,7 @@ function DashboardPage({user,setPage}){
                         <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>{a.testTitle}</div>
                         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                           <span style={{background:et?.color||"#FF6A00",color:"#fff",padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:700}}>{et?.icon} {a.examType?.toUpperCase()}</span>
-                          <span style={{background:"#f0f0f0",color:"#555",padding:"2px 8px",borderRadius:10,fontSize:10}}>{a.mode==="practice"?"🧘 Practice":"⏱️ Timed"}</span>
+                          <span style={{background:"#f0f0f0",color:"rgba(255,255,255,0.6)",padding:"2px 8px",borderRadius:10,fontSize:10}}>{a.mode==="practice"?"🧘 Practice":"⏱️ Timed"}</span>
                         </div>
                       </div>
                       <span style={{background:a.accuracy>=80?"#dcfce7":a.accuracy>=60?"#fef9c3":"#fee2e2",color:a.accuracy>=80?"#16a34a":a.accuracy>=60?"#854d0e":"#dc2626",padding:"4px 12px",borderRadius:20,fontSize:14,fontWeight:900,flexShrink:0}}>{a.accuracy}%</span>
@@ -3801,7 +3801,7 @@ function LeaderboardPage(){
             {l:"Avg Accuracy",v:allAttempts.length?Math.round(allAttempts.reduce((s,a)=>s+(a.accuracy||0),0)/allAttempts.length)+"%":"—",c:"#22c55e"},
             {l:"Top Score",v:allAttempts.length?(Math.max(...allAttempts.map(a=>a.accuracy||0))+"%"):"—",c:"#f59e0b"},
           ].map(s=>(
-            <div key={s.l} style={{background:"#fff",borderRadius:12,padding:"10px 18px",border:"2px solid #f0f0f0",textAlign:"center",minWidth:100}}>
+            <div key={s.l} style={{background:"rgba(255,255,255,0.03)",borderRadius:12,padding:"10px 18px",border:"2px solid #f0f0f0",textAlign:"center",minWidth:100}}>
               <div style={{fontWeight:900,fontSize:18,color:s.c}}>{s.v}</div>
               <div style={{fontSize:10,color:"#888",marginTop:2}}>{s.l}</div>
             </div>
@@ -3820,7 +3820,7 @@ function LeaderboardPage(){
       </div>
 
       {/* Table */}
-      <div style={{background:"#fff",borderRadius:18,overflow:"hidden",border:"2px solid #f0f0f0",boxShadow:"0 4px 24px #00000008"}}>
+      <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,overflow:"hidden",border:"2px solid #f0f0f0",boxShadow:"0 4px 24px #00000008"}}>
         <div style={{background:"#000",padding:"12px 20px",display:"flex",gap:10,alignItems:"center"}}>
           <div style={{color:"#FF6A00",fontWeight:800,fontSize:12,width:36}}>#</div>
           <div style={{color:"#FF6A00",fontWeight:800,fontSize:12,flex:2}}>Student</div>
@@ -3928,7 +3928,7 @@ function ProfilePage({user,setUser,setPage}){
           <button key={t} onClick={()=>{setTab(t);setErr({});setSaved(false);}} style={{padding:"8px 14px",borderRadius:9,border:"2px solid",borderColor:tab===t?(t==="danger"?"#dc2626":"#FF6A00"):"#e0e0e0",background:tab===t?(t==="danger"?"#dc2626":"#FF6A00"):"#fff",color:tab===t?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{l}</button>
         ))}
       </div>
-      <div style={{background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
+      <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
         {saved&&<div style={{background:"#dcfce7",border:"2px solid #86efac",borderRadius:9,padding:"9px 14px",marginBottom:14,fontSize:13,color:"#166534",fontWeight:600}}>✅ Saved to cloud!</div>}
         {tab==="info"&&(
           <>
@@ -4805,14 +4805,14 @@ function AdminPage(){
   const TABS=[{id:"students",l:"👥 Students"},{id:"exams",l:"🎯 Exam Types"},{id:"banners",l:"🖼️ Banners"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"notes",l:"📖 Notes"},{id:"settings",l:"⚙️ Settings"}];
 
   return(
-    <div style={{paddingTop:74,padding:window.innerWidth<=768?"74px 14px 100px":"80px 28px 40px",maxWidth:1000,margin:"0 auto"}}>
+    <div className="ra-admin" style={{paddingTop:74,padding:window.innerWidth<=768?"74px 14px 100px":"80px 28px 40px",maxWidth:1000,margin:"0 auto",minHeight:"100vh",background:"#060608",color:"#fff"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24,flexWrap:"wrap",gap:10}}>
         <div>
           <h1 style={{fontSize:24,fontWeight:900,margin:0}}>Admin Dashboard</h1>
           <p style={{color:"#888",margin:"3px 0 0",fontSize:12}}>Rank Achievers Academy · Anantapur · Firebase Backend ☁️</p>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:9,border:"2px solid",borderColor:tab===t.id?"#FF6A00":"#e0e0e0",background:tab===t.id?"#FF6A00":"#fff",color:tab===t.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.l}</button>)}
+          {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:9,border:"2px solid",borderColor:tab===t.id?"#FF6A00":"rgba(255,255,255,0.1)",background:tab===t.id?"#FF6A00":"rgba(255,255,255,0.05)",color:tab===t.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.l}</button>)}
         </div>
       </div>
 
@@ -4920,7 +4920,7 @@ function AdminPage(){
 
           <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"repeat(auto-fill,minmax(300px,1fr))",gap:20}}>
             {liveExamTypes.map(et=>(
-              <div key={et.id} style={{background:"#fff",borderRadius:18,padding:22,border:"2px solid",borderColor:editingET===et.id?et.color:"#f0f0f0"}}>
+              <div key={et.id} style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:22,border:"2px solid",borderColor:editingET===et.id?et.color:"#f0f0f0"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
                   <span style={{fontSize:28}}>{et.icon}</span>
                   <div style={{flex:1}}>
@@ -4929,7 +4929,7 @@ function AdminPage(){
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <div onClick={()=>toggleExamVisible(et.id)} style={{width:40,height:22,borderRadius:11,background:et.visible===false?"#e0e0e0":"#22c55e",position:"relative",cursor:"pointer",transition:"background .3s",flexShrink:0}}>
-                      <div style={{position:"absolute",top:2,left:et.visible===false?2:20,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .3s",boxShadow:"0 1px 4px #00000030"}}/>
+                      <div style={{position:"absolute",top:2,left:et.visible===false?2:20,width:18,height:18,borderRadius:"50%",background:"rgba(255,255,255,0.03)",transition:"left .3s",boxShadow:"0 1px 4px #00000030"}}/>
                     </div>
                     <span style={{fontSize:10,color:et.visible===false?"#aaa":"#22c55e",fontWeight:700,whiteSpace:"nowrap"}}>{et.visible===false?"Hidden":"Shown"}</span>
                   </div>
@@ -4950,7 +4950,7 @@ function AdminPage(){
                       <button onClick={saveExamTypeEdit} disabled={etSaving} style={{flex:2,padding:"10px 0",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                         {etSaving&&<Spinner size={14} color="#fff"/>}Save
                       </button>
-                      <button onClick={()=>{setEditingET(null);setEtForm({});}} style={{flex:1,padding:"10px 0",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                      <button onClick={()=>{setEditingET(null);setEtForm({});}} style={{flex:1,padding:"10px 0",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,cursor:"pointer"}}>Cancel</button>
                     </div>
                   </div>
                 ):(
@@ -4962,7 +4962,7 @@ function AdminPage(){
                         <button onClick={()=>deleteExamType(et.id)} style={{padding:"8px 14px",borderRadius:10,border:"1.5px solid rgba(239,68,68,0.4)",background:"rgba(239,68,68,0.1)",color:"#ef4444",fontWeight:700,cursor:"pointer",fontSize:13}}>🗑️</button>
                       )}
                     </div>
-                    <div style={{fontSize:12,fontWeight:700,color:"#555",marginBottom:8}}>Topics ({et.topics?.length||0})</div>
+                    <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,0.6)",marginBottom:8}}>Topics ({et.topics?.length||0})</div>
                     <div style={{maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
                       {(et.topics||[]).map(t=>(
                         <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:"#f8f8f8",borderRadius:8}}>
@@ -4981,11 +4981,11 @@ function AdminPage(){
                         </div>
                         <div style={{display:"flex",gap:6}}>
                           <button onClick={()=>addTopic(et.id)} style={{flex:1,padding:"8px 0",borderRadius:8,border:"none",background:"#FF6A00",color:"#fff",fontWeight:700,cursor:"pointer"}}>Add</button>
-                          <button onClick={()=>{setAddingTopic(null);setNewTopicName("");}} style={{flex:1,padding:"8px 0",borderRadius:8,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                          <button onClick={()=>{setAddingTopic(null);setNewTopicName("");}} style={{flex:1,padding:"8px 0",borderRadius:8,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,cursor:"pointer"}}>Cancel</button>
                         </div>
                       </div>
                     ):(
-                      <button onClick={()=>setAddingTopic(et.id)} style={{width:"100%",padding:"7px 0",borderRadius:9,border:"2px dashed #e0e0e0",background:"#fff",color:"#888",fontWeight:700,cursor:"pointer",fontSize:12}}>+ Add Topic</button>
+                      <button onClick={()=>setAddingTopic(et.id)} style={{width:"100%",padding:"7px 0",borderRadius:9,border:"2px dashed #e0e0e0",background:"rgba(255,255,255,0.03)",color:"#888",fontWeight:700,cursor:"pointer",fontSize:12}}>+ Add Topic</button>
                     )}
                   </>
                 )}
@@ -4998,7 +4998,7 @@ function AdminPage(){
       {/* ── BANNERS TAB ── */}
       {tab==="banners"&&(
         <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"1fr 1fr",gap:22,alignItems:"start"}}>
-          <div style={{background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
             <h3 style={{fontWeight:900,marginBottom:4}}>{editingBanner?"✏️ Edit Banner":"🖼️ Add Banner"}</h3>
             <p style={{color:"#888",fontSize:13,marginBottom:16}}>Banners auto-scroll on the home page</p>
             {bannerMsg&&<div style={{padding:"9px 14px",borderRadius:9,marginBottom:12,fontSize:13,fontWeight:700,background:bannerMsg.startsWith("✅")?"#dcfce7":"#fee2e2",color:bannerMsg.startsWith("✅")?"#166534":"#dc2626"}}>{bannerMsg}</div>}
@@ -5010,7 +5010,7 @@ function AdminPage(){
                   {bannerForm.badge&&<div style={{fontSize:9,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:4}}>{bannerForm.badge}</div>}
                   <div style={{fontWeight:900,color:"#fff",fontSize:14}}>{bannerForm.title}</div>
                   {bannerForm.subtitle&&<div style={{color:"rgba(255,255,255,.75)",fontSize:11,marginTop:3}}>{bannerForm.subtitle}</div>}
-                  {bannerForm.btnText&&<div style={{marginTop:8,display:"inline-block",background:"#fff",color:bannerForm.bgColor||"#FF6A00",padding:"4px 12px",borderRadius:7,fontSize:11,fontWeight:800}}>{bannerForm.btnText}</div>}
+                  {bannerForm.btnText&&<div style={{marginTop:8,display:"inline-block",background:"rgba(255,255,255,0.03)",color:bannerForm.bgColor||"#FF6A00",padding:"4px 12px",borderRadius:7,fontSize:11,fontWeight:800}}>{bannerForm.btnText}</div>}
                 </div>
               </div>
             )}
@@ -5042,11 +5042,11 @@ function AdminPage(){
               <button onClick={saveBanner} disabled={bannerSaving} style={{flex:2,padding:"12px 0",borderRadius:11,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                 {bannerSaving&&<Spinner size={16} color="#fff"/>}{editingBanner?"💾 Update":"🖼️ Add Banner"}
               </button>
-              {editingBanner&&<button onClick={()=>{setEditingBanner(null);setBannerForm({title:"",subtitle:"",badge:"",imageUrl:"",bgColor:"#FF6A00",btnText:"",btnLink:"",order:adminBanners.length});}} style={{flex:1,padding:"12px 0",borderRadius:11,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>}
+              {editingBanner&&<button onClick={()=>{setEditingBanner(null);setBannerForm({title:"",subtitle:"",badge:"",imageUrl:"",bgColor:"#FF6A00",btnText:"",btnLink:"",order:adminBanners.length});}} style={{flex:1,padding:"12px 0",borderRadius:11,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,cursor:"pointer"}}>Cancel</button>}
             </div>
           </div>
 
-          <div style={{background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
               <h3 style={{fontWeight:900,margin:0}}>Live Banners</h3>
               <span style={{background:"#FF6A00",color:"#fff",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:800}}>{adminBanners.length} · ☁️</span>
@@ -5069,12 +5069,12 @@ function AdminPage(){
                       </div>
                     </div>
                     <div style={{padding:"8px 12px",display:"flex",gap:6,alignItems:"center",background:"#f9f9f9"}}>
-                      <button onClick={()=>moveBanner(b.id,-1)} disabled={i===0} style={{padding:"4px 8px",borderRadius:6,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",opacity:i===0?.4:1}}>↑</button>
-                      <button onClick={()=>moveBanner(b.id,1)} disabled={i===adminBanners.length-1} style={{padding:"4px 8px",borderRadius:6,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:11,cursor:"pointer",opacity:i===adminBanners.length-1?.4:1}}>↓</button>
+                      <button onClick={()=>moveBanner(b.id,-1)} disabled={i===0} style={{padding:"4px 8px",borderRadius:6,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,fontSize:11,cursor:"pointer",opacity:i===0?.4:1}}>↑</button>
+                      <button onClick={()=>moveBanner(b.id,1)} disabled={i===adminBanners.length-1} style={{padding:"4px 8px",borderRadius:6,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,fontSize:11,cursor:"pointer",opacity:i===adminBanners.length-1?.4:1}}>↓</button>
                       <button onClick={()=>{setEditingBanner(b.id);setBannerForm({title:b.title||"",subtitle:b.subtitle||"",badge:b.badge||"",imageUrl:b.imageUrl||"",bgColor:b.bgColor||"#FF6A00",btnText:b.btnText||"",btnLink:b.btnLink||"",order:b.order||0});}} style={{flex:1,padding:"5px 0",borderRadius:7,border:"2px solid #FF6A00",background:"#fff5ee",color:"#FF6A00",fontWeight:700,fontSize:11,cursor:"pointer"}}>✏️ Edit</button>
                       {delBannerId===b.id?(
                         <><button onClick={()=>deleteBanner(b.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#dc2626",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>Delete</button>
-                        <button onClick={()=>setDelBannerId(null)} style={{padding:"5px 8px",borderRadius:7,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:10,cursor:"pointer"}}>✕</button></>
+                        <button onClick={()=>setDelBannerId(null)} style={{padding:"5px 8px",borderRadius:7,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,fontSize:10,cursor:"pointer"}}>✕</button></>
                       ):(
                         <button onClick={()=>setDelBannerId(b.id)} style={{padding:"5px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontWeight:700,fontSize:11,cursor:"pointer"}}>🗑️</button>
                       )}
@@ -5311,7 +5311,7 @@ function AdminPage(){
 
       {/* SETTINGS */}
       {tab==="settings"&&(
-        <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+        <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
           <h3 style={{fontWeight:900,marginBottom:6}}>Content Access Settings</h3>
           <p style={{color:"#888",fontSize:13,marginBottom:24}}>Firebase-backed — changes apply instantly for all students.</p>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 22px",background:settings.contentMode==="free"?"#f0fdf4":"#fff5ee",borderRadius:14,border:"2px solid",borderColor:settings.contentMode==="free"?"#86efac":"#FF6A00",marginBottom:28}}>
@@ -5320,7 +5320,7 @@ function AdminPage(){
               <div style={{color:"#888",fontSize:13,marginTop:3}}>{settings.contentMode==="free"?"Every student can access all tests without restriction.":"Only students you individually enable can access content."}</div>
             </div>
             <div onClick={toggleMode} style={{width:60,height:32,borderRadius:16,background:settings.contentMode==="free"?"#22c55e":"#ccc",position:"relative",cursor:"pointer",transition:"background .3s",flexShrink:0,marginLeft:20}}>
-              <div style={{position:"absolute",top:3,left:settings.contentMode==="free"?31:3,width:26,height:26,borderRadius:"50%",background:"#fff",transition:"left .3s",boxShadow:"0 2px 6px #00000030"}}/>
+              <div style={{position:"absolute",top:3,left:settings.contentMode==="free"?31:3,width:26,height:26,borderRadius:"50%",background:"rgba(255,255,255,0.03)",transition:"left .3s",boxShadow:"0 2px 6px #00000030"}}/>
             </div>
           </div>
           {settings.contentMode==="paid"&&(
@@ -5340,7 +5340,7 @@ function AdminPage(){
                       </div>
                       <span style={{fontSize:12,fontWeight:700,color:ena?"#16a34a":"#dc2626"}}>{ena?"✅ Enabled":"🔒 Locked"}</span>
                       <div onClick={()=>toggleAccess(s.uid||s.id,ena)} style={{width:48,height:26,borderRadius:13,background:ena?"#22c55e":"#e0e0e0",position:"relative",cursor:"pointer",transition:"background .3s",flexShrink:0}}>
-                        <div style={{position:"absolute",top:2,left:ena?24:2,width:22,height:22,borderRadius:"50%",background:"#fff",transition:"left .3s",boxShadow:"0 1px 4px #00000030"}}/>
+                        <div style={{position:"absolute",top:2,left:ena?24:2,width:22,height:22,borderRadius:"50%",background:"rgba(255,255,255,0.03)",transition:"left .3s",boxShadow:"0 1px 4px #00000030"}}/>
                       </div>
                     </div>
                   );
@@ -5356,27 +5356,27 @@ function AdminPage(){
         <div>
           {cred&&(
             <div style={{position:"fixed",inset:0,background:"#00000090",zIndex:999,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <div style={{background:"#fff",borderRadius:18,padding:32,maxWidth:400,width:"90%",textAlign:"center"}}>
+              <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:32,maxWidth:400,width:"90%",textAlign:"center"}}>
                 <div style={{fontSize:44,marginBottom:10}}>🎉</div>
                 <h3 style={{fontWeight:900,marginBottom:6}}>Account Created in Firebase!</h3>
-                <p style={{color:"#666",fontSize:13,marginBottom:18}}>Share these login credentials</p>
+                <p style={{color:"rgba(255,255,255,0.4)",fontSize:13,marginBottom:18}}>Share these login credentials</p>
                 <div style={{background:"#f8f8f8",borderRadius:12,padding:18,textAlign:"left",marginBottom:18,border:"2px solid #FF6A0030"}}>
                   {[["NAME",cred.name],["EMAIL",cred.email],["PASSWORD",cred.password]].map(([l,v])=>(
                     <div key={l} style={{marginBottom:10}}>
                       <div style={{fontSize:10,fontWeight:700,color:"#888",marginBottom:3}}>{l}</div>
-                      <div style={{fontWeight:700,fontFamily:"monospace",background:"#fff",padding:"7px 10px",borderRadius:7,border:"2px solid",borderColor:l==="PASSWORD"?"#FF6A00":"#e0e0e0",color:l==="PASSWORD"?"#FF6A00":"#000"}}>{v}</div>
+                      <div style={{fontWeight:700,fontFamily:"monospace",background:"rgba(255,255,255,0.03)",padding:"7px 10px",borderRadius:7,border:"2px solid",borderColor:l==="PASSWORD"?"#FF6A00":"#e0e0e0",color:l==="PASSWORD"?"#FF6A00":"#000"}}>{v}</div>
                     </div>
                   ))}
                 </div>
                 <div style={{display:"flex",gap:10}}>
-                  <button onClick={()=>{const t=`Rank Achievers Academy\nName: ${cred.name}\nEmail: ${cred.email}\nPassword: ${cred.password}\nLogin: www.rankachievers.in`;navigator.clipboard?.writeText(t).then(()=>alert("Copied!"));}} style={{flex:1,padding:"10px 0",borderRadius:9,border:"2px solid #FF6A00",background:"#fff",color:"#FF6A00",fontWeight:800,cursor:"pointer"}}>📋 Copy</button>
+                  <button onClick={()=>{const t=`Rank Achievers Academy\nName: ${cred.name}\nEmail: ${cred.email}\nPassword: ${cred.password}\nLogin: www.rankachievers.in`;navigator.clipboard?.writeText(t).then(()=>alert("Copied!"));}} style={{flex:1,padding:"10px 0",borderRadius:9,border:"2px solid #FF6A00",background:"rgba(255,255,255,0.03)",color:"#FF6A00",fontWeight:800,cursor:"pointer"}}>📋 Copy</button>
                   <button onClick={()=>setCred(null)} style={{flex:1,padding:"10px 0",borderRadius:9,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"}}>Done ✓</button>
                 </div>
               </div>
             </div>
           )}
           <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"1fr 1fr",gap:22,alignItems:"start"}}>
-            <div style={{background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
               <h3 style={{fontWeight:900,marginBottom:4}}>➕ Create Student Account</h3>
               <p style={{color:"#888",fontSize:13,marginBottom:18}}>Creates real Firebase auth account</p>
               {sOk&&<div style={{background:"#dcfce7",border:"2px solid #86efac",borderRadius:9,padding:"9px 14px",marginBottom:12,fontSize:13,color:"#166534",fontWeight:600}}>✅ Account created in Firebase!</div>}
@@ -5395,7 +5395,7 @@ function AdminPage(){
               </div><Err m={se.confirmPwd}/>
               <button onClick={createStu} style={{width:"100%",padding:"12px 0",borderRadius:11,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",marginTop:6}}>🎓 Create Firebase Account</button>
             </div>
-            <div style={{background:"#fff",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
+            <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:26,border:"2px solid #f0f0f0"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <h3 style={{fontWeight:900,margin:0}}>All Students</h3>
                 <span style={{background:"#FF6A00",color:"#fff",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:800}}>{students.length} · Live ☁️</span>
@@ -5415,7 +5415,7 @@ function AdminPage(){
                       </div>
                       {settings.contentMode==="paid"&&(
                         <div onClick={()=>toggleAccess(uid,ena)} title={ena?"Disable":"Enable"} style={{width:40,height:22,borderRadius:11,background:ena?"#22c55e":"#e0e0e0",position:"relative",cursor:"pointer",transition:"background .3s",flexShrink:0}}>
-                          <div style={{position:"absolute",top:2,left:ena?20:2,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .3s",boxShadow:"0 1px 4px #00000030"}}/>
+                          <div style={{position:"absolute",top:2,left:ena?20:2,width:18,height:18,borderRadius:"50%",background:"rgba(255,255,255,0.03)",transition:"left .3s",boxShadow:"0 1px 4px #00000030"}}/>
                         </div>
                       )}
                     </div>
@@ -5429,7 +5429,7 @@ function AdminPage(){
 
       {/* ADD QUESTION */}
       {tab==="questions"&&(
-        <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+        <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
           <div style={{display:"flex",gap:10,marginBottom:18}}>
             {EXAM_TYPES.map(e=><button key={e.id} onClick={()=>{setExamType(e.id);setTopicId(null);}} style={{flex:1,padding:"11px 0",borderRadius:11,border:"2px solid",borderColor:examType===e.id?e.color:"#e0e0e0",background:examType===e.id?e.color:"#fff",color:examType===e.id?"#fff":"#555",fontWeight:800,fontSize:14,cursor:"pointer"}}>{e.icon} {e.label}</button>)}
           </div>
@@ -5450,7 +5450,7 @@ function AdminPage(){
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
             {["a","b","c","d"].map(opt=>(
               <div key={opt}>
-                <label style={{...LS,color:qf.correct_answer===opt?et.color:"#444"}}>Option {opt.toUpperCase()} {qf.correct_answer===opt?"✅":""}</label>
+                <label style={{...LS,color:qf.correct_answer===opt?et.color:"rgba(255,255,255,0.5)"}}>Option {opt.toUpperCase()} {qf.correct_answer===opt?"✅":""}</label>
                 <input value={qf[`option_${opt}`]} onChange={e=>setQf(f=>({...f,[`option_${opt}`]:e.target.value}))} style={{...IS,borderColor:qf.correct_answer===opt?et.color:"#f0f0f0",background:qf.correct_answer===opt?et.bg:"#fff"}} placeholder={`Option ${opt.toUpperCase()}...`}/>
               </div>
             ))}
@@ -5469,7 +5469,7 @@ function AdminPage(){
       {tab==="notices"&&(
         <div style={{display:"grid",gridTemplateColumns:window.innerWidth<=768?"1fr":"1fr 1fr",gap:22,alignItems:"start"}}>
           {/* Create Notice */}
-          <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
             <h3 style={{fontWeight:900,marginBottom:4}}>📢 Post Announcement</h3>
             <p style={{color:"#888",fontSize:13,marginBottom:20}}>Students see this as a popup after login and in the 🔔 bell</p>
             {nSaved&&<div style={{background:"#dcfce7",border:"2px solid #86efac",borderRadius:9,padding:"9px 14px",marginBottom:14,fontSize:13,color:"#166534",fontWeight:600}}>✅ Announcement posted!</div>}
@@ -5487,7 +5487,7 @@ function AdminPage(){
           </div>
 
           {/* Live Notices List */}
-          <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
               <h3 style={{fontWeight:900,margin:0}}>Live Announcements</h3>
               <span style={{background:"#FF6A00",color:"#fff",padding:"3px 12px",borderRadius:20,fontSize:12,fontWeight:800}}>{dbNotices.length} · Live ☁️</span>
@@ -5502,7 +5502,7 @@ function AdminPage(){
                       {delNoticeId===n.id
                         ?<div style={{display:"flex",gap:6,flexShrink:0}}>
                           <button onClick={()=>deleteNotice(n.id)} style={{padding:"4px 10px",borderRadius:7,border:"none",background:"#dc2626",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>Delete</button>
-                          <button onClick={()=>setDelNoticeId(null)} style={{padding:"4px 10px",borderRadius:7,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>Cancel</button>
+                          <button onClick={()=>setDelNoticeId(null)} style={{padding:"4px 10px",borderRadius:7,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,fontSize:11,cursor:"pointer"}}>Cancel</button>
                         </div>
                         :<button onClick={()=>setDelNoticeId(n.id)} style={{padding:"4px 10px",borderRadius:7,border:"none",background:"#fee2e2",color:"#dc2626",fontWeight:700,fontSize:11,cursor:"pointer",flexShrink:0}}>🗑️ Delete</button>
                       }
@@ -5520,7 +5520,7 @@ function AdminPage(){
 
       {/* EDIT QUESTIONS */}
       {tab==="editq"&&(
-        <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+        <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
           <div style={{marginBottom:20}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"start",flexWrap:"wrap",gap:12,marginBottom:16}}>
               <div>
@@ -5534,7 +5534,7 @@ function AdminPage(){
             {!qLoading&&(
               <div style={{background:"#f8f8f8",borderRadius:12,padding:"12px 18px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
                 <div>
-                  <span style={{fontSize:13,fontWeight:700,color:"#333"}}>📊 Question Bank Status</span>
+                  <span style={{fontSize:13,fontWeight:700,color:"rgba(255,255,255,0.8)"}}>📊 Question Bank Status</span>
                   <div style={{fontSize:12,color:"#888",marginTop:2}}>
                     {EXAM_TYPES.map(et=>{
                       const cnt=allQuestions.filter(q=>q.examType===et.id).length;
@@ -5660,8 +5660,8 @@ function AdminPage(){
 
                 {/* Summary + Confirm */}
                 {bulkDelExam&&(
-                  <div style={{background:"#fff",borderRadius:12,padding:"14px 18px",border:"2px solid #fca5a5",marginBottom:12}}>
-                    <div style={{fontSize:13,color:"#555",marginBottom:8}}>
+                  <div style={{background:"rgba(255,255,255,0.03)",borderRadius:12,padding:"14px 18px",border:"2px solid #fca5a5",marginBottom:12}}>
+                    <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",marginBottom:8}}>
                       ⚠️ This will permanently delete{" "}
                       <b style={{color:"#dc2626",fontSize:16}}>{bulkDelCount}</b>{" "}
                       questions from Firestore matching:
@@ -5697,7 +5697,7 @@ function AdminPage(){
                         {bulkDelLoading&&<Spinner size={14} color="#fff"/>}
                         {bulkDelLoading?`Deleting...`:`Yes, Delete ${bulkDelCount} Questions`}
                       </button>
-                      <button onClick={()=>setBulkDelConfirm(false)} style={{padding:"11px 20px",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                      <button onClick={()=>setBulkDelConfirm(false)} style={{padding:"11px 20px",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,cursor:"pointer"}}>Cancel</button>
                     </div>
                   )
                 )}
@@ -5731,7 +5731,7 @@ function AdminPage(){
           <input value={qSearch} onChange={e=>setQSearch(e.target.value)} placeholder="🔍 Search by question text, topic or test name..." style={{...IS,marginBottom:14}}/>
 
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
-            <span style={{fontSize:13,color:"#555",fontWeight:600}}>
+            <span style={{fontSize:13,color:"rgba(255,255,255,0.6)",fontWeight:600}}>
               Showing <b style={{color:"#FF6A00"}}>{filteredQs.length}</b>
               {qExamFilter&&<> of <b>{allQuestions.filter(q=>q.examType===qExamFilter).length}</b> {qExamFilter.toUpperCase()} questions</>}
               {!qExamFilter&&<> of <b>{allQuestions.length}</b> total questions</>}
@@ -5749,7 +5749,7 @@ function AdminPage(){
               <div style={{fontSize:48,marginBottom:16}}>📭</div>
               {allQuestions.length===0?(
                 <div>
-                  <p style={{fontSize:15,marginBottom:8,color:"#555",fontWeight:600}}>No questions in Firestore yet.</p>
+                  <p style={{fontSize:15,marginBottom:8,color:"rgba(255,255,255,0.6)",fontWeight:600}}>No questions in Firestore yet.</p>
                   <p style={{fontSize:13,marginBottom:20}}>Click <b style={{color:"#FF6A00"}}>"⬆️ Seed Questions"</b> above to load all {getAllTests().length*30} practice questions into Firestore so you can edit them here.</p>
                   <button onClick={seedAllQuestions} disabled={seedLoading} style={{padding:"12px 24px",borderRadius:12,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"}}>⬆️ Seed All Questions Now</button>
                 </div>
@@ -5798,7 +5798,7 @@ function AdminPage(){
                       <input value={editQForm.youtube_link||""} onChange={e=>setEditQForm(f=>({...f,youtube_link:e.target.value}))} style={IS} placeholder="https://www.youtube.com/embed/..."/>
                       <div style={{display:"flex",gap:10,marginTop:4}}>
                         <button onClick={saveEditQ} style={{flex:2,padding:"10px 0",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"}}>💾 Save Changes</button>
-                        <button onClick={()=>{setEditingQ(null);setEditQForm({});}} style={{flex:1,padding:"10px 0",borderRadius:10,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,cursor:"pointer"}}>Cancel</button>
+                        <button onClick={()=>{setEditingQ(null);setEditQForm({});}} style={{flex:1,padding:"10px 0",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,cursor:"pointer"}}>Cancel</button>
                       </div>
                     </div>
                   ):(
@@ -5809,7 +5809,7 @@ function AdminPage(){
                           <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
                             <span style={{background:EXAM_TYPES.find(e=>e.id===q.examType)?.color||"#FF6A00",color:"#fff",padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700}}>{q.examType?.toUpperCase()}</span>
                             <span style={{background:DBG[q.difficulty]||"#f0f0f0",color:DCOL[q.difficulty]||"#666",padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:700}}>{q.difficulty?.toUpperCase()}</span>
-                            <span style={{background:"#f0f0f0",color:"#555",padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:600}}>{q.topicName}</span>
+                            <span style={{background:"#f0f0f0",color:"rgba(255,255,255,0.6)",padding:"2px 10px",borderRadius:20,fontSize:10,fontWeight:600}}>{q.topicName}</span>
                           </div>
                           <p style={{fontSize:13,fontWeight:600,color:"#000",lineHeight:1.5,margin:0}}>{q.question_text?.substring(0,120)}{q.question_text?.length>120?"...":""}</p>
                           <div style={{display:"flex",gap:10,marginTop:6,flexWrap:"wrap"}}>
@@ -5825,7 +5825,7 @@ function AdminPage(){
                           {delQId===q.id?(
                             <div style={{display:"flex",gap:4}}>
                               <button onClick={()=>deleteQuestion(q.id)} style={{padding:"6px 10px",borderRadius:8,border:"none",background:"#dc2626",color:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>Confirm</button>
-                              <button onClick={()=>setDelQId(null)} style={{padding:"6px 10px",borderRadius:8,border:"2px solid #e0e0e0",background:"#fff",fontWeight:700,fontSize:11,cursor:"pointer"}}>✕</button>
+                              <button onClick={()=>setDelQId(null)} style={{padding:"6px 10px",borderRadius:8,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:700,fontSize:11,cursor:"pointer"}}>✕</button>
                             </div>
                           ):(
                             <button onClick={()=>setDelQId(q.id)} style={{padding:"6px 12px",borderRadius:8,border:"none",background:"#fee2e2",color:"#dc2626",fontWeight:700,fontSize:12,cursor:"pointer"}}>🗑️</button>
@@ -5849,7 +5849,7 @@ function AdminPage(){
         const bulkDiff=qf.difficulty||"easy";
         const allSelected=!!examType&&!!topicId;
         return(
-          <div style={{background:"#fff",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
+          <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:28,border:"2px solid #f0f0f0"}}>
             <h3 style={{fontWeight:900,marginBottom:4}}>📤 Bulk Upload Questions</h3>
             <p style={{color:"#888",marginBottom:20,fontSize:13}}>3 steps: choose exam → choose topic → upload CSV</p>
 
@@ -5887,7 +5887,7 @@ function AdminPage(){
 
             {/* STEP 3 — Difficulty */}
             <div style={{background:"#f8f8f8",borderRadius:14,padding:"16px 18px",marginBottom:14,border:"2px solid",borderColor:topicId?"#FF6A00":"#e0e0e0",opacity:topicId?1:0.5}}>
-              <div style={{fontWeight:800,fontSize:13,marginBottom:10,color:"#555"}}>
+              <div style={{fontWeight:800,fontSize:13,marginBottom:10,color:"rgba(255,255,255,0.6)"}}>
                 3️⃣ Choose Difficulty Level
               </div>
               <div style={{display:"flex",gap:8}}>
@@ -5907,7 +5907,7 @@ function AdminPage(){
                   <div style={{fontWeight:900,fontSize:17,display:"flex",alignItems:"center",gap:8}}>
                     <span style={{color:bulkET.color}}>{bulkET.icon} {bulkET.label}</span>
                     <span style={{color:"#ccc"}}>→</span>
-                    <span style={{color:"#333"}}>{bulkTopic?.icon} {bulkTopic?.name}</span>
+                    <span style={{color:"rgba(255,255,255,0.8)"}}>{bulkTopic?.icon} {bulkTopic?.name}</span>
                   </div>
                 </div>
                 <div style={{textAlign:"center"}}>
@@ -6010,7 +6010,7 @@ function AdminPage(){
             {/* CSV format guide */}
             <div style={{marginTop:20,background:"#f8f8f8",borderRadius:12,padding:18}}>
               <div style={{fontWeight:800,marginBottom:10,fontSize:13}}>📋 Required CSV Format:</div>
-              <code style={{fontSize:11,color:"#333",display:"block",whiteSpace:"pre",lineHeight:1.9,overflowX:"auto",fontFamily:"monospace"}}>
+              <code style={{fontSize:11,color:"rgba(255,255,255,0.8)",display:"block",whiteSpace:"pre",lineHeight:1.9,overflowX:"auto",fontFamily:"monospace"}}>
 {`question_text,option_a,option_b,option_c,option_d,correct_answer,explanation,youtube_link,difficulty
 "What is 15% of 200?","20","25","30","35","c","15/100 × 200 = 30","https://youtube.com/embed/xxx","easy"
 "Solve: 2x + 5 = 15","3","4","5","6","c","2x=10, x=5","","medium"`}
@@ -6140,7 +6140,7 @@ export default function App(){
 
   return(
     <ThemeProvider>
-    <div style={{fontFamily:"'Segoe UI',system-ui,sans-serif",minHeight:"100vh",background:"#fff"}}>
+    <div style={{fontFamily:"'Segoe UI',system-ui,sans-serif",minHeight:"100vh",background:"rgba(255,255,255,0.03)"}}>
       <NavBar
         page={page} setPage={setPage}
         user={fbUser}
@@ -6301,7 +6301,7 @@ function ScoreRing({score,total,size=120,stroke=10}){
       </svg>
       <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
         <div style={{fontSize:size*0.22,fontWeight:900,color}}>{displayed}%</div>
-        <div style={{fontSize:size*0.1,color:"#555"}}>{score}/{total}</div>
+        <div style={{fontSize:size*0.1,color:"rgba(255,255,255,0.6)"}}>{score}/{total}</div>
       </div>
     </div>
   );
