@@ -2357,9 +2357,20 @@ function ExamModeModal({test,onConfirm,onCancel}){
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
 
   useEffect(()=>{
-    const prev=document.body.style.overflow;
-    document.body.style.overflow="hidden";
-    return()=>{document.body.style.overflow=prev;};
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top      = `-${scrollY}px`;
+    document.body.style.left     = "0";
+    document.body.style.right    = "0";
+    document.body.style.overflow = "hidden";
+    return()=>{
+      document.body.style.position = "";
+      document.body.style.top      = "";
+      document.body.style.left     = "";
+      document.body.style.right    = "";
+      document.body.style.overflow = "";
+      window.scrollTo({top:scrollY,behavior:"instant"});
+    };
   },[]);
 
   useEffect(()=>{
@@ -2369,10 +2380,29 @@ function ExamModeModal({test,onConfirm,onCancel}){
   },[onCancel]);
 
   const modal=(
-    <div onClick={e=>{if(e.target===e.currentTarget)onCancel();}} className="ra-modal-backdrop">
-      <div className="ra-modal-card" style={{
-        padding:window.innerWidth<=768?"24px 20px":"36px",
-        maxWidth:460,width:"100%",textAlign:"center",
+    <div onClick={e=>{if(e.target===e.currentTarget)onCancel();}} style={{
+      position:"fixed",top:0,left:0,
+      width:"100vw",height:"100vh",
+      background:"rgba(0,0,0,0.88)",
+      zIndex:2147483647,
+      display:"flex",alignItems:"center",justifyContent:"center",
+      padding:"16px",
+      WebkitTransform:"translateZ(0)",
+      transform:"translateZ(0)",
+    }}>
+      <div style={{
+        background:"rgba(14,14,18,0.98)",
+        backdropFilter:"blur(32px)",
+        WebkitBackdropFilter:"blur(32px)",
+        border:"1px solid rgba(255,255,255,0.12)",
+        borderRadius:24,
+        padding:window.innerWidth<=768?"22px 18px":"36px",
+        maxWidth:440,width:"100%",
+        maxHeight:"85vh",overflowY:"auto",
+        WebkitOverflowScrolling:"touch",
+        textAlign:"center",
+        boxShadow:"0 32px 80px rgba(0,0,0,0.9),0 0 0 1px rgba(255,106,0,0.15)",
+        animation:"raPop .25s cubic-bezier(.4,0,.2,1) both",
       }}>
         <div style={{fontSize:42,marginBottom:10}}>📋</div>
         <h2 style={{fontWeight:900,fontSize:20,marginBottom:4,color:"#fff"}}>{test.title}</h2>
