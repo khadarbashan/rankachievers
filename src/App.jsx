@@ -2357,19 +2357,28 @@ function ExamModeModal({test,onConfirm,onCancel}){
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
 
   useEffect(()=>{
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const scrollY = window.scrollY;
-    document.body.style.position = "fixed";
-    document.body.style.top      = `-${scrollY}px`;
-    document.body.style.left     = "0";
-    document.body.style.right    = "0";
-    document.body.style.overflow = "hidden";
+    if(isIOS){
+      document.body.style.position = "fixed";
+      document.body.style.top      = `-${scrollY}px`;
+      document.body.style.left     = "0";
+      document.body.style.right    = "0";
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "hidden";
+    }
     return()=>{
-      document.body.style.position = "";
-      document.body.style.top      = "";
-      document.body.style.left     = "";
-      document.body.style.right    = "";
-      document.body.style.overflow = "";
-      window.scrollTo({top:scrollY,behavior:"instant"});
+      if(isIOS){
+        document.body.style.position = "";
+        document.body.style.top      = "";
+        document.body.style.left     = "";
+        document.body.style.right    = "";
+        document.body.style.overflow = "";
+        window.scrollTo({top:scrollY,behavior:"instant"});
+      } else {
+        document.body.style.overflow = "";
+      }
     };
   },[]);
 
