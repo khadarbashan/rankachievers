@@ -4166,7 +4166,13 @@ function NotesEditorModal({examType, topic, onSave, onClose, subtopicId=null, su
               fontSize:15,lineHeight:1.9,
               outline:"none",
             }}
-            data-placeholder="Start writing notes here..."/>
+            data-placeholder="Start writing notes here..."
+            onKeyDown={e=>{
+              if(e.key==="Tab"){
+                e.preventDefault();
+                exec("insertHTML","&nbsp;&nbsp;&nbsp;");
+              }
+            }}/>
         )}
       </div>
 
