@@ -5265,10 +5265,13 @@ function AdminPage(){
                           {st.hasNotes?"✅ Notes":"No notes"}
                         </span>
                         <button onClick={()=>{setNotesTopic(t);setNotesSubtopicId(st.id);setNotesSubtopicTitle(st.title);setEditingNotes(true);}} style={{
-                          padding:"4px 10px",borderRadius:7,border:"none",
-                          background:`${notesET.color}20`,color:notesET.color,
-                          fontWeight:700,fontSize:10,cursor:"pointer",
-                        }}>{st.hasNotes?"✏️":"➕"}</button>
+                          padding:"5px 12px",borderRadius:8,border:"none",
+                          background:st.hasNotes?"rgba(255,106,0,0.15)":"linear-gradient(135deg,#FF6A00,#ff9a00)",
+                          color:"#fff",
+                          fontWeight:700,fontSize:11,cursor:"pointer",
+                          whiteSpace:"nowrap",
+                          boxShadow:st.hasNotes?"none":"0 2px 8px rgba(255,106,0,0.4)",
+                        }}>{st.hasNotes?"✏️ Edit Notes":"➕ Add Notes"}</button>
                         <button onClick={async()=>{
                           const d = await getDoc(doc(db,"notes",`${notesExam}_${t.id}`));
                           if(d.exists()){
