@@ -3969,41 +3969,33 @@ function NotesEditorModal({examType, topic, onSave, onClose, subtopicId=null, su
   const docId = subtopicId
     ? `${examType}_${topic.id}_${subtopicId}`
     : `${examType}_${topic.id}`;
+  const displayTitle = subtopicTitle||topic.name;
 
   useEffect(()=>{
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return ()=>{ document.body.style.overflow = prev; };
+    document.body.style.overflow="hidden";
+    return()=>{ document.body.style.overflow=""; };
   },[]);
 
   useEffect(()=>{
     setLoading(true);
     getDoc(doc(db,"notes",docId))
-      .then(d=>{
-        if(d.exists() && editorRef.current){
-          editorRef.current.innerHTML = d.data().content || "";
-        }
-      })
+      .then(d=>{ if(d.exists()&&editorRef.current) editorRef.current.innerHTML=d.data().content||""; })
       .catch(()=>{})
       .finally(()=>setLoading(false));
   },[docId]);
 
-  const exec = (cmd, val=null) => {
-    document.execCommand(cmd, false, val);
-    editorRef.current?.focus();
-  };
+  const exec=(cmd,val=null)=>{ document.execCommand(cmd,false,val); editorRef.current?.focus(); };
+  const insertTable=()=>exec("insertHTML","<table><thead><tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr></thead><tbody><tr><td>Row 1</td><td>Data</td><td>Data</td></tr><tr><td>Row 2</td><td>Data</td><td>Data</td></tr></tbody></table><p></p>");
 
-  const insertTable = () => exec("insertHTML", `<table><thead><tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr></thead><tbody><tr><td>Row 1</td><td>Data</td><td>Data</td></tr><tr><td>Row 2</td><td>Data</td><td>Data</td></tr></tbody></table><p></p>`);
-
-  const handleSave = async () => {
-    const content = editorRef.current?.innerHTML || "";
+  const handleSave=async()=>{
+    const content=editorRef.current?.innerHTML||"";
     if(!content.trim()||content==="<br>"){alert("Please add content first");return;}
     setSaving(true);
     try{
       await setDoc(doc(db,"notes",docId),{
-        examType, topicId:topic.id, topicName:topic.name,
-        subtopicId:subtopicId||null, subtopicTitle:subtopicTitle||null,
-        content, updatedAt:serverTimestamp(),
+        examType,topicId:topic.id,topicName:topic.name,
+        subtopicId:subtopicId||null,subtopicTitle:subtopicTitle||null,
+        content,updatedAt:serverTimestamp(),
         wordCount:content.replace(/<[^>]*>/g,"").trim().split(" ").length,
       });
       setSaved(true);
@@ -4014,114 +4006,167 @@ function NotesEditorModal({examType, topic, onSave, onClose, subtopicId=null, su
 
   const COLORS=["#ffffff","#FF6A00","#ff9a00","#22c55e","#3b82f6","#a855f7","#ec4899","#ef4444","#f59e0b","#06b6d4","#84cc16","#64748b"];
   const HIGHLIGHTS=["rgba(255,106,0,0.35)","rgba(34,197,94,0.35)","rgba(59,130,246,0.35)","rgba(234,179,8,0.4)","rgba(168,85,247,0.35)","rgba(239,68,68,0.35)"];
-  const displayTitle = subtopicTitle||topic.name;
 
-  const _modal=(
-    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.95)",backdropFilter:"blur(8px)",zIndex:2147483647,display:"flex",alignItems:"stretch",justifyContent:"center",padding:"10px"}}>
-      <div style={{background:"rgba(10,10,14,0.99)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,width:"100%",maxWidth:980,height:"100%",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 40px 80px rgba(0,0,0,0.9)",animation:"raPop .2s ease both"}}>
-
-        {/* Header */}
-        <div style={{padding:"14px 20px",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(255,255,255,0.03)",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:40,height:40,borderRadius:12,background:et.color+"20",border:`1px solid ${et.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{topic.icon||et.icon}</div>
-            <div>
-              <div style={{fontWeight:800,fontSize:15,color:"#fff"}}>{displayTitle}</div>
-              <div style={{fontSize:11,color:et.color,fontWeight:600,marginTop:1}}>{et.icon} {et.label}{subtopicTitle?` › ${topic.name} › ${subtopicTitle}`:` › ${topic.name}`}</div>
-            </div>
-          </div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            {saved&&<span style={{fontSize:12,color:"#22c55e",fontWeight:700}}>✅ Saved!</span>}
-            <button onClick={handleSave} disabled={saving||loading} style={{padding:"9px 20px",borderRadius:10,border:"none",background:(saving||loading)?"rgba(255,255,255,0.08)":"linear-gradient(135deg,#FF6A00,#ff9a00)",color:(saving||loading)?"rgba(255,255,255,0.3)":"#fff",fontWeight:800,fontSize:13,cursor:(saving||loading)?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:7,boxShadow:(saving||loading)?"none":"0 4px 16px rgba(255,106,0,0.4)"}}>
-              {saving?<><div style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"raSpin .7s linear infinite"}}/>Saving...</>:"💾 Save Notes"}
-            </button>
-            <button onClick={onClose} style={{width:34,height:34,borderRadius:9,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.06)",color:"rgba(255,255,255,0.5)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+  const modal=(
+    <div style={{
+      position:"fixed",top:0,left:0,width:"100vw",height:"100vh",
+      background:"rgba(0,0,0,0.96)",
+      zIndex:2147483647,
+      display:"flex",flexDirection:"column",
+      overflow:"hidden",
+    }}>
+      {/* ── HEADER ── */}
+      <div style={{
+        height:56,minHeight:56,
+        display:"flex",alignItems:"center",justifyContent:"space-between",
+        padding:"0 20px",
+        background:"rgba(255,255,255,0.04)",
+        borderBottom:"1px solid rgba(255,255,255,0.1)",
+        flexShrink:0,
+        zIndex:10,
+      }}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:36,height:36,borderRadius:10,background:et.color+"20",border:`1px solid ${et.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{topic.icon||et.icon}</div>
+          <div>
+            <div style={{fontWeight:800,fontSize:14,color:"#fff"}}>{displayTitle}</div>
+            <div style={{fontSize:10,color:et.color,fontWeight:600}}>{et.icon} {et.label}{subtopicTitle?` › ${topic.name}`:"" }</div>
           </div>
         </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {saved&&<span style={{fontSize:12,color:"#22c55e",fontWeight:700}}>✅ Saved!</span>}
+          <button onClick={handleSave} disabled={saving||loading} style={{
+            padding:"8px 20px",borderRadius:9,border:"none",
+            background:(saving||loading)?"rgba(255,255,255,0.08)":"linear-gradient(135deg,#FF6A00,#ff9a00)",
+            color:(saving||loading)?"rgba(255,255,255,0.3)":"#fff",
+            fontWeight:800,fontSize:13,cursor:(saving||loading)?"not-allowed":"pointer",
+            display:"flex",alignItems:"center",gap:6,
+            boxShadow:(saving||loading)?"none":"0 4px 14px rgba(255,106,0,0.4)",
+          }}>
+            {saving?<><div style={{width:12,height:12,border:"2px solid rgba(255,255,255,0.3)",borderTop:"2px solid #fff",borderRadius:"50%",animation:"raSpin .7s linear infinite"}}/>Saving...</>:"💾 Save Notes"}
+          </button>
+          <button onClick={onClose} style={{
+            width:34,height:34,borderRadius:8,
+            border:"1px solid rgba(255,255,255,0.15)",
+            background:"rgba(255,255,255,0.08)",
+            color:"#fff",fontSize:18,cursor:"pointer",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            fontWeight:700,
+          }}>✕</button>
+        </div>
+      </div>
 
-        {/* Toolbar Row 1 */}
-        <div style={{padding:"7px 12px",borderBottom:"1px solid rgba(255,255,255,0.05)",display:"flex",gap:4,flexWrap:"wrap",alignItems:"center",background:"rgba(255,255,255,0.02)",flexShrink:0}}>
-          {[
-            {l:"B",cmd:"bold",style:{fontWeight:"bold"}},
-            {l:"I",cmd:"italic",style:{fontStyle:"italic"}},
-            {l:"U",cmd:"underline",style:{textDecoration:"underline"}},
-            {l:"H1",cmd:"formatBlock",val:"h1"},
-            {l:"H2",cmd:"formatBlock",val:"h2"},
-            {l:"H3",cmd:"formatBlock",val:"h3"},
-            {l:"¶",cmd:"formatBlock",val:"p"},
-            {l:"• List",cmd:"insertUnorderedList"},
-            {l:"1. List",cmd:"insertOrderedList"},
-            {l:"❝",cmd:"formatBlock",val:"blockquote"},
-            {l:"Code",cmd:"insertHTML",val:"<code>code</code>"},
-          ].map(t=>(
-            <button key={t.l} className="ra-toolbar-btn" style={t.style||{}}
-              onMouseDown={e=>{e.preventDefault();t.cmd==="insertHTML"?exec(t.cmd,t.val):exec(t.cmd,t.val||null);}}>
-              {t.l}
-            </button>
+      {/* ── TOOLBAR ROW 1 ── */}
+      <div style={{
+        padding:"6px 12px",
+        borderBottom:"1px solid rgba(255,255,255,0.06)",
+        display:"flex",gap:4,flexWrap:"wrap",alignItems:"center",
+        background:"rgba(255,255,255,0.02)",
+        flexShrink:0,
+      }}>
+        {[
+          {l:"B",cmd:"bold",style:{fontWeight:"bold"}},
+          {l:"I",cmd:"italic",style:{fontStyle:"italic"}},
+          {l:"U",cmd:"underline",style:{textDecoration:"underline"}},
+          {l:"H1",cmd:"formatBlock",val:"h1"},
+          {l:"H2",cmd:"formatBlock",val:"h2"},
+          {l:"H3",cmd:"formatBlock",val:"h3"},
+          {l:"¶",cmd:"formatBlock",val:"p"},
+          {l:"• List",cmd:"insertUnorderedList"},
+          {l:"1. List",cmd:"insertOrderedList"},
+          {l:"❝",cmd:"formatBlock",val:"blockquote"},
+          {l:"Code",cmd:"insertHTML",val:"<code>code</code>"},
+        ].map(t=>(
+          <button key={t.l} className="ra-toolbar-btn" style={t.style||{}}
+            onMouseDown={e=>{e.preventDefault();t.cmd==="insertHTML"?exec(t.cmd,t.val):exec(t.cmd,t.val||null);}}>
+            {t.l}
+          </button>
+        ))}
+        <div style={{width:1,height:16,background:"rgba(255,255,255,0.1)",margin:"0 2px"}}/>
+        <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();insertTable();}}>📊 Table</button>
+        <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("insertHorizontalRule");}}>─ Divider</button>
+        <div style={{width:1,height:16,background:"rgba(255,255,255,0.1)",margin:"0 2px"}}/>
+        <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("justifyLeft");}}>⬅</button>
+        <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("justifyCenter");}}>↔</button>
+        <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("justifyRight");}}>➡</button>
+        <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("justifyFull");}}>≡</button>
+        <div style={{width:1,height:16,background:"rgba(255,255,255,0.1)",margin:"0 2px"}}/>
+        <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("removeFormat");}}>✕ Clear</button>
+      </div>
+
+      {/* ── TOOLBAR ROW 2: Colors ── */}
+      <div style={{
+        padding:"5px 12px",
+        borderBottom:"1px solid rgba(255,255,255,0.05)",
+        display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",
+        background:"rgba(255,255,255,0.01)",
+        flexShrink:0,
+      }}>
+        <span style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.3)"}}>A Text:</span>
+        <div style={{display:"flex",gap:3}}>
+          {COLORS.map(col=>(
+            <div key={col} onMouseDown={e=>{e.preventDefault();exec("foreColor",col);}}
+              style={{width:18,height:18,borderRadius:"50%",background:col,cursor:"pointer",border:"1.5px solid rgba(255,255,255,0.15)",flexShrink:0,transition:"transform .15s"}}
+              onMouseOver={e=>e.currentTarget.style.transform="scale(1.35)"}
+              onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}/>
           ))}
-          <div style={{width:1,height:18,background:"rgba(255,255,255,0.1)",margin:"0 2px"}}/>
-          <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();insertTable();}}>📊 Table</button>
-          <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("insertHorizontalRule");}}>─ Divider</button>
-          <div style={{width:1,height:18,background:"rgba(255,255,255,0.1)",margin:"0 2px"}}/>
-          <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("justifyLeft");}}>⬅</button>
-          <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("justifyCenter");}}>↔</button>
-          <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("justifyRight");}}>➡</button>
-          <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("justifyFull");}}>≡</button>
-          <div style={{width:1,height:18,background:"rgba(255,255,255,0.1)",margin:"0 2px"}}/>
-          <button className="ra-toolbar-btn" onMouseDown={e=>{e.preventDefault();exec("removeFormat");}}>✕ Clear</button>
         </div>
+        <div style={{width:1,height:14,background:"rgba(255,255,255,0.1)"}}/>
+        <span style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.3)"}}>🖍 Highlight:</span>
+        <div style={{display:"flex",gap:3}}>
+          {HIGHLIGHTS.map(col=>(
+            <div key={col} onMouseDown={e=>{e.preventDefault();exec("hiliteColor",col);}}
+              style={{width:18,height:18,borderRadius:4,background:col,cursor:"pointer",border:"1.5px solid rgba(255,255,255,0.15)",flexShrink:0,transition:"transform .15s"}}
+              onMouseOver={e=>e.currentTarget.style.transform="scale(1.35)"}
+              onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}/>
+          ))}
+          <div onMouseDown={e=>{e.preventDefault();exec("hiliteColor","transparent");}}
+            style={{width:18,height:18,borderRadius:4,cursor:"pointer",border:"1.5px solid rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"rgba(255,255,255,0.5)",transition:"transform .15s"}}
+            onMouseOver={e=>e.currentTarget.style.transform="scale(1.35)"}
+            onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}>✕</div>
+        </div>
+        <span style={{marginLeft:"auto",fontSize:10,color:"rgba(255,255,255,0.15)"}}>Select text first → apply color</span>
+      </div>
 
-        {/* Toolbar Row 2: Colors */}
-        <div style={{padding:"6px 12px",borderBottom:"1px solid rgba(255,255,255,0.05)",display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",background:"rgba(255,255,255,0.01)",flexShrink:0}}>
-          <span style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.3)"}}>A Text:</span>
-          <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-            {COLORS.map(col=>(
-              <div key={col} onMouseDown={e=>{e.preventDefault();exec("foreColor",col);}}
-                style={{width:19,height:19,borderRadius:"50%",background:col,cursor:"pointer",border:"1.5px solid rgba(255,255,255,0.15)",transition:"transform .15s",flexShrink:0}}
-                onMouseOver={e=>e.currentTarget.style.transform="scale(1.3)"}
-                onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}/>
-            ))}
+      {/* ── EDITOR ── */}
+      <div style={{flex:1,overflow:"auto",padding:"8px 12px",background:"#0a0a0e"}}>
+        {loading?(
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",gap:12,flexDirection:"column"}}>
+            <div style={{width:32,height:32,border:"3px solid rgba(255,106,0,0.2)",borderTop:"3px solid #FF6A00",borderRadius:"50%",animation:"raSpin .7s linear infinite"}}/>
+            <span style={{color:"rgba(255,255,255,0.35)",fontSize:13}}>Loading content...</span>
           </div>
-          <div style={{width:1,height:16,background:"rgba(255,255,255,0.1)"}}/>
-          <span style={{fontSize:10,fontWeight:600,color:"rgba(255,255,255,0.3)"}}>🖍 Highlight:</span>
-          <div style={{display:"flex",gap:3}}>
-            {HIGHLIGHTS.map(col=>(
-              <div key={col} onMouseDown={e=>{e.preventDefault();exec("hiliteColor",col);}}
-                style={{width:19,height:19,borderRadius:5,background:col,cursor:"pointer",border:"1.5px solid rgba(255,255,255,0.15)",transition:"transform .15s",flexShrink:0}}
-                onMouseOver={e=>e.currentTarget.style.transform="scale(1.3)"}
-                onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}/>
-            ))}
-            <div onMouseDown={e=>{e.preventDefault();exec("hiliteColor","transparent");}}
-              style={{width:19,height:19,borderRadius:5,cursor:"pointer",border:"1.5px solid rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"rgba(255,255,255,0.4)",transition:"transform .15s"}}
-              onMouseOver={e=>e.currentTarget.style.transform="scale(1.3)"}
-              onMouseOut={e=>e.currentTarget.style.transform="scale(1)"}>✕</div>
-          </div>
-          <span style={{marginLeft:"auto",fontSize:10,color:"rgba(255,255,255,0.15)"}}>Select text first</span>
-        </div>
+        ):(
+          <div ref={editorRef} contentEditable suppressContentEditableWarning
+            className="ra-editor"
+            style={{
+              minHeight:"100%",
+              borderRadius:10,border:"none",
+              background:"transparent",
+              fontSize:15,lineHeight:1.9,
+              outline:"none",
+            }}
+            data-placeholder="Start writing notes here..."/>
+        )}
+      </div>
 
-        {/* Editor area */}
-        <div style={{flex:1,overflow:"auto",padding:"6px"}}>
-          {loading?(
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",gap:12,flexDirection:"column"}}>
-              <div style={{width:32,height:32,border:"3px solid rgba(255,106,0,0.2)",borderTop:"3px solid #FF6A00",borderRadius:"50%",animation:"raSpin .7s linear infinite"}}/>
-              <span style={{color:"rgba(255,255,255,0.35)",fontSize:13}}>Loading content...</span>
-            </div>
-          ):(
-            <div ref={editorRef} contentEditable suppressContentEditableWarning className="ra-editor"
-              style={{minHeight:"100%",height:"100%",borderRadius:12,border:"none",background:"transparent",fontSize:15,lineHeight:1.9}}
-              data-placeholder="Start writing notes...&#10;&#10;Tips:&#10;• H1/H2/H3 for headings&#10;• Bullet list for key points&#10;• Blockquote for formulas&#10;• Table for comparisons"/>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div style={{padding:"7px 18px",borderTop:"1px solid rgba(255,255,255,0.06)",display:"flex",justifyContent:"space-between",background:"rgba(255,255,255,0.02)",flexShrink:0,fontSize:10,color:"rgba(255,255,255,0.2)"}}>
-          <span>📝 {displayTitle}</span>
-          <span>Auto-saved to Firestore · Students see instantly</span>
-        </div>
+      {/* ── FOOTER ── */}
+      <div style={{
+        height:36,minHeight:36,
+        display:"flex",alignItems:"center",justifyContent:"space-between",
+        padding:"0 16px",
+        borderTop:"1px solid rgba(255,255,255,0.06)",
+        background:"rgba(255,255,255,0.02)",
+        flexShrink:0,
+        fontSize:10,color:"rgba(255,255,255,0.2)",
+      }}>
+        <span>📝 {displayTitle}</span>
+        <span>Saved to Firestore · Students see instantly</span>
       </div>
     </div>
   );
-  return createPortal(_modal, document.body);
+  return createPortal(modal, document.body);
 }
+
+
 function NotesViewerModal({examType, topic, onClose}){
   const [notes, setNotes]   = useState(null);
   const [loading, setLoading] = useState(true);
