@@ -2368,7 +2368,7 @@ function ExamModeModal({test,onConfirm,onCancel}){
     return()=>window.removeEventListener("keydown",h);
   },[onCancel]);
 
-  return(
+  const modal=(
     <div onClick={e=>{if(e.target===e.currentTarget)onCancel();}} className="ra-modal-backdrop">
       <div className="ra-modal-card" style={{
         padding:window.innerWidth<=768?"24px 20px":"36px",
@@ -2415,6 +2415,7 @@ function ExamModeModal({test,onConfirm,onCancel}){
       </div>
     </div>
   );
+  return createPortal(modal, document.body);
 }
 // ─── NOTES PAGE ──────────────────────────────────────────────────────────────
 function NotesPage({user, examType, setExamType, examTypes}){
