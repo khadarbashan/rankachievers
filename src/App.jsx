@@ -4017,8 +4017,8 @@ function NotesEditorModal({examType, topic, onSave, onClose, subtopicId=null, su
   const displayTitle = subtopicTitle||topic.name;
 
   return(
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",backdropFilter:"blur(8px)",zIndex:999999,display:"flex",alignItems:"stretch",justifyContent:"center",padding:"10px"}}>
-      <div style={{background:"rgba(10,10,14,0.99)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,width:"100%",maxWidth:920,height:"100%",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 40px 80px rgba(0,0,0,0.9)",animation:"raPop .2s ease both"}}>
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.95)",backdropFilter:"blur(8px)",zIndex:2147483647,display:"flex",alignItems:"stretch",justifyContent:"center",padding:"10px"}}>
+      <div style={{background:"rgba(10,10,14,0.99)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:20,width:"100%",maxWidth:980,height:"100%",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 40px 80px rgba(0,0,0,0.9)",animation:"raPop .2s ease both"}}>
 
         {/* Header */}
         <div style={{padding:"14px 20px",borderBottom:"1px solid rgba(255,255,255,0.08)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"rgba(255,255,255,0.03)",flexShrink:0}}>
