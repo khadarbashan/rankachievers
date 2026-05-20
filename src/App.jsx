@@ -376,7 +376,7 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
               border:"1px solid rgba(255,255,255,0.12)",
               borderRadius:10,width:36,height:36,
               display:"flex",alignItems:"center",justifyContent:"center",
-              cursor:"pointer",fontSize:16,transition:"all .2s",flexShrink:0,
+              cursor:"pointer",fontSize:16,transition:"all .2s",flexShrink:0,"aria-label":"Notifications",
             }}
             onMouseOver={e=>{e.currentTarget.style.background="rgba(255,106,0,0.15)";e.currentTarget.style.borderColor="rgba(255,106,0,0.4)";}}
             onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,0.07)";e.currentTarget.style.borderColor="rgba(255,255,255,0.12)";}}>
@@ -398,7 +398,7 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
             onMouseOver={e=>{e.currentTarget.style.background="rgba(255,255,255,0.12)";e.currentTarget.style.borderColor="rgba(255,106,0,0.4)";}}
             onMouseOut={e=>{e.currentTarget.style.background="rgba(255,255,255,0.07)";e.currentTarget.style.borderColor="rgba(255,255,255,0.12)";}}>
               {user.photoURL
-                ?<img src={user.photoURL} alt="" style={{width:26,height:26,borderRadius:"50%",objectFit:"cover"}}/>
+                ?<img src={user.photoURL} alt={user.name||"Profile photo"} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover"}}/>
                 :<div style={{width:26,height:26,borderRadius:"50%",background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#fff"}}>{user.name?.charAt(0).toUpperCase()}</div>
               }
               {!isMobile&&<span style={{fontWeight:600,fontSize:12,color:"#fff"}}>{user.name?.split(" ")[0]}</span>}
@@ -467,6 +467,8 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
             ...(user?[{p:"profile",icon:"👤",label:"Profile"}]:[]),
           ].map(item=>(
             <button key={item.p}
+              aria-label={item.label}
+              aria-current={page===item.p?"page":undefined}
               className={`ra-bnav-item${page===item.p?" active":""}`}
               onClick={()=>{
                 if((item.requireAuth||item.p==="profile"||item.p==="dashboard")&&!user){
@@ -2462,7 +2464,7 @@ function ExamModeModal({test,onConfirm,onCancel}){
             flex:1,padding:"13px 0",borderRadius:12,
             border:"1.5px solid rgba(255,255,255,0.12)",
             background:"rgba(255,255,255,0.06)",
-            color:"rgba(255,255,255,0.7)",fontWeight:700,fontSize:14,cursor:"pointer",
+            color:"rgba(255,255,255,0.9)",fontWeight:700,fontSize:14,cursor:"pointer",
           }}>Cancel</button>
           <button onClick={()=>timed!==null&&onConfirm(timed)} disabled={timed===null} style={{
             flex:2,padding:"13px 0",borderRadius:12,border:"none",
@@ -3574,7 +3576,7 @@ function DashboardPage({user,setPage}){
       {/* Profile card */}
       <div style={{background:"linear-gradient(135deg,#000,#1a0a00)",borderRadius:20,padding:26,display:"flex",alignItems:"center",gap:22,marginBottom:24,border:"2px solid #FF6A0030"}}>
         {user?.photoURL
-          ?<img src={user.photoURL} alt="" style={{width:68,height:68,borderRadius:"50%",flexShrink:0}}/>
+          ?<img src={user.photoURL} alt={user.name||"Profile photo"} style={{width:68,height:68,borderRadius:"50%",flexShrink:0}}/>
           :<div style={{width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,fontWeight:900,color:"#fff",flexShrink:0}}>{user?.name?.charAt(0).toUpperCase()}</div>
         }
         <div style={{flex:1}}>
@@ -3935,7 +3937,7 @@ function ProfilePage({user,setUser,setPage}){
     <div style={{paddingTop:74,padding:window.innerWidth<=768?"74px 16px 100px":"74px 40px 40px",maxWidth:600,margin:"0 auto"}}>
       <div style={{background:"linear-gradient(135deg,#000,#1a0a00)",borderRadius:18,padding:24,display:"flex",alignItems:"center",gap:18,marginBottom:22,border:"2px solid #FF6A0030"}}>
         {user?.photoURL
-          ?<img src={user.photoURL} alt="" style={{width:64,height:64,borderRadius:"50%",flexShrink:0}}/>
+          ?<img src={user.photoURL} alt={user.name||"Profile photo"} style={{width:64,height:64,borderRadius:"50%",flexShrink:0}}/>
           :<div style={{width:64,height:64,borderRadius:"50%",background:"linear-gradient(135deg,#FF6A00,#ff9a00)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,fontWeight:900,color:"#fff",flexShrink:0}}>{user?.name?.charAt(0).toUpperCase()}</div>
         }
         <div style={{flex:1}}>
@@ -5089,7 +5091,7 @@ function AdminPage(){
                 {adminBanners.map((b,i)=>(
                   <div key={b.id} style={{borderRadius:12,overflow:"hidden",border:"2px solid #f0f0f0"}}>
                     <div style={{background:b.bgColor||"#FF6A00",padding:"12px 16px",position:"relative",overflow:"hidden",minHeight:60}}>
-                      {b.imageUrl&&<img src={b.imageUrl} alt="" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.35}}/>}
+                      {b.imageUrl&&<img src={b.imageUrl} alt={b.title||"Banner"} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:.35}}/>}
                       <div style={{position:"relative"}}>
                         {b.badge&&<div style={{fontSize:9,color:"rgba(255,255,255,.8)",fontWeight:700,marginBottom:3}}>{b.badge}</div>}
                         <div style={{fontWeight:800,color:"#fff",fontSize:13}}>{b.title}</div>
