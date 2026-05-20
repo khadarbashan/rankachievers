@@ -3017,9 +3017,31 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
   const [notesExistMap,setNotesExistMap]=useState({});
   const [settings,setSettingsState]=useState({contentMode:"free"});
   const [userAccess,setUserAccess]=useState(true);
+  const [attemptMap,setAttemptMap]=useState({}); // {testId: {score,accuracy,attempts}}
   const isMobile=useMobile();
 
   useEffect(()=>{ if(examType&&examType!==localExam) setLocalExam(examType); },[examType]);
+
+  // Load user attempts for this exam
+  useEffect(()=>{
+    if(!user?.uid) return;
+    const q = query(
+      collection(db,"attempts"),
+      where("userId","==",user.uid),
+      where("examType","==",localExam)
+    );
+    getDocs(q).then(snap=>{
+      const map = {};
+      snap.docs.forEach(d=>{
+        const a = d.data();
+        const key = a.testId||`${a.topicId}_${a.difficulty}`;
+        if(!map[key]) map[key]={score:0,accuracy:0,attempts:0,best:0};
+        map[key].attempts += 1;
+        map[key].best = Math.max(map[key].best, a.accuracy||0);
+      });
+      setAttemptMap(map);
+    }).catch(()=>{});
+  },[localExam, user]);
 
   // Check which topics have notes
   useEffect(()=>{
@@ -3126,14 +3148,31 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
           {(et.topics||[]).filter(t=>!selTopic||t.id===selTopic).flatMap(topic=>
             DIFFS.map((diff,di)=>{
               const testObj={id:`${topic.id}_${diff}`,topic_id:topic.id,topicName:topic.name,difficulty:diff,title:`${topic.name} – Test ${di+1}`,duration:1800,examType:et.id};
+              const att=attemptMap[testObj.id]||attemptMap[`${topic.id}_${diff}`];
+              const done=att&&att.attempts>0;
+              const best=att?.best||0;
+              const cardBg=done?(best>=70?"rgba(34,197,94,0.08)":best>=40?"rgba(245,158,11,0.08)":"rgba(239,68,68,0.08)"):"rgba(255,255,255,0.03)";
+              const cardBorder=done?(best>=70?"rgba(34,197,94,0.35)":best>=40?"rgba(245,158,11,0.3)":"rgba(239,68,68,0.25)"):isPaidLocked?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.08)";
               return(
-                <div key={testObj.id} className="ra-test-card" style={{
-                  padding:18,cursor:"pointer",
+                <div key={testObj.id} style={{
+                  borderRadius:16,padding:18,cursor:"pointer",
+                  background:cardBg,
+                  border:`1.5px solid ${cardBorder}`,
                   opacity:isPaidLocked?0.45:1,
-                  borderColor:isPaidLocked?"rgba(255,255,255,0.04)":"var(--border-1)",
+                  transition:"all .25s ease",
+                  position:"relative",
                 }}
-                onMouseOver={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor=et.color+"50";e.currentTarget.style.boxShadow=`0 20px 48px rgba(0,0,0,0.5),0 0 0 1px ${et.color}25`;}}}
-                onMouseOut={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor="var(--border-1)";e.currentTarget.style.boxShadow="none";}}}>
+                onMouseOver={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor=et.color+"60";e.currentTarget.style.background="rgba(255,255,255,0.07)";e.currentTarget.style.transform="translateY(-2px)";}}}
+                onMouseOut={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor=cardBorder;e.currentTarget.style.background=cardBg;e.currentTarget.style.transform="none";}}}>
+                  {done&&(
+                    <div style={{
+                      position:"absolute",top:10,right:10,
+                      padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:700,
+                      background:best>=70?"rgba(34,197,94,0.15)":best>=40?"rgba(245,158,11,0.15)":"rgba(239,68,68,0.15)",
+                      color:best>=70?"#22c55e":best>=40?"#f59e0b":"#ef4444",
+                      border:`1px solid ${best>=70?"rgba(34,197,94,0.3)":best>=40?"rgba(245,158,11,0.3)":"rgba(239,68,68,0.3)"}`,
+                    }}>{best>=70?"✅":"⚠️"} {best}%</div>
+                  )}
 
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                     <div style={{width:44,height:44,borderRadius:12,flexShrink:0,background:et.color+"18",border:`1px solid ${et.color}30`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{topic.icon||et.icon}</div>
@@ -6313,7 +6352,7 @@ function AdminPage(){
                       </div>
                     );
                   })()}
-                  <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Preview (first 5 rows):</div>
+                  <div style={{fontSize:13,fontWeight:700,marginBottom:8,color:"rgba(255,255,255,0.7)"}}>Preview (first 5 rows):</div>
                   <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                     <thead>
                       <tr style={{background:"#000",color:"#FF6A00"}}>
