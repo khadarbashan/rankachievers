@@ -3515,8 +3515,11 @@ function TestPage({test,user,onFinish}){
             <div style={{fontSize:48,marginBottom:10}}>📋</div>
             <h3 style={{fontWeight:900,fontSize:18,marginBottom:14,color:"#fff"}}>Submit Test?</h3>
             <div style={{background:"rgba(255,255,255,0.07)",borderRadius:10,padding:14,marginBottom:18,textAlign:"left",border:"1px solid rgba(255,255,255,0.1)"}}>
-              {[["✅ Answered",Object.values(status).filter(s=>s==="answered").length,"#22c55e"],["🔖 For Review",Object.values(status).filter(s=>s==="review").length,"#FF6A00"],["⬜ Skipped",questions.length-Object.keys(status).length,"#ef4444"]].map(([l,v,c])=>(
-                <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:13,color:"rgba(255,255,255,0.6)"}}>{l}</span><span style={{fontWeight:800,color:c}}>{v}</span></div>
+              {[["✅ Answered",Object.values(status).filter(s=>s==="answered").length,"#22c55e"],["🔖 For Review",Object.values(status).filter(s=>s==="review").length,"#FF6A00"],["⬜ Skipped",questions.length-Object.keys(status).length,"#ef4444"]].map(([l,v,col])=>(
+                <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+                  <span style={{fontSize:13,color:"rgba(255,255,255,0.85)",fontWeight:500}}>{l}</span>
+                  <span style={{fontWeight:900,fontSize:18,color:col,minWidth:30,textAlign:"right"}}>{v}</span>
+                </div>
               ))}
             </div>
             <p style={{fontSize:12,color:"rgba(255,255,255,0.45)",marginBottom:18}}>☁️ Results will be saved to cloud</p>
