@@ -112,6 +112,8 @@
         var s = document.getElementById("ra-splash");
         if(s){ s.style.opacity="0"; setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); },450); }
       };
+      // Fallback: force remove after 4 seconds no matter what
+      setTimeout(function(){ window.__removeSplash && window.__removeSplash(); }, 4000);
       // Service Worker
       if("serviceWorker" in navigator){
         window.addEventListener("load",function(){

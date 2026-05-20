@@ -6378,6 +6378,10 @@ if(!document.getElementById("ra-spin-css")){
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App(){
+  // Remove splash screen immediately on mount
+  useEffect(()=>{ 
+    if(window.__removeSplash) window.__removeSplash(); 
+  },[]);
   const {user:fbUser, setUser:setFbUser, justLoggedIn, clearJustLoggedIn} = useAuth();
   const examTypes = useExamTypes(); // live from Firestore
   const [page,setPage]   = useState("home");
