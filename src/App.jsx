@@ -3271,13 +3271,19 @@ function TestPage({test,user,onFinish}){
     let cancelled=false;
     (async()=>{
       try{
+        // Try fetching by topicId + difficulty (how questions are stored)
         const snap=await getDocs(query(
           collection(db,"questions"),
-          where("testId","==",test.id),
+          where("topicId","==",test.topic_id),
+          where("difficulty","==",test.difficulty),
           limit(30)
         ));
         if(!cancelled && snap.docs.length>=5){
-          setQuestions(snap.docs.map(d=>({id:d.id,...d.data()})));
+          const qs = snap.docs.map(d=>({id:d.id,...d.data()}));
+          // Only use if questions have text
+          if(qs.every(q=>q.question_text)){
+            setQuestions(qs);
+          }
         }
       }catch(e){
         // silently ignore — generated questions already loaded
