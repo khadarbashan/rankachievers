@@ -3393,7 +3393,7 @@ function TestPage({test,user,onFinish}){
   );
 
   return(
-    <div style={{paddingTop:60,height:"100vh",display:"flex",flexDirection:"column",background:"#f8f8f8",overflow:"hidden"}}>
+    <div style={{paddingTop:0,height:"100vh",display:"flex",flexDirection:"column",background:"#060608",overflow:"hidden"}}>
       {/* Header */}
       <div style={{background:"#000",color:"#fff",padding:window.innerWidth<=768?"8px 12px":"10px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,flexShrink:0}}>
         <div style={{minWidth:0,flex:1}}>
