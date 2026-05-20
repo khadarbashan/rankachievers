@@ -2363,6 +2363,87 @@ function HomePage({setPage,user,setExamType,banners=[],examTypes,notices=[],setS
         </div>
       </div>
 
+      {/* ══════════ CONTACT US SECTION ══════════ */}
+      <div style={{
+        position:"relative",zIndex:1,
+        maxWidth:1320,margin:"0 auto",
+        padding:isMobile?"0 16px 20px":"0 48px 20px",
+      }}>
+        <div style={{
+          background:"rgba(255,255,255,0.03)",
+          border:"1px solid rgba(255,255,255,0.07)",
+          borderRadius:24,
+          padding:isMobile?"24px 20px":"36px 40px",
+          display:"flex",flexDirection:isMobile?"column":"row",
+          gap:isMobile?24:40,
+          alignItems:isMobile?"flex-start":"center",
+          animation:"raFadeUp .6s ease both",
+        }}>
+          {/* Left — title */}
+          <div style={{flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:8}}>
+              <div style={{
+                width:48,height:48,borderRadius:14,flexShrink:0,
+                background:"rgba(255,106,0,0.15)",
+                border:"1.5px solid rgba(255,106,0,0.3)",
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,
+              }}>📍</div>
+              <div>
+                <div style={{fontWeight:900,fontSize:isMobile?18:22,color:"#fff",letterSpacing:"-0.4px"}}>Contact Us</div>
+                <div style={{fontSize:12,color:"rgba(255,106,0,0.8)",fontWeight:600,marginTop:2}}>Rank Achievers Academy</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          {!isMobile&&<div style={{width:1,height:80,background:"rgba(255,255,255,0.08)",flexShrink:0}}/>}
+
+          {/* Right — details */}
+          <div style={{flex:1,display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:isMobile?14:20}}>
+
+            {/* Director */}
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"rgba(255,106,0,0.12)",border:"1px solid rgba(255,106,0,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>👨‍💼</div>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.35)",letterSpacing:"0.1em",marginBottom:3}}>DIRECTOR</div>
+                <div style={{fontWeight:800,fontSize:14,color:"#fff",marginBottom:2}}>Dr. Khadar Basha N</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,0.5)"}}>Rank Achievers Academy</div>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"rgba(59,130,246,0.12)",border:"1px solid rgba(59,130,246,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🏢</div>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.35)",letterSpacing:"0.1em",marginBottom:3}}>ADDRESS</div>
+                <div style={{fontWeight:600,fontSize:13,color:"rgba(255,255,255,0.8)",lineHeight:1.5}}>
+                  1st Cross, Sai Nagar,<br/>Anantapur, Andhra Pradesh
+                </div>
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>📞</div>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.35)",letterSpacing:"0.1em",marginBottom:3}}>GET IN TOUCH</div>
+                <a href="tel:+917901279014" style={{display:"block",fontWeight:700,fontSize:14,color:"#22c55e",marginBottom:4,textDecoration:"none",transition:"color .2s"}}
+                  onMouseOver={e=>e.currentTarget.style.color="#4ade80"}
+                  onMouseOut={e=>e.currentTarget.style.color="#22c55e"}>
+                  📱 +91 79012 79014
+                </a>
+                <a href="mailto:nkhadar@gmail.com" style={{display:"block",fontWeight:600,fontSize:12,color:"rgba(255,106,0,0.8)",textDecoration:"none",transition:"color .2s"}}
+                  onMouseOver={e=>e.currentTarget.style.color="#FF6A00"}
+                  onMouseOut={e=>e.currentTarget.style.color="rgba(255,106,0,0.8)"}>
+                  ✉️ nkhadar@gmail.com
+                </a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       {/* ══════════ BOTTOM CTA SECTION ══════════ */}
       <div style={{
         position:"relative",zIndex:1,
