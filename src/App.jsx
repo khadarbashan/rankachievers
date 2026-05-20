@@ -1426,6 +1426,27 @@ _heroStyle.textContent = `
     border-radius: 6px;
   }
 
+  /* ══ PUSH NOTIFICATION BANNER ══ */
+  .ra-push-banner {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(14,14,18,0.97);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,106,0,0.3);
+    border-radius: 18px;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    z-index: 9998;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    animation: raFadeUp .4s ease both;
+    max-width: 380px;
+    width: calc(100vw - 40px);
+  }
+
   /* ══ SKELETON LOADERS ══ */
   .ra-skeleton {
     background: linear-gradient(90deg,
@@ -3443,6 +3464,14 @@ function TestPage({test,user,onFinish}){
 }
 
 function ResultPage({result,onViewSolutions,onBack,user}){
+  // Offer push notifications after first test
+  useEffect(()=>{
+    if(typeof Notification !== "undefined" && Notification.permission === "default"){
+      setTimeout(()=>{
+        if(window.__requestPush) window.__requestPush();
+      }, 2000);
+    }
+  },[]);
   const {score,total,accuracy,timeSpent,test,auto}=result;
   const et=EXAM_TYPES.find(e=>e.id===test.examType)||EXAM_TYPES[0];
   const grade=accuracy>=80?{g:"Excellent! 🏆",c:"#22c55e"}:accuracy>=60?{g:"Good Job! 🎯",c:"#f59e0b"}:{g:"Keep Going! 📚",c:"#ef4444"};
