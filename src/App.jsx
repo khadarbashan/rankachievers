@@ -3513,13 +3513,13 @@ function TestPage({test,user,onFinish}){
         <div style={{position:"fixed",inset:0,background:"#00000090",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999}}>
           <div style={{background:"rgba(255,255,255,0.03)",borderRadius:20,padding:32,maxWidth:380,width:"90%",textAlign:"center"}}>
             <div style={{fontSize:48,marginBottom:10}}>📋</div>
-            <h3 style={{fontWeight:900,fontSize:18,marginBottom:14}}>Submit Test?</h3>
-            <div style={{background:"#f8f8f8",borderRadius:10,padding:14,marginBottom:18,textAlign:"left"}}>
+            <h3 style={{fontWeight:900,fontSize:18,marginBottom:14,color:"#fff"}}>Submit Test?</h3>
+            <div style={{background:"rgba(255,255,255,0.07)",borderRadius:10,padding:14,marginBottom:18,textAlign:"left",border:"1px solid rgba(255,255,255,0.1)"}}>
               {[["✅ Answered",Object.values(status).filter(s=>s==="answered").length,"#22c55e"],["🔖 For Review",Object.values(status).filter(s=>s==="review").length,"#FF6A00"],["⬜ Skipped",questions.length-Object.keys(status).length,"#ef4444"]].map(([l,v,c])=>(
                 <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{fontSize:13,color:"rgba(255,255,255,0.6)"}}>{l}</span><span style={{fontWeight:800,color:c}}>{v}</span></div>
               ))}
             </div>
-            <p style={{fontSize:12,color:"#888",marginBottom:18}}>☁️ Results will be saved to cloud</p>
+            <p style={{fontSize:12,color:"rgba(255,255,255,0.45)",marginBottom:18}}>☁️ Results will be saved to cloud</p>
             <div style={{display:"flex",gap:10}}>
               <button onClick={()=>setShowSubmitModal(false)} style={{flex:1,padding:"11px 0",borderRadius:10,border:"1.5px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",fontWeight:800,cursor:"pointer"}}>Continue</button>
               <button onClick={()=>{setShowSubmitModal(false);handleSubmit();}} style={{flex:1,padding:"11px 0",borderRadius:10,border:"none",background:"linear-gradient(90deg,#FF6A00,#ff9a00)",color:"#fff",fontWeight:800,cursor:"pointer"}}>Submit →</button>
