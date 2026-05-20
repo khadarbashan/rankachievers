@@ -3434,7 +3434,7 @@ function TestPage({test,user,onFinish}){
               </div>
               <button onClick={()=>setBookmarked(p=>{const n=new Set(p);n.has(current)?n.delete(current):n.add(current);return n;})} style={{background:"none",border:"none",cursor:"pointer",fontSize:20}}>{bookmarked.has(current)?"🔖":"📌"}</button>
             </div>
-            <p style={{fontSize:16,fontWeight:600,lineHeight:1.6,marginBottom:24,color:"#111"}}>{q.question_text}</p>
+            <p style={{fontSize:16,fontWeight:600,lineHeight:1.6,marginBottom:24,color:"#fff"}}>{q.question_text}</p>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {["a","b","c","d"].map(opt=>(
                 <label key={opt} onClick={()=>setAnswers(p=>({...p,[current]:opt}))} style={{display:"flex",alignItems:"center",gap:14,padding:"13px 18px",borderRadius:12,border:"2px solid",borderColor:answers[current]===opt?et.color:"rgba(255,255,255,0.12)",background:answers[current]===opt?et.color+"22":"rgba(255,255,255,0.04)",cursor:"pointer",transition:"all .15s"}}>
