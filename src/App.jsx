@@ -3375,7 +3375,7 @@ function TestPage({test,user,onFinish}){
   };
 
   const q=questions[current];
-  const pc=i=>{const s=status[i];return s==="answered"?"#22c55e":s==="review"?"#FF6A00":s==="visited"?"#ef4444":"#e5e7eb";};
+  const pc=i=>{const s=status[i];return s==="answered"?"#22c55e":s==="review"?"#FF6A00":s==="visited"?"#ef4444":"rgba(255,255,255,0.15)";};
   const tc=timeLeft<300?"#ef4444":timeLeft<600?"#f59e0b":"#22c55e";
 
   if(saving) return(
@@ -3437,7 +3437,7 @@ function TestPage({test,user,onFinish}){
             <p style={{fontSize:16,fontWeight:600,lineHeight:1.6,marginBottom:24,color:"#111"}}>{q.question_text}</p>
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {["a","b","c","d"].map(opt=>(
-                <label key={opt} onClick={()=>setAnswers(p=>({...p,[current]:opt}))} style={{display:"flex",alignItems:"center",gap:14,padding:"13px 18px",borderRadius:12,border:"2px solid",borderColor:answers[current]===opt?et.color:"#e5e7eb",background:answers[current]===opt?"#fff5ee":"#fff",cursor:"pointer",transition:"all .15s"}}>
+                <label key={opt} onClick={()=>setAnswers(p=>({...p,[current]:opt}))} style={{display:"flex",alignItems:"center",gap:14,padding:"13px 18px",borderRadius:12,border:"2px solid",borderColor:answers[current]===opt?et.color:"rgba(255,255,255,0.12)",background:answers[current]===opt?et.color+"22":"rgba(255,255,255,0.04)",cursor:"pointer",transition:"all .15s"}}>
                   <div style={{width:22,height:22,borderRadius:"50%",border:"2px solid",borderColor:answers[current]===opt?et.color:"#ccc",background:answers[current]===opt?et.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                     {answers[current]===opt&&<div style={{width:8,height:8,borderRadius:"50%",background:"rgba(255,255,255,0.03)"}}/>}
                   </div>
@@ -3470,10 +3470,10 @@ function TestPage({test,user,onFinish}){
               ))}
             </div>
             <div style={{display:"flex",gap:12,marginTop:8,flexWrap:"wrap"}}>
-              {[["#22c55e","Answered"],["#ef4444","Not Ans."],["#e5e7eb","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
+              {[["#22c55e","Answered"],["#ef4444","Not Ans."],["rgba(255,255,255,0.2)","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
                 <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10}}>
                   <div style={{width:10,height:10,borderRadius:3,background:c,flexShrink:0}}/>
-                  <span style={{color:"#666"}}>{l}</span>
+                  <span style={{color:"rgba(255,255,255,0.6)",fontWeight:500}}>{l}</span>
                 </div>
               ))}
             </div>
@@ -3482,7 +3482,7 @@ function TestPage({test,user,onFinish}){
           <div style={{width:250,background:"rgba(255,255,255,0.03)",borderLeft:"2px solid #f0f0f0",padding:18,overflowY:"auto",flexShrink:0}}>
             <h3 style={{fontWeight:800,fontSize:13,marginBottom:12}}>Question Palette</h3>
             <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
-              {[["#22c55e","Answered"],["#ef4444","Not Ans."],["#e5e7eb","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
+              {[["#22c55e","Answered"],["#ef4444","Not Ans."],["rgba(255,255,255,0.2)","Not Visited"],["#FF6A00","Review"]].map(([c,l])=>(
                 <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10}}>
                   <div style={{width:10,height:10,borderRadius:3,background:c}}/>
                   <span style={{color:"rgba(255,255,255,0.6)"}}>{l}</span>
