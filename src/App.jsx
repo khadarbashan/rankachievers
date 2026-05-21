@@ -3151,8 +3151,11 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
               const att=attemptMap[testObj.id]||attemptMap[`${topic.id}_${diff}`];
               const done=att&&att.attempts>0;
               const best=att?.best||0;
+              const inProgress=!done; // gold border = not yet attempted
               const cardBg=done?(best>=70?"rgba(34,197,94,0.08)":best>=40?"rgba(245,158,11,0.08)":"rgba(239,68,68,0.08)"):"rgba(255,255,255,0.03)";
-              const cardBorder=done?(best>=70?"rgba(34,197,94,0.35)":best>=40?"rgba(245,158,11,0.3)":"rgba(239,68,68,0.25)"):isPaidLocked?"rgba(255,255,255,0.04)":"rgba(255,255,255,0.08)";
+              const cardBorder=done
+                ?(best>=70?"rgba(34,197,94,0.35)":best>=40?"rgba(245,158,11,0.3)":"rgba(239,68,68,0.25)")
+                :isPaidLocked?"rgba(255,255,255,0.04)":"rgba(255,215,0,0.45)"; // gold for not attempted
               return(
                 <div key={testObj.id} style={{
                   borderRadius:16,padding:18,cursor:"pointer",
@@ -3161,6 +3164,7 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
                   opacity:isPaidLocked?0.45:1,
                   transition:"all .25s ease",
                   position:"relative",
+                  boxShadow:done?"none":isPaidLocked?"none":"0 0 10px rgba(255,215,0,0.12)",
                 }}
                 onMouseOver={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor=et.color+"60";e.currentTarget.style.background="rgba(255,255,255,0.07)";e.currentTarget.style.transform="translateY(-2px)";}}}
                 onMouseOut={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor=cardBorder;e.currentTarget.style.background=cardBg;e.currentTarget.style.transform="none";}}}>
