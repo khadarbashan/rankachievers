@@ -264,7 +264,7 @@ async function checkAccess(uid){
 }
 
 // ─── NAVBAR ───────────────────────────────────────────────────────────────────
-function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices}){
+function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNotifPanel,unreadCount,setUnreadCount,notices,examTypes}){
   const [menuOpen,setMenuOpen]=useState(false);
   const [scrolled,setScrolled]=useState(false);
   const isMobile=useMobile();
@@ -356,7 +356,7 @@ function NavBar({page,setPage,user,examType,setExamType,showNotifPanel,setShowNo
           {/* Exam type pills — desktop only */}
           {!isMobile&&user&&(
             <div style={{display:"flex",gap:4,marginRight:4}}>
-              {EXAM_TYPES.map(e=>(
+              {(examTypes||EXAM_TYPES).filter(e=>e.visible!==false).map(e=>(
                 <button key={e.id} onClick={()=>{if(!user){setPage("auth");return;}setExamType(e.id);setPage("tests");}} style={{
                   padding:"5px 12px",borderRadius:20,
                   border:`1.5px solid ${examType===e.id?e.color:"rgba(255,255,255,0.12)"}`,
