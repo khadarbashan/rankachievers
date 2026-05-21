@@ -3174,12 +3174,28 @@ function TestsPage({user,onStartTest,examType,setExamType,examTypes,setPage}){
                 onMouseOut={e=>{if(!isPaidLocked){e.currentTarget.style.borderColor=cardBorder;e.currentTarget.style.background=cardBg;e.currentTarget.style.transform="none";}}}>
                   {done&&(
                     <div style={{
-                      position:"absolute",top:10,right:10,
-                      padding:"3px 10px",borderRadius:20,fontSize:10,fontWeight:700,
-                      background:best>=70?"rgba(34,197,94,0.15)":best>=40?"rgba(245,158,11,0.15)":"rgba(239,68,68,0.15)",
-                      color:best>=70?"#22c55e":best>=40?"#f59e0b":"#ef4444",
-                      border:`1px solid ${best>=70?"rgba(34,197,94,0.3)":best>=40?"rgba(245,158,11,0.3)":"rgba(239,68,68,0.3)"}`,
-                    }}>{best>=70?"✅":"⚠️"} {best}%</div>
+                      position:"absolute",top:-10,left:"50%",
+                      transform:"translateX(-50%)",
+                      padding:"4px 14px",
+                      borderRadius:20,
+                      fontSize:10,fontWeight:800,
+                      whiteSpace:"nowrap",
+                      background:best>=70
+                        ?"linear-gradient(135deg,#22c55e,#16a34a)"
+                        :best>=40
+                          ?"linear-gradient(135deg,#f59e0b,#d97706)"
+                          :"linear-gradient(135deg,#ef4444,#dc2626)",
+                      color:"#fff",
+                      boxShadow:best>=70
+                        ?"0 2px 8px rgba(34,197,94,0.5)"
+                        :best>=40
+                          ?"0 2px 8px rgba(245,158,11,0.5)"
+                          :"0 2px 8px rgba(239,68,68,0.5)",
+                      border:"1.5px solid rgba(255,255,255,0.2)",
+                      zIndex:2,
+                    }}>
+                      {best>=70?"✅ Completed":"⚠️ Attempted"} · {best}%
+                    </div>
                   )}
 
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
