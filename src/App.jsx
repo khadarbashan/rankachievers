@@ -8374,11 +8374,13 @@ function usePyActivitySync(user, topicTitle, unitTitle, tcIndex, tcQuestion) {
   const lastSentRef = useRef(0);
   const pendingRef = useRef(null);
   const timerRef = useRef(null);
+  const lastCodeRef = useRef("");
 
   const sync = useCallback((code, status) => {
     if (!user?.uid) return; // only track logged-in students
+    lastCodeRef.current = code || "";
     const now = Date.now();
-    const doWrite = () => {
+    const doWrite = (overrideStatus) => {
       lastSentRef.current = Date.now();
       setDoc(doc(db, "python_activity", user.uid), {
         uid: user.uid,
@@ -8388,8 +8390,8 @@ function usePyActivitySync(user, topicTitle, unitTitle, tcIndex, tcQuestion) {
         topicTitle: topicTitle || null,
         problemIndex: tcIndex,
         question: tcQuestion ? tcQuestion.slice(0, 140) : null,
-        code: (code || "").slice(0, 4000), // cap size to keep doc small & cheap
-        status: status || "typing", // typing | running | pass | fail
+        code: (lastCodeRef.current || "").slice(0, 4000), // cap size to keep doc small & cheap
+        status: overrideStatus || status || "typing", // typing | running | pass | fail | away
         updatedAt: serverTimestamp(),
       }, { merge: true }).catch(() => {});
     };
@@ -8406,7 +8408,32 @@ function usePyActivitySync(user, topicTitle, unitTitle, tcIndex, tcQuestion) {
     }
   }, [user, unitTitle, topicTitle, tcIndex, tcQuestion]);
 
-  // Clean up on unmount: mark the student as no longer on this problem.
+  // Mark the student "away" as soon as we can detect they've left — tab closed,
+  // switched apps, or browser backgrounded. This is best-effort: browsers don't
+  // guarantee async work completes during unload, so this is a fast path, and
+  // the admin tab's staleness fallback (PY_ACTIVITY_STALE_MS) is the real safety net.
+  useEffect(() => {
+    if (!user?.uid) return;
+    const markAway = () => {
+      try {
+        setDoc(doc(db, "python_activity", user.uid), {
+          status: "away",
+          updatedAt: serverTimestamp(),
+        }, { merge: true }).catch(() => {});
+      } catch (e) { /* best-effort only */ }
+    };
+    const handleVisibility = () => { if (document.hidden) markAway(); };
+    window.addEventListener("beforeunload", markAway);
+    window.addEventListener("pagehide", markAway);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", markAway);
+      window.removeEventListener("pagehide", markAway);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [user]);
+
+  // Clean up timers on unmount (e.g. navigating to a different problem within the app).
   useEffect(() => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
@@ -8442,20 +8469,27 @@ function PyActivityAdminTab() {
   const activeStudents = activity.filter(isActive);
   const recentStudents = activity.filter(a => !isActive(a));
 
-  const statusBadge = (status) => {
+  const statusBadge = (status, secsAgo) => {
+    // Once a card has gone quiet for a while, the last-saved status (e.g. "typing")
+    // is no longer trustworthy — the student may have closed the tab, lost connection,
+    // or backgrounded the app without our cleanup write ever reaching Firestore.
+    if (secsAgo >= PY_ACTIVITY_STALE_MS / 1000) {
+      return { l: "💤 Idle", c: "#6b7280" };
+    }
     const map = {
       typing: { l: "✍️ Typing", c: "#3b82f6" },
       running: { l: "⏳ Running", c: "#f59e0b" },
       pass: { l: "✅ Passed", c: "#22c55e" },
       fail: { l: "✕ Failed", c: "#ef4444" },
+      away: { l: "🚪 Left the page", c: "#6b7280" },
     };
     return map[status] || map.typing;
   };
 
   const renderCard = (a, active) => {
-    const sb = statusBadge(a.status);
     const t = a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : 0;
     const secsAgo = Math.max(0, Math.round((now - t) / 1000));
+    const sb = statusBadge(a.status, secsAgo);
     const timeLabel = secsAgo < 5 ? "just now" : secsAgo < 60 ? `${secsAgo}s ago` : `${Math.round(secsAgo / 60)}m ago`;
     const open = expandedUid === a.uid;
 
@@ -8739,43 +8773,76 @@ function PythonCourseShell({ onExitToAdmin, isAdmin, user, onJoinClass }) {
 }
 
 function PythonCourseHome({ onStart, user, onJoinClass }) {
+  const isMobile = window.innerWidth <= 480;
   return (
     <div style={{ maxWidth: 880, margin: "0 auto", padding: "0 0 60px" }}>
-      {/* Institute header — bold, capital, as required */}
-      <div style={{ textAlign: "center", padding: "36px 20px 28px", borderBottom: "1px solid rgba(255,255,255,0.08)", marginBottom: 40 }}>
-        <h1 style={{ fontSize: "clamp(18px,3.2vw,26px)", fontWeight: 900, letterSpacing: "0.02em", textTransform: "uppercase", color: "#fff", margin: 0, lineHeight: 1.4 }}>
-          ANANTHA LAKSHMI INSTITUTE OF TECHNOLOGY AND SCIENCES, ANANTAPUR
-        </h1>
-        <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#FF6A00", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-          Department of Electronics &amp; Communication Engineering
+
+      {/* ── Hero — full original photo as background, face lit, rest darkened ── */}
+      <div style={{
+        position: "relative", width: "100%", minHeight: isMobile ? 480 : 560,
+        backgroundImage: "url(/images/khadar-basha.jpg)",
+        backgroundSize: "cover", backgroundPosition: "27% 26%",
+        display: "flex", flexDirection: "column", justifyContent: "flex-end",
+        marginBottom: 40, overflow: "hidden",
+      }}>
+        {/* Spotlight glow positioned directly over the face — warm, bright, the focal point */}
+        <div style={{
+          position: "absolute", top: "-18%", left: "27%", transform: "translateX(-50%)",
+          width: "50%", height: "85%", borderRadius: "50%",
+          background: "radial-gradient(ellipse, rgba(255,200,120,0.22) 0%, rgba(255,170,80,0.1) 45%, transparent 75%)",
+          pointerEvents: "none", mixBlendMode: "screen",
+        }} />
+        {/* Vignette — keeps the face area bright, fades the rest of the room down (not to black) */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "radial-gradient(ellipse 50% 85% at 27% 26%, transparent 35%, rgba(6,6,8,0.45) 70%, rgba(6,6,8,0.72) 100%)",
+          pointerEvents: "none",
+        }} />
+        {/* Smooth bottom gradient for text legibility */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(6,6,8,0) 0%, rgba(6,6,8,0.15) 55%, rgba(6,6,8,0.95) 100%)",
+          pointerEvents: "none",
+        }} />
+
+        {/* Institute header — sits over the top of the photo */}
+        <div style={{ position: "relative", textAlign: "center", padding: "32px 20px 0" }}>
+          <h1 style={{
+            fontSize: "clamp(17px,3vw,25px)", fontWeight: 900, letterSpacing: "0.02em",
+            textTransform: "uppercase", color: "#fff", margin: 0, lineHeight: 1.4,
+            textShadow: "0 2px 16px rgba(0,0,0,0.9), 0 1px 4px rgba(0,0,0,0.9)",
+          }}>
+            ANANTHA LAKSHMI INSTITUTE OF TECHNOLOGY AND SCIENCES, ANANTAPUR
+          </h1>
+          <div style={{
+            marginTop: 8, fontSize: 12.5, fontWeight: 700, color: "#ffb066",
+            letterSpacing: "0.08em", textTransform: "uppercase",
+            textShadow: "0 2px 10px rgba(0,0,0,0.9)",
+          }}>
+            Department of Electronics &amp; Communication Engineering
+          </div>
+        </div>
+
+        {/* Name + CTA — sits over the bottom of the photo, in the dark gradient zone */}
+        <div style={{ position: "relative", padding: "0 20px 28px", textAlign: "center" }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px",
+            borderRadius: 100, background: "rgba(255,106,0,0.22)", border: "1px solid rgba(255,154,0,0.5)",
+            fontSize: 12, fontWeight: 700, color: "#ffb066", marginBottom: 14,
+            backdropFilter: "blur(4px)",
+          }}>
+            🐍 PYTHON CLASSES STARTING SOON
+          </div>
+          <div style={{ fontSize: isMobile ? 21 : 26, fontWeight: 900, color: "#fff", textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>
+            Dr. N. Khadar Basha
+          </div>
+          <div style={{ fontSize: 13.5, color: "rgba(255,255,255,0.85)", marginTop: 3, textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}>
+            Professor, Department of ECE
+          </div>
         </div>
       </div>
 
       <div style={{ padding: "0 20px" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 100, background: "rgba(255,106,0,0.12)", border: "1px solid rgba(255,106,0,0.3)", fontSize: 12, fontWeight: 700, color: "#FF6A00", marginBottom: 24 }}>
-          🐍 PYTHON CLASSES STARTING SOON
-        </div>
-
-        {/* Faculty card — photo is the signature element, kept prominent */}
-        <div style={{ display: "flex", gap: 22, alignItems: "center", flexWrap: "wrap", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: window.innerWidth <= 480 ? 18 : 26, marginBottom: 32 }}>
-          <div style={{ position: "relative", flexShrink: 0, margin: "0 auto" }}>
-            <div style={{ position: "absolute", inset: -5, borderRadius: 18, background: "linear-gradient(135deg,#FF6A00,#ff9a00)", opacity: 0.4, filter: "blur(14px)" }} />
-            <img
-              src="/images/khadar-basha.jpg"
-              alt="Dr. N. Khadar Basha, Professor, Department of ECE"
-              style={{ position: "relative", width: window.innerWidth <= 480 ? 130 : 150, height: window.innerWidth <= 480 ? 147 : 170, borderRadius: 14, objectFit: "cover", objectPosition: "center 20%", border: "2px solid rgba(255,106,0,0.45)", boxShadow: "0 12px 32px rgba(0,0,0,0.5)", display: "block" }}
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
-            />
-          </div>
-          <div style={{ textAlign: window.innerWidth <= 480 ? "center" : "left", width: window.innerWidth <= 480 ? "100%" : "auto" }}>
-            <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>Dr. N. Khadar Basha</div>
-            <div style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", marginTop: 3 }}>Professor, Department of ECE</div>
-            <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.4)", marginTop: 8, lineHeight: 1.6, maxWidth: 360 }}>
-              Anantha Lakshmi Institute of Technology and Sciences, Anantapur
-            </div>
-          </div>
-        </div>
-
         <h2 style={{ fontSize: "clamp(26px,4.5vw,38px)", fontWeight: 900, lineHeight: 1.2, marginBottom: 14, color: "#fff" }}>
           Learn Python Programming<br /><span style={{ background: "linear-gradient(135deg,#FF6A00,#ff9a00)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>for B.Tech First Years</span>
         </h2>
