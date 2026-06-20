@@ -5210,7 +5210,7 @@ function AdminPage(){
     checkNotes();
   },[tab, liveExamTypes]);
 
-  const TABS=[{id:"students",l:"👥 Students"},{id:"exams",l:"🎯 Exam Types"},{id:"banners",l:"🖼️ Banners"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"notes",l:"📖 Notes"},{id:"pyactivity",l:"🐍 Python Activity"},{id:"settings",l:"⚙️ Settings"}];
+  const TABS=[{id:"students",l:"👥 Students"},{id:"exams",l:"🎯 Exam Types"},{id:"banners",l:"🖼️ Banners"},{id:"questions",l:"📝 Add Question"},{id:"editq",l:"✏️ Edit Questions"},{id:"bulk",l:"📤 Bulk Upload"},{id:"notices",l:"📢 Notices"},{id:"notes",l:"📖 Notes"},{id:"pyactivity",l:"Python Activity",pyIcon:true},{id:"settings",l:"⚙️ Settings"}];
 
   return(
     <div className="ra-admin" style={{paddingTop:74,padding:window.innerWidth<=768?"74px 14px 100px":"80px 28px 40px",maxWidth:1000,margin:"0 auto",minHeight:"100vh",background:"#060608",color:"#fff"}}>
@@ -5220,7 +5220,7 @@ function AdminPage(){
           <p style={{color:"#888",margin:"3px 0 0",fontSize:12}}>Rank Achievers Academy · Anantapur · Firebase Backend ☁️</p>
         </div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:9,border:"2px solid",borderColor:tab===t.id?"#FF6A00":"rgba(255,255,255,0.1)",background:tab===t.id?"#FF6A00":"rgba(255,255,255,0.05)",color:tab===t.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer"}}>{t.l}</button>)}
+          {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"7px 14px",borderRadius:9,border:"2px solid",borderColor:tab===t.id?"#FF6A00":"rgba(255,255,255,0.1)",background:tab===t.id?"#FF6A00":"rgba(255,255,255,0.05)",color:tab===t.id?"#fff":"#555",fontWeight:700,fontSize:12,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:6}}>{t.pyIcon && <PyLogoIcon size={13}/>}{t.l}</button>)}
         </div>
       </div>
 
@@ -5725,11 +5725,11 @@ function AdminPage(){
 
       {tab==="settings"&&(
         <div style={{background:"rgba(255,255,255,0.03)",borderRadius:18,padding:28,border:"2px solid #f0f0f0",marginBottom:20}}>
-          <h3 style={{fontWeight:900,marginBottom:6}}>🐍 Python Course Mode</h3>
+          <h3 style={{fontWeight:900,marginBottom:6,display:"flex",alignItems:"center",gap:8}}><PyLogoIcon size={18}/> Python Course Mode</h3>
           <p style={{color:"#888",fontSize:13,marginBottom:18}}>Firebase-backed — changes apply instantly for all visitors, no redeploy needed.</p>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"18px 22px",background:settings.pythonCourseMode?"#fff5ee":"#f0fdf4",borderRadius:14,border:"2px solid",borderColor:settings.pythonCourseMode?"#FF6A00":"#86efac"}}>
             <div>
-              <div style={{fontWeight:900,fontSize:17,color:settings.pythonCourseMode?"#FF6A00":"#16a34a"}}>{settings.pythonCourseMode?"🐍 Python Course — Showing to everyone":"🏠 Previous Site — Showing to everyone"}</div>
+              <div style={{fontWeight:900,fontSize:17,color:settings.pythonCourseMode?"#FF6A00":"#16a34a",display:"flex",alignItems:"center",gap:8}}>{settings.pythonCourseMode?(<><PyLogoIcon size={17}/> Python Course — Showing to everyone</>):"🏠 Previous Site — Showing to everyone"}</div>
               <div style={{color:"#888",fontSize:13,marginTop:3}}>{settings.pythonCourseMode?"All visitors see the Python course home page and lessons instead of the exam platform.":"Your exam platform (Home, Tests, Notes, Dashboard) is showing exactly as before."}</div>
             </div>
             <div onClick={togglePythonCourse} style={{width:60,height:32,borderRadius:16,background:settings.pythonCourseMode?"#FF6A00":"#ccc",position:"relative",cursor:"pointer",transition:"background .3s",flexShrink:0,marginLeft:20}}>
@@ -8526,7 +8526,7 @@ function PyActivityAdminTab() {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <h3 style={{ fontWeight: 900, marginBottom: 4 }}>🐍 Python Activity</h3>
+          <h3 style={{ fontWeight: 900, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}><PyLogoIcon size={17}/> Python Activity</h3>
           <p style={{ color: "#888", fontSize: 12.5 }}>Updates every few seconds — not true keystroke-by-keystroke, to keep Firestore costs low.</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, color: "#22c55e" }}>
@@ -8939,6 +8939,16 @@ const PY_PLACEMENT_QUESTIONS = {
 // Different UX from PyCodeEditor on purpose: the code is fixed/read-only (the
 // student traces through it mentally, like in an actual coding-round MCQ),
 // they type their predicted output, then reveal + verify by actually running it.
+// ─── REUSABLE PYTHON LOGO ICON (inline SVG, replaces 🐍 emoji everywhere) ──────
+function PyLogoIcon({ size = 14 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} xmlns="http://www.w3.org/2000/svg" style={{ display: "inline-block", verticalAlign: "-2px", flexShrink: 0 }}>
+      <path fill="#FFE873" d="M12.05 1.5c-1.05 0-2.05.09-2.9.25-2.6.45-3.07 1.41-3.07 3.16v2.31h6.13v.78H3.94c-1.77 0-3.32 1.06-3.8 3.08-.56 2.32-.59 3.77 0 6.19.43 1.8 1.46 3.08 3.23 3.08h2.09v-2.78c0-2.01 1.74-3.78 3.8-3.78h6.13c1.69 0 3.04-1.39 3.04-3.08V4.91c0-1.64-1.39-2.87-3.04-3.16a18.6 18.6 0 0 0-3.34-.25zM8.7 3.2c.62 0 1.13.51 1.13 1.14 0 .63-.51 1.13-1.13 1.13-.63 0-1.13-.5-1.13-1.13 0-.63.5-1.14 1.13-1.14z"/>
+      <path fill="#4B8BBE" d="M11.95 22.5c1.05 0 2.05-.09 2.9-.25 2.6-.45 3.07-1.41 3.07-3.16v-2.31h-6.13v-.78h8.27c1.77 0 3.32-1.06 3.8-3.08.56-2.32.59-3.77 0-6.19-.43-1.8-1.46-3.08-3.23-3.08h-2.09v2.78c0 2.01-1.74 3.78-3.8 3.78H8.61c-1.69 0-3.04 1.39-3.04 3.08v5.21c0 1.64 1.39 2.87 3.04 3.16 1.13.2 2.27.27 3.34.25zm3.35-1.7c-.62 0-1.13-.51-1.13-1.14 0-.63.51-1.13 1.13-1.13.63 0 1.13.5 1.13 1.13 0 .63-.5 1.14-1.13 1.14z"/>
+    </svg>
+  );
+}
+
 function PyPredictOutput({ pq, pqIndex, runPython, pyStatus, ensureLoaded }) {
   const [guess, setGuess] = useState("");
   const [checked, setChecked] = useState(false);
@@ -9212,7 +9222,7 @@ function PythonCourseHome({ onStart, user, onJoinClass }) {
             fontSize: 12, fontWeight: 700, color: "#ffb066", marginBottom: 14,
             backdropFilter: "blur(4px)",
           }}>
-            🐍 PYTHON CLASSES STARTING SOON
+            <PyLogoIcon size={14}/> PYTHON CLASSES STARTING SOON
           </div>
           <div style={{ fontSize: isMobile ? 21 : 26, fontWeight: 900, color: "#fff", textShadow: "0 2px 14px rgba(0,0,0,0.9)" }}>
             Dr. N. Khadar Basha
