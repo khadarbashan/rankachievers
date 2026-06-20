@@ -8757,17 +8757,17 @@ function PythonCourseHome({ onStart, user, onJoinClass }) {
         </div>
 
         {/* Faculty card — photo is the signature element, kept prominent */}
-        <div style={{ display: "flex", gap: 26, alignItems: "center", flexWrap: "wrap", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: 26, marginBottom: 32 }}>
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <div style={{ position: "absolute", inset: -6, borderRadius: 22, background: "linear-gradient(135deg,#FF6A00,#ff9a00)", opacity: 0.45, filter: "blur(16px)" }} />
+        <div style={{ display: "flex", gap: 22, alignItems: "center", flexWrap: "wrap", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: window.innerWidth <= 480 ? 18 : 26, marginBottom: 32 }}>
+          <div style={{ position: "relative", flexShrink: 0, margin: "0 auto" }}>
+            <div style={{ position: "absolute", inset: -5, borderRadius: 18, background: "linear-gradient(135deg,#FF6A00,#ff9a00)", opacity: 0.4, filter: "blur(14px)" }} />
             <img
               src="/images/khadar-basha.jpg"
               alt="Dr. N. Khadar Basha, Professor, Department of ECE"
-              style={{ position: "relative", width: 168, height: 190, borderRadius: 18, objectFit: "cover", border: "2px solid rgba(255,106,0,0.45)", boxShadow: "0 16px 40px rgba(0,0,0,0.5)", display: "block" }}
+              style={{ position: "relative", width: window.innerWidth <= 480 ? 130 : 150, height: window.innerWidth <= 480 ? 147 : 170, borderRadius: 14, objectFit: "cover", objectPosition: "center 20%", border: "2px solid rgba(255,106,0,0.45)", boxShadow: "0 12px 32px rgba(0,0,0,0.5)", display: "block" }}
               onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
           </div>
-          <div>
+          <div style={{ textAlign: window.innerWidth <= 480 ? "center" : "left", width: window.innerWidth <= 480 ? "100%" : "auto" }}>
             <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>Dr. N. Khadar Basha</div>
             <div style={{ fontSize: 13.5, color: "rgba(255,255,255,0.55)", marginTop: 3 }}>Professor, Department of ECE</div>
             <div style={{ fontSize: 12.5, color: "rgba(255,255,255,0.4)", marginTop: 8, lineHeight: 1.6, maxWidth: 360 }}>
