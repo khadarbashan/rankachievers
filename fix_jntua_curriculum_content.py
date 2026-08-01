@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """
-URGENT FIX: Restore full curriculum content (notes, examples, test cases).
-The previous patch replaced PY_CURRICULUM with topic shells only, crashing
-the app when clicking any topic.
+Updates PY_CURRICULUM with notes content matching the uploaded syllabus document.
+All 22 topics, 69 test cases — same topic IDs and sequence, updated notes.
 
 Run from: ~/Downloads/rankachievers/
     python3 fix_jntua_curriculum_content.py
 
-Requires: PY_CURRICULUM_JNTUA.js in the same folder as this script.
+Requires: PY_CURRICULUM_JNTUA.js in the same folder.
 """
-
 import sys, os
 
 FILE = "src/App.jsx"
 CURRICULUM_FILE = "PY_CURRICULUM_JNTUA.js"
 
 if not os.path.exists(CURRICULUM_FILE):
-    print(f"ERROR: {CURRICULUM_FILE} not found. Download it alongside this script.")
+    print(f"ERROR: {CURRICULUM_FILE} not found in current folder.")
     sys.exit(1)
 
 with open(FILE, "r") as f:
@@ -27,18 +25,16 @@ with open(CURRICULUM_FILE, "r") as f:
 
 original_length = len(content)
 
-has_jntua = "Computational Thinking & Programming Basics" in content
-has_content = "### Why Python?" in content or "### Basic if statement" in content or "### What is a Module?" in content
-
-if has_jntua and has_content:
-    print("Already fixed - full content present. No changes needed.")
+# Check if content is already updated (look for syllabus-specific content)
+if "Decomposition" in content and "Pattern Recognition" in content and "Abstraction" in content:
+    print("Already updated — syllabus content already present. No changes needed.")
     sys.exit(0)
 
-if not has_jntua:
-    print("ERROR: JNTUA curriculum not found. Run add_jntua_syllabus.py first.")
+if "Computational Thinking & Programming Basics" not in content:
+    print("ERROR: JNTUA curriculum structure not found. Run add_jntua_syllabus.py first.")
     sys.exit(1)
 
-# Find PY_CURRICULUM = [ ... ]; and replace with the full version
+# Find and replace PY_CURRICULUM block
 start = content.find("const PY_CURRICULUM = [")
 if start == -1:
     print("ERROR: Cannot find PY_CURRICULUM. Aborting.")
@@ -57,18 +53,18 @@ while i < len(content):
             break
     i += 1
 
-print(f"Found PY_CURRICULUM shell: {end-start} chars — replacing with full content ({len(full_curriculum_js)} chars)")
+print(f"Found PY_CURRICULUM: {end-start} chars — replacing with syllabus content ({len(full_curriculum_js)} chars)")
 
-# Remove duplicate PY_TOTAL_TOPICS/PY_TOTAL_TESTS that exist right after
-# the old shell block (they will be re-added from the full file)
+# Remove any PY_TOTAL_TOPICS/PY_TOTAL_TESTS immediately after the old block
 after = content[end:]
 for const_name in ["const PY_TOTAL_TOPICS", "const PY_TOTAL_TESTS"]:
     idx = after.find(const_name)
-    if idx >= 0 and idx < 200:  # only remove if immediately after the block
+    if 0 <= idx < 300:
         line_end = after.find('\n', idx)
         after = after[:idx] + after[line_end+1:]
 
-content = content[:start] + full_curriculum_js + "\n\nconst PY_TOTAL_TOPICS = PY_CURRICULUM.reduce((s, u) => s + u.topics.length, 0);\nconst PY_TOTAL_TESTS = PY_CURRICULUM.reduce((s, u) => s + u.topics.reduce((s2, t) => s2 + (t.testCases?.length || 0), 0), 0);\n\n" + after
+NEW_CONST = "\n\nconst PY_TOTAL_TOPICS = PY_CURRICULUM.reduce((s, u) => s + u.topics.length, 0);\nconst PY_TOTAL_TESTS = PY_CURRICULUM.reduce((s, u) => s + u.topics.reduce((s2, t) => s2 + (t.testCases?.length || 0), 0), 0);\n\n"
+content = content[:start] + full_curriculum_js + NEW_CONST + after
 
 with open(FILE, "w") as f:
     f.write(content)
@@ -76,7 +72,7 @@ with open(FILE, "w") as f:
 print("=" * 70)
 print(f"{FILE}: {original_length} -> {len(content)} chars")
 print("=" * 70)
-print("APPLIED: Full curriculum content restored (notes + examples + 69 test cases)")
+print("APPLIED: Syllabus-aligned content updated (22 topics, 69 test cases)")
 print("\nNext steps:")
 print("  1. npm run build")
-print("  2. If clean: git add -A && git commit -m 'Fix: restore full curriculum content' && git push")
+print("  2. If clean: git add -A && git commit -m 'Update curriculum content to match JNTUA syllabus document' && git push")
