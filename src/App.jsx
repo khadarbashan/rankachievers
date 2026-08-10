@@ -9301,6 +9301,9 @@ function PyActivityAdminTab({ fbUser }) {
             </pre>
           </div>
         )}
+            {tab==="presentation" && (
+              <PresentationAdminPanel fbUser={fbUser} />
+            )}
       </div>
     );
   };
